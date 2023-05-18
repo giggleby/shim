@@ -4,7 +4,7 @@
 
 import logging
 import operator
-from typing import Dict, List, NamedTuple, Optional
+from typing import Collection, Dict, List, NamedTuple, Optional
 
 from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data import decoder_data
@@ -123,8 +123,12 @@ class BOMAndConfiglessHelper:
     return result
 
   def BatchGetBOMEntry(
-      self, hwid_action_getter: hwid_action_manager.IHWIDActionGetter, hwids,
-      verbose=False) -> Dict[str, BOMEntry]:
+      self,
+      hwid_action_getter: hwid_action_manager.IHWIDActionGetter,
+      hwids: Collection[str],
+      verbose: bool = False,
+      no_avl_name: bool = False,
+  ) -> Dict[str, BOMEntry]:
     result = {}
     batch_request = []
     # filter out bad HWIDs
@@ -149,8 +153,11 @@ class BOMAndConfiglessHelper:
                            status=hwid_api_messages_pb2.Status.SUCCESS)
 
       for component in bom.GetComponents():
-        avl_name = self._decoder_data_manager.GetAVLName(
-            component.cls, component.name, fallback=False)
+        if no_avl_name:
+          avl_name = ''
+        else:
+          avl_name = self._decoder_data_manager.GetAVLName(
+              component.cls, component.name, fallback=False)
         fields = []
         if verbose:
           for fname, fvalue in component.fields.items():

@@ -92,6 +92,8 @@ message BomRequest {
   string hwid = 1;
   // A flag to indicate whether to return the detail fields in response.
   bool verbose = 2;
+  // A flag to disable AVL name lookup to speed up request.
+  bool no_avl_name = 3;
 }
 
 // The response to a BOM request.
@@ -114,6 +116,8 @@ message BatchGetBomRequest {
   repeated string hwid = 1;
   // A flag to indicate whether to return the detail fields in response.
   bool verbose = 2;
+  // A flag to disable AVL name lookup to speed up request.
+  bool no_avl_name = 3;
 }
 
 // The response to BatchGetBOMRequest.

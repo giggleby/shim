@@ -193,6 +193,64 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                 ], '', '', _Status.SUCCESS)
         })
 
+  def testBatchGetBOMEntry_WithoutAVLName(self):
+    bom = hwid_action.BOM()
+    bom.AddAllComponents(
+        {
+            'dram': [
+                'dram_1234_5678', 'dram_1234_5678#4', 'not_dram_1234_5678',
+                'dram_subcomp_2468'
+            ]
+        }, comp_db=database.Database.LoadFile(
+            GOLDEN_HWIDV3_FILE, verify_checksum=False), verbose=True)
+    configless = None
+    self._module_collection.AddAVLNameMapping(1234, 'avl_name_1')
+    with self._PatchBatchGetBOMAndConfigless() as patch_method:
+      patch_method.return_value = {
+          TEST_HWID: _BOMAndConfigless(bom, configless, None),
+      }
+
+      results = self._bc_helper.BatchGetBOMEntry(
+          self._fake_hwid_action_manager,
+          [TEST_HWID],
+          verbose=True,
+          no_avl_name=True,
+      )
+
+    self.assertEqual(
+        results, {
+            TEST_HWID:
+                bc_helper_module.BOMEntry([
+                    _ComponentMsg(
+                        name='dram_1234_5678', component_class='dram', fields=[
+                            _FieldMsg(name='part', value='part2'),
+                            _FieldMsg(name='size', value='4G'),
+                        ], avl_info=_AvlInfoMsg(cid=1234, qid=5678),
+                        has_avl=True),
+                    _ComponentMsg(
+                        name='dram_1234_5678#4', component_class='dram',
+                        fields=[
+                            _FieldMsg(name='part', value='part2'),
+                            _FieldMsg(name='size', value='4G'),
+                            _FieldMsg(name='slot', value='3'),
+                        ], avl_info=_AvlInfoMsg(cid=1234,
+                                                qid=5678), has_avl=True),
+                    _ComponentMsg(
+                        name='dram_subcomp_2468', component_class='dram',
+                        fields=[
+                            _FieldMsg(name='part', value='part4'),
+                            _FieldMsg(name='size', value='4G'),
+                        ], avl_info=_AvlInfoMsg(cid=2468,
+                                                is_subcomp=True), has_avl=True),
+                    _ComponentMsg(
+                        name='not_dram_1234_5678', component_class='dram',
+                        fields=[
+                            _FieldMsg(name='part', value='part3'),
+                            _FieldMsg(name='size', value='4G'),
+                        ]),
+                ], '', '', _Status.SUCCESS)
+        })
+
   def testBatchGetBOMEntry_BOMIsNone(self):
     with self._PatchBatchGetBOMAndConfigless() as patch_method:
       patch_method.return_value = {

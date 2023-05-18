@@ -93,7 +93,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
         self._hwid_action_manager)
     bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
-        hwid_action_getter, [request.hwid], request.verbose)
+        hwid_action_getter, [request.hwid], request.verbose,
+        request.no_avl_name)
     bom_entry = bom_entry_dict.get(request.hwid)
     if bom_entry is None:
       return hwid_api_messages_pb2.BomResponse(
@@ -112,7 +113,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
         self._hwid_action_manager)
     bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
-        hwid_action_getter, request.hwid, request.verbose)
+        hwid_action_getter, request.hwid, request.verbose, request.no_avl_name)
     for hwid, bom_entry in bom_entry_dict.items():
       response.boms.get_or_create(hwid).CopyFrom(
           hwid_api_messages_pb2.BatchGetBomResponse.Bom(
