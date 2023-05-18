@@ -9,7 +9,6 @@ from unittest import mock
 
 from cros.factory.hwid.service.appengine import config as config_module
 from cros.factory.hwid.service.appengine.data import config_data as config_data_module
-from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.data import verification_payload_data
 from cros.factory.hwid.service.appengine import hwid_action
@@ -18,26 +17,25 @@ from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ingestion
 from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
-from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 
-def _CreateMockConfig():
+def _CreateMockConfig(fake_modules: test_utils.FakeModuleCollection):
   mock_config = mock.Mock(
       spec=config_module._Config,  # pylint: disable=protected-access
       wraps=config_module.CONFIG)
-  mock_config.hwid_action_manager = mock.create_autospec(
-      hwid_action_manager.HWIDActionManager, instance=True)
+  mock_config.hwid_action_manager = fake_modules.fake_hwid_action_manager
   mock_config.vp_data_manager = mock.create_autospec(
       verification_payload_data.VerificationPayloadDataManager, instance=True)
   mock_config.hwid_db_data_manager = mock.create_autospec(
       hwid_db_data.HWIDDBDataManager, instance=True)
-  mock_config.decoder_data_manager = mock.create_autospec(
-      decoder_data.DecoderDataManager, instance=True)
+  mock_config.decoder_data_manager = fake_modules.fake_decoder_data_manager
   mock_config.hwid_repo_manager = mock.create_autospec(
       hwid_repo.HWIDRepoManager, instance=True)
-  mock_config.goldeneye_filesystem = mock.create_autospec(
-      filesystem_adapter.IFileSystemAdapter, instance=True)
+  mock_config.goldeneye_filesystem = fake_modules.fake_goldeneye_memcache
+  mock_config.hwid_data_cachers = [
+      mock.create_autospec(hwid_action_manager.IHWIDDataCacher, instance=True),
+  ]
   return mock_config
 
 
@@ -45,9 +43,14 @@ class IngestionTest(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._config = _CreateMockConfig()
+    self._modules = test_utils.FakeModuleCollection()
+    self._config = _CreateMockConfig(self._modules)
     self.service = ingestion.ProtoRPCService.CreateInstance(
         self._config, config_data_module.CONFIG)
+
+  def tearDown(self):
+    super().tearDown()
+    self._modules.ClearAll()
 
   def testRefresh(self):
     hwid_db_metadata_list = [
@@ -196,11 +199,12 @@ class AVLNameTest(unittest.TestCase):
       return self.comps
 
   def setUp(self):
+    super().setUp()
     self.fixtures = test_utils.FakeModuleCollection()
-    self._config = _CreateMockConfig()
-    self._config.decoder_data_manager = self.fixtures.fake_decoder_data_manager
+    self._config = _CreateMockConfig(self.fixtures)
     self.service = ingestion.ProtoRPCService.CreateInstance(
         self._config, config_data_module.CONFIG)
+    self._hwid_data_cacher = self._config.hwid_data_cachers[0]
 
     self.init_mapping_data = {
         2: "name1",
@@ -214,6 +218,7 @@ class AVLNameTest(unittest.TestCase):
     }
 
   def tearDown(self):
+    super().tearDown()
     self.fixtures.ClearAll()
 
   @mock.patch(
@@ -269,6 +274,71 @@ class AVLNameTest(unittest.TestCase):
       for comp in comps:
         mapping[comp] = self.service.decoder_data_manager.GetAVLName(cls, comp)
     self.assertDictEqual(mapping, expected_mapping)
+
+  @mock.patch(
+      'cros.factory.hwid.service.appengine.api_connector.HWIDAPIConnector'
+      '.GetAVLNameMapping')
+  def testSyncNameMapping_HWIDDataCacheInvalidate(self, get_avl_name_mapping):
+    # Arrange.
+    all_comps1 = {
+        'cls1': ['cls1_1', 'cls1_3'],
+    }
+    all_comps2 = {
+        'cls1': ['cls1_2', 'cls1_3']
+    }
+    fake_hwid_action1 = self._FakeHWIDAction(all_comps1)
+    fake_hwid_action2 = self._FakeHWIDAction(all_comps2)
+    self.fixtures.ConfigHWID('PROJ1', 3, 'unused_raw_db', fake_hwid_action1)
+    self.fixtures.ConfigHWID('PROJ2', 3, 'unused_raw_db', fake_hwid_action2)
+    get_avl_name_mapping.return_value = {
+        1: 'name1',
+        2: 'name2',
+    }
+    self.service.SyncNameMapping(ingestion_pb2.SyncNameMappingRequest())
+    self._hwid_data_cacher.ClearCache.reset_mock()
+
+    # Act: Change AVL name of CID:2.
+    get_avl_name_mapping.return_value = {
+        1: 'name1',
+        2: 'name2-changed',
+    }
+    self.service.SyncNameMapping(ingestion_pb2.SyncNameMappingRequest())
+
+    # Assert: HWID DB cacher of PROJ2 should trigger a cache invalidation.
+    actual_calls = self._hwid_data_cacher.ClearCache.call_args_list
+    # Only PROJ2 is affected.
+    self.assertCountEqual([mock.call('PROJ2')], actual_calls)
+
+    # Arrange: Reset mock.
+    self._hwid_data_cacher.ClearCache.reset_mock()
+
+    # Act: Remove AVL name of CID:1.
+    get_avl_name_mapping.return_value = {
+        2: 'name2-changed',
+    }
+    self.service.SyncNameMapping(ingestion_pb2.SyncNameMappingRequest())
+
+    # Assert: HWID DB cacher of PROJ1 should trigger a cache invalidation.
+    actual_calls = self._hwid_data_cacher.ClearCache.call_args_list
+    # Only PROJ1 is affected.
+    self.assertCountEqual([mock.call('PROJ1')], actual_calls)
+
+    # Arrange: Reset mock.
+    self._hwid_data_cacher.ClearCache.reset_mock()
+
+    # Act: Add new AVL name of CID:3.
+    get_avl_name_mapping.return_value = {
+        2: 'name2-changed',
+        3: 'name3',
+    }
+    self.service.SyncNameMapping(ingestion_pb2.SyncNameMappingRequest())
+
+    # Assert: HWID DB cacher of both PROJ1 and PROJ2 should trigger cache
+    # invalidations.
+    actual_calls = self._hwid_data_cacher.ClearCache.call_args_list
+    # Both PROJ1 and PROJ2 are affected.
+    self.assertCountEqual(
+        [mock.call('PROJ1'), mock.call('PROJ2')], actual_calls)
 
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ import logging
 import os
 import os.path
 import textwrap
-from typing import Set
+from typing import Collection, Mapping, Set
 
 import urllib3
 
@@ -58,6 +58,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     self.hwid_repo_manager = config.hwid_repo_manager
     self.hwid_api_connector = hwid_api_connector
     self.goldeneye_filesystem = config.goldeneye_filesystem
+    self.hwid_data_cachers = config.hwid_data_cachers
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -76,11 +77,23 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     del request  # unused
 
-    comp_ids = list(self._ListComponentIDs())
+    cid_proj_mapping = self._ListComponentIDs()
+    comp_ids = list(cid_proj_mapping)
     avl_name_mapping = self.hwid_api_connector.GetAVLNameMapping(comp_ids)
 
     logging.info('Got %d AVL names from HWID API.', len(avl_name_mapping))
-    self.decoder_data_manager.SyncAVLNameMapping(avl_name_mapping)
+    touched_cids = self.decoder_data_manager.SyncAVLNameMapping(
+        avl_name_mapping)
+    affected_projs = set()
+    for touched_cid in touched_cids:
+      affected_projs.update(cid_proj_mapping[touched_cid])
+
+    for affected_proj in affected_projs:
+      logging.info(
+          'Caches of HWID data of project %r is out-of-date, clear now.',
+          affected_proj)
+      for hwid_data_cacher in self.hwid_data_cachers:
+        hwid_data_cacher.ClearCache(affected_proj)
 
     return ingestion_pb2.SyncNameMappingResponse()
 
@@ -400,16 +413,16 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       self.vp_data_manager.SetLatestPayloadHash(board, payload_hash)
     return response
 
-  def _ListComponentIDs(self):
+  def _ListComponentIDs(self) -> Mapping[int, Collection[str]]:
     """Lists all component IDs in HWID database.
 
     Returns:
-      A set of component Ids.
+      A mapping of {cid: list of projects} where HWID DB of the project contains
+      the CID.
     """
-    all_comp_ids = set()
     np_adapter = name_pattern_adapter.NamePatternAdapter()
 
-    def _ResolveComponentIds(comp_cls, comps):
+    def _ResolveComponentIds(comp_cls, comps) -> Collection[int]:
       comp_ids = set()
       pattern = np_adapter.GetNamePattern(comp_cls)
       for comp_name in comps:
@@ -418,9 +431,11 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
           comp_ids.add(name_info.cid)
       return comp_ids
 
+    cid_proj_mapping = collections.defaultdict(set)
     for project in self.hwid_action_manager.ListProjects():
       action = self.hwid_action_manager.GetHWIDAction(project)
       for comp_cls, comps in action.GetComponents().items():
-        all_comp_ids |= _ResolveComponentIds(comp_cls, comps)
+        for cid in _ResolveComponentIds(comp_cls, comps):
+          cid_proj_mapping[cid].add(project)
 
-    return all_comp_ids
+    return cid_proj_mapping

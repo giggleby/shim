@@ -65,6 +65,19 @@ class DecoderDataManagerTest(unittest.TestCase):
     avl_name = self._manager.GetAVLName('category1', 'category1_1234_5678_9012')
     self.assertEqual(avl_name, 'category1_1234_5678_9012')
 
+  def testSyncAVLNameMapping_TouchedCIDs(self):
+    self._AddAVLNameMapping(1, 'comp_name1')
+    self._AddAVLNameMapping(2, 'comp_name2')  # To be removed.
+    self._AddAVLNameMapping(3, 'comp_name3')
+
+    touched_cids = self._manager.SyncAVLNameMapping({
+        1: 'comp_name1',  # Unchanged.
+        3: 'comp_name3-changed',  # Changed.
+        4: 'comp_name4',  # Created.
+    })
+
+    self.assertCountEqual({2, 3, 4}, touched_cids)
+
 
 if __name__ == '__main__':
   unittest.main()

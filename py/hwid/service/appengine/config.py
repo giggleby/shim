@@ -77,10 +77,11 @@ class _Config:
         namespace=BOM_DATA_MEMCACHE_NAMESPACE)
     self.bom_data_cacher = bc_helper_module.BOMDataCacher(
         bom_data_memcache_adapter)
+    self.hwid_data_cachers = [self.bom_data_cacher]
     self.hwid_action_manager = hwid_action_manager.HWIDActionManager(
         self.hwid_db_data_manager,
         hwid_preproc_data_memcache_adapter,
-        [self.bom_data_cacher],
+        self.hwid_data_cachers,
     )
     self.hwid_repo_manager = hwid_repo.HWIDRepoManager(
         _CONFIG_DATA.hwid_repo_branch,

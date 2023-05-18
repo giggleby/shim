@@ -4,6 +4,7 @@
 """Holds data models and their management utils regarding decoding HWIDs."""
 
 import logging
+from typing import Collection
 
 from google.cloud import ndb
 
@@ -39,13 +40,18 @@ class DecoderDataManager:
   def __init__(self, ndb_connector: ndbc_module.NDBConnector):
     self._ndb_connector = ndb_connector
 
-  def SyncAVLNameMapping(self, mapping):
+  def SyncAVLNameMapping(self, mapping) -> Collection[int]:
     """Sync the set of AVL name mapping to be exactly the mapping provided.
 
     Args:
       mapping: The {cid: avl_name} dictionary for updating datastore.
+
+    Returns:
+      A collection of CIDs as integers having AVL name mapping
+      created, changed, or deleted.
     """
 
+    touched_cids = set()
     with self._ndb_connector.CreateClientContextWithGlobalCache():
       cids_to_create = set(mapping)
 
@@ -54,16 +60,22 @@ class DecoderDataManager:
         # Discard the entries indexed by cid.
         if entry.component_id not in mapping:
           entry.key.delete()
+          touched_cids.add(entry.component_id)
         else:
-          entry.name = mapping[entry.component_id]
-          entry.put()
+          new_name = mapping[entry.component_id]
+          if entry.name != new_name:
+            touched_cids.add(entry.component_id)
+            entry.name = new_name
+            entry.put()
           cids_to_create.discard(entry.component_id)
 
       for cid in cids_to_create:
+        touched_cids.add(cid)
         name = mapping[cid]
         entry = AVLNameMapping(component_id=cid, name=name)
         entry.put()
     logging.info('AVL name mapping is synced.')
+    return touched_cids
 
   def GetAVLName(self, category, comp_name, fallback=True):
     """Get AVL Name from hourly updated mapping data.
