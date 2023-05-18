@@ -10,9 +10,9 @@ from cros.factory.utils import process_utils
 
 
 SERVOD_BIN = 'servod'
-DUT_CONTROL_TIMEOUT = 30
-SERVOD_INIT_TIMEOUT_SEC = 30
-SERVOD_KILL_TIMEOUT_SEC = 5
+DUT_CONTROL_TIMEOUT = 10
+SERVOD_INIT_TIMEOUT_SEC = 10
+SERVOD_KILL_TIMEOUT_SEC = 3
 
 
 class _DutControl:
@@ -63,8 +63,7 @@ class Servod:
   def __init__(self, port=9999, board=None, serial_name=None):
     self._port = port
     self._servod_cmd = [SERVOD_BIN, '-p', str(port)]
-    if board:
-      self._servod_cmd += ['-b', board]
+    self._servod_cmd += ['-b', board or 'none']
     if serial_name:
       self._servod_cmd += ['-s', serial_name]
 
