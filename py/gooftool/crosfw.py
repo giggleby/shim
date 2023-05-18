@@ -17,7 +17,6 @@ import collections
 import enum
 import filecmp
 import logging
-import os
 import re
 import tempfile
 
@@ -119,78 +118,6 @@ class Flashrom:
     sections_param = [f'-i {name}' for name in sections or []]
     self._InvokeCommand(
         f"-w '{filename}' {' '.join(sections_param)} {self._WRITE_FLAGS}")
-
-  def GetWriteProtectionStatus(self):
-    """Gets write protection status from selected flash chipset.
-
-    Returns: A named tuple with (enabled, offset, size).
-    """
-    # Depending on the flashrom version, `flashrom --wp-status` may
-    # print output in one of two formats:
-    #
-    # Old format:
-    #     WP: status: 0x80
-    #     WP: status.srp0: 1
-    #     WP: write protect is %s. (disabled/enabled)
-    #     WP: write protect range: start=0x%8x, len=0x%08x
-    #
-    # New format:
-    #     Protection mode: %s (disabled/hardware)
-    #     Protection range: start=0x%8x length=0x%08x [extra info]
-    #
-    # Note: 'hardware' in the new format is the same as to 'enabled'
-    # in the old format.
-
-    results = self._InvokeCommand('--wp-status').stdout
-
-    status = re.findall(r'WP: write protect is (\w+)\.', results)
-    if len(status) != 1:
-      status = re.findall(r'Protection mode: (\w+)', results)
-    if len(status) != 1:
-      raise CrosFWError('Failed getting write protection status')
-    status = status[0]
-    if status not in ('hardware', 'enabled', 'disabled'):
-      raise ValueError(f'Unknown write protection status: {status}')
-
-    wp_range = re.findall(r'WP: write protect range: start=(\w+), len=(\w+)',
-                          results)
-    if len(wp_range) != 1:
-      wp_range = re.findall(r'Protection range: start=(\w+) length=(\w+)',
-                            results)
-    if len(wp_range) != 1:
-      raise CrosFWError('Failed getting write protection range')
-    wp_range = wp_range[0]
-    return WpStatus(status != 'disabled', int(wp_range[0], 0),
-                    int(wp_range[1], 0))
-
-  def EnableWriteProtection(self, offset, size, skip_check=False):
-    """Enables write protection by specified range."""
-    self._InvokeCommand(f'--wp-range 0x{offset:06X},0x{size:06X} --wp-enable')
-    result = self.GetWriteProtectionStatus()
-    if ((not result.enabled) or (result.offset != offset) or
-        (result.size != size)):
-      raise CrosFWError('Failed to enabled write protection.')
-
-    if skip_check:
-      return
-
-    # Try to verify write protection by attempting to disable it.
-    self._InvokeCommand('--wp-disable --wp-range 0,0', ignore_status=True)
-    # Verify the results
-    result = self.GetWriteProtectionStatus()
-    if ((not result.enabled) or (result.offset != offset) or
-        (result.size != size)):
-      raise CrosFWError(
-          'Software write protection can be disabled. Please make '
-          'sure hardware write protection is enabled.')
-
-  def DisableWriteProtection(self):
-    """Tries to Disable whole write protection range and status."""
-    self._InvokeCommand('--wp-disable --wp-range 0,0')
-    result = self.GetWriteProtectionStatus()
-    if result.enabled or (result.offset != 0) or (result.size != 0):
-      raise CrosFWError('Failed to disable write protection.')
-
 
 class FirmwareContent:
   """Wrapper around flashrom for a specific firmware target.

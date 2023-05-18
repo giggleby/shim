@@ -517,11 +517,9 @@ class Util:
         'modem_status':
             self.shell('modem status').stdout.splitlines(),
         'ec_wp_status':
-            self.shell('flashrom -p ec --flash-size 2>/dev/null && '
-                       'flashrom -p ec --wp-status || '
-                       'echo "EC is not available."').stdout,
+            self.shell('ectool flashprotect').stdout,
         'bios_wp_status':
-            self.shell('flashrom -p host --wp-status').stdout,
+            self.shell('futility flash --wp-status --ignore-hw').stdout,
         'cr50_board_id':
             self.shell('gsctool -a -i -M').stdout,
         'cr50_sn_bits':

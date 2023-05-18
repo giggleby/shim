@@ -8,7 +8,7 @@ import logging
 import os
 import tempfile
 
-from cros.factory.gooftool import crosfw
+from cros.factory.gooftool import common
 from cros.factory.test.utils import fpmcu_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import sys_interface
@@ -27,7 +27,7 @@ class WriteProtectError(Error):
 
 
 class WriteProtectTargetType(enum.Enum):
-  AP = 'main'
+  AP = 'ap'
   EC = 'ec'
   FPMCU = 'fpmcu'
 
@@ -59,97 +59,80 @@ class IWriteProtectTarget(abc.ABC):
     """Gets the information of the write protection.
 
     Returns:
-      A dictionary containing the status of write protection. The format of the
-      dictionary:
-        {
-          "enabled": Boolean value,
-          "offset": non-negative integer,
-          "size": non-negative integer,
-        }
+      Boolean value: true if WP is enabled, false if WP is disabled.
     """
     raise NotImplementedError
 
 
-class _FlashromBasedWriteProtectTarget(IWriteProtectTarget):
+class _APWriteProtectTarget(IWriteProtectTarget):
 
-  def __init__(self):
-    self._flashrom = self._GetFlashrom()
-
-  def SetProtectionStatus(self, enable, skip_enable_check=False):
-    if enable:
-      fw = self._GetReferenceFirmware()
-      section_data = fw.GetFirmwareImage(
-          sections=[_WP_SECTION]).get_section_area(_WP_SECTION)
-      offset, size = section_data[0:2]
-      self._flashrom.EnableWriteProtection(offset, size,
-                                           skip_check=skip_enable_check)
-    else:
-      self._flashrom.DisableWriteProtection()
-
-  def GetStatus(self):
-    return self._flashrom.GetWriteProtectionStatus()._asdict()
-
-  @abc.abstractmethod
-  def _GetReferenceFirmware(self):
-    """Gets the reference firmware for the target."""
-    raise NotImplementedError
-
-  @abc.abstractmethod
-  def _GetFlashrom(self):
-    """Gets the instance of cros.factory.gooftool.crosfw.Flashrom."""
-    raise NotImplementedError
-
-
-class _APWriteProtectTarget(_FlashromBasedWriteProtectTarget):
-
-  def _GetFlashrom(self):
-    return crosfw.Flashrom(crosfw.TARGET_MAIN)
-
-  def _GetReferenceFirmware(self):
-    return crosfw.LoadMainFirmware()
-
-
-class _ECBasedWriteProtectTarget(_FlashromBasedWriteProtectTarget):
-
-  def __init__(self):
-    super().__init__()
-    self._fw = self._GetReferenceFirmware()
+  def _InvokeCommand(self, param, ignore_status=False):
+    command = ' '.join(['futility flash', param])
+    result = common.Shell(command)
+    if not (ignore_status or result.success):
+      raise WriteProtectError(f'Failed in command: {command}\n{result.stderr}')
+    return result
 
   def SetProtectionStatus(self, enable, skip_enable_check=False):
-    self._CheckAvailability()
-    super().SetProtectionStatus(enable, skip_enable_check)
+    self._InvokeCommand('--wp-enable' if enable else '--wp-disable')
+
+    # Verify new WP state
+    if self.GetStatus() != enable:
+      raise WriteProtectError(
+          'AP Software write protection could not be changed')
+
+    if enable and not skip_enable_check:
+      # Try to verify write protection by attempting to disable it.
+      self._InvokeCommand('--wp-disable', ignore_status=True)
+      if not self.GetStatus():
+        raise WriteProtectError(
+            'AP Software write protection can be disabled. Please make '
+            'sure hardware write protection is enabled.')
 
   def GetStatus(self):
-    self._CheckAvailability()
-    return super().GetStatus()
+    result = self._InvokeCommand('--wp-status --ignore-hw').stdout
 
-  def _GetReferenceFirmware(self):
-    return self._fw
-
-  def _CheckAvailability(self):
-    if self._fw.GetChipId() is None:
-      # Some EC (mostly PD) does not support "RO_NOW". Instead they will only
-      # set "RO_AT_BOOT" when you request to enable RO (These platforms
-      # consider --wp-range with right range identical to --wp-enable), and
-      # requires a 'ectool reboot_ec RO at-shutdown; reboot' to let the RO
-      # take effect. After reboot, "flashrom -p host --wp-status" will return
-      # protected range. If you don't reboot, returned range will be (0, 0),
-      # and running command "ectool flashprotect" will not have RO_NOW.
-      # generic_common.test_list.json provides "EnableECWriteProtect" test
-      # group which can be run individually before finalization. Try that out
-      # if you're having trouble enabling RO_NOW flag.
-      logging.warning('%s not write protected (seems there is no %s flash).',
-                      self._fw.target.upper(), self._fw.target.upper())
-      raise UnsupportedOperationError
+    if result == 'WP status: enabled':
+      return True
+    if result == 'WP status: disabled':
+      return False
+    raise WriteProtectError(f'Unexpected WP status: {result}')
 
 
-class _ECWriteProtectTarget(_ECBasedWriteProtectTarget):
+class _ECWriteProtectTarget(IWriteProtectTarget):
 
-  def _GetFlashrom(self):
-    return crosfw.Flashrom(crosfw.TARGET_EC)
+  def _InvokeCommand(self, param, ignore_status=False):
+    command = ' '.join(['ectool flashprotect', param])
+    result = common.Shell(command)
+    if not (ignore_status or result.success):
+      raise WriteProtectError(f'Failed in command: {command}\n{result.stderr}')
+    return result
 
-  def _GetReferenceFirmware(self):
-    return crosfw.LoadEcFirmware()
+  def SetProtectionStatus(self, enable, skip_enable_check=False):
+    self._InvokeCommand('enable now' if enable else 'disable')
+
+    # Verify new WP state
+    if self.GetStatus() != enable:
+      raise WriteProtectError(
+          'EC Software write protection could not be changed')
+
+    if enable and not skip_enable_check:
+      # Try to verify write protection by attempting to disable it.
+      self._InvokeCommand('disable', ignore_status=True)
+      if not self.GetStatus():
+        raise WriteProtectError(
+            'EC Software write protection can be disabled. Please make '
+            'sure hardware write protection is enabled.')
+
+  def GetStatus(self):
+    result = self._InvokeCommand('')
+    lines = result.split('\n')
+
+    # First line should be active flags
+    if len(lines) < 1 or 'Flash protect flags' not in lines[0]:
+      raise WriteProtectError(f'Unexpected ectool output: {result}')
+
+    return 'ro_at_boot' in lines[0]
 
 
 class _FPMCUWriteProtectTarget(IWriteProtectTarget):
