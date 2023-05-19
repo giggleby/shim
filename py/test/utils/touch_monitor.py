@@ -26,11 +26,19 @@ Quick Start:
 """
 
 import copy
+import enum
 import fcntl
 import struct
 
 # pylint: disable=no-name-in-module
 from cros.factory.external.py_lib.evdev import ecodes
+
+
+class AngleCompensation(enum.IntEnum):
+  angle_0 = 0
+  angle_90 = 90
+  angle_180 = 180
+  angle_270 = 270
 
 
 class TouchMonitorBase:

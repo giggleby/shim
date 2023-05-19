@@ -118,7 +118,6 @@ from cros.factory.test import test_ui
 from cros.factory.test.utils import evdev_utils
 from cros.factory.test.utils import touch_monitor
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils.type_utils import Enum
 
 # pylint: disable=no-name-in-module
 from cros.factory.external.py_lib.evdev import ecodes
@@ -220,7 +219,7 @@ class TouchscreenTest(test_case.TestCase):
       Arg('timeout_secs', (int, type(None)),
           'Timeout for the test. None for no time limit.', default=20),
       Arg(
-          'angle_compensation', Enum([0, 90, 180, 270]),
+          'angle_compensation', touch_monitor.AngleCompensation,
           'Specify a degree to compensate the orientation difference between '
           'panel and system in counter-clockwise direction. It is used when '
           'panel scanout is different from default system orientation, i.e., '

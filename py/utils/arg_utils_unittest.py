@@ -15,12 +15,17 @@ from cros.factory.utils.arg_utils import _DEFAULT_NOT_SET
 from cros.factory.utils.type_utils import Enum
 
 
-class enum_typed_1(str, enum.Enum):
+class EnumTyped_1(str, enum.Enum):
   a = 'a'
   b = 'b'
 
   def __str__(self) -> str:
     return self.name
+
+
+class IntEnumTyped(enum.IntEnum):
+  num_1 = 1
+  num_2 = 2
 
 
 class ArgTest(unittest.TestCase):
@@ -42,13 +47,19 @@ class ArgTest(unittest.TestCase):
     self.assertFalse(int_arg.ValueMatchesType('0'))
 
   def testValueMatchesType_Enum(self):
-    enum_arg_1 = Arg('enum_arg_1', enum_typed_1, 'X')
-    self.assertTrue(enum_arg_1.ValueMatchesType(enum_typed_1.a))
+    enum_arg_1 = Arg('enum_arg_1', EnumTyped_1, 'X')
+    self.assertTrue(enum_arg_1.ValueMatchesType(EnumTyped_1.a))
     self.assertTrue(enum_arg_1.ValueMatchesType('a'))
     self.assertFalse(enum_arg_1.ValueMatchesType('c'))
-    enum_arg_2 = Arg('enum_arg_2', enum.Enum('enum_typed_2', ['a', 'b']), 'X')
+    enum_arg_2 = Arg('enum_arg_2', enum.Enum('EnumTyped_2', ['a', 'b']), 'X')
     self.assertTrue(enum_arg_2.ValueMatchesType('a'))
     self.assertFalse(enum_arg_2.ValueMatchesType('c'))
+
+  def testValueMatchesType_IntEnum(self):
+    int_enum_arg = Arg('int_enum_arg', IntEnumTyped, 'X')
+    self.assertTrue(int_enum_arg.ValueMatchesType(IntEnumTyped.num_1))
+    self.assertTrue(int_enum_arg.ValueMatchesType(2))
+    self.assertFalse(int_enum_arg.ValueMatchesType(3))
 
   def testValueMatchesType_type_util_Enum(self):
     type_util_enum_arg = Arg('type_util_enum_typed', Enum(['a']), 'X')
@@ -94,10 +105,16 @@ class ArgTest(unittest.TestCase):
         'list_arg', help='X', default=_DEFAULT_NOT_SET, nargs='*')
 
   def testAddToParser_AddEnum(self):
-    Arg('enum_arg', enum_typed_1, 'X').AddToParser(self.parser)
+    Arg('enum_arg', EnumTyped_1, 'X').AddToParser(self.parser)
     self.parser.add_argument.assert_called_once_with(
         'enum_arg', type=str, help='X', choices={'a',
                                                  'b'}, default=_DEFAULT_NOT_SET)
+
+  def testAddToParser_AddIntEnum(self):
+    Arg('int_enum_arg', IntEnumTyped, 'X').AddToParser(self.parser)
+    self.parser.add_argument.assert_called_once_with('int_enum_arg', type=int,
+                                                     help='X', choices={1, 2},
+                                                     default=_DEFAULT_NOT_SET)
 
   def testAddToParser_AddTypeUtilEnum(self):
     Arg('type_util_enum_arg', Enum(['1', '2']), 'X').AddToParser(self.parser)
@@ -157,15 +174,14 @@ class ArgsTest(unittest.TestCase):
 
   def testEnum(self):
     self.parser = Args(
-        Arg('enum_typed_1', enum_typed_1, 'X', default=None),
-        Arg('enum_typed_2', enum.Enum('enum_typed_2', 'a b'), 'X',
-            default=None))
+        Arg('enum_typed_1', EnumTyped_1, 'X', default=None),
+        Arg('enum_typed_2', enum.Enum('EnumTyped_2', 'a b'), 'X', default=None))
     self.assertEqual(
-        dict(enum_typed_1=enum_typed_1.a, enum_typed_2=None),
-        self.Parse(dict(enum_typed_1=enum_typed_1.a)))
+        dict(enum_typed_1=EnumTyped_1.a, enum_typed_2=None),
+        self.Parse(dict(enum_typed_1=EnumTyped_1.a)))
     self.assertEqual(
         dict(enum_typed_1='a', enum_typed_2=None),
-        self.Parse(dict(enum_typed_1=enum_typed_1.a)))
+        self.Parse(dict(enum_typed_1=EnumTyped_1.a)))
     self.assertEqual(
         dict(enum_typed_1='a', enum_typed_2=None),
         self.Parse(dict(enum_typed_1='a')))
@@ -175,11 +191,27 @@ class ArgsTest(unittest.TestCase):
 
     error_pattern = re.compile(
         r'.*enum_typed_[12].*The argument should have type '
-        r'\(\<enum \'enum_typed_[12]\'\>', re.DOTALL)
+        r'\(\<enum \'EnumTyped_[12]\'\>', re.DOTALL)
     self.assertRaisesRegex(ValueError, error_pattern, self.Parse,
-                           dict(required='x', enum_typed_1='c'))
+                           dict(enum_typed_1='c'))
     self.assertRaisesRegex(ValueError, error_pattern, self.Parse,
-                           dict(required='x', enum_typed_2='c'))
+                           dict(enum_typed_2='c'))
+
+  def testIntEnum(self):
+    self.parser = Args(Arg('int_enum_typed', IntEnumTyped, 'X', default=None))
+    self.assertEqual(
+        dict(int_enum_typed=IntEnumTyped.num_1),
+        self.Parse(dict(int_enum_typed=IntEnumTyped.num_1)))
+    self.assertEqual(
+        dict(int_enum_typed=2),
+        self.Parse(dict(int_enum_typed=IntEnumTyped.num_2)))
+
+    error_pattern = re.compile(
+        r'.*int_enum_typed.*The argument should have type '
+        r'\(\<enum \'IntEnumTyped\'\>', re.DOTALL)
+    self.assertRaisesRegex(ValueError, error_pattern, self.Parse,
+                           dict(int_enum_typed=3))
+
 
   def testTypeUtilEnum(self):
     self.parser = Args(
@@ -192,7 +224,7 @@ class ArgsTest(unittest.TestCase):
         r'.*type_util_enum_typed.*The argument should have type \(Enum',
         re.DOTALL)
     self.assertRaisesRegex(ValueError, error_pattern, self.Parse,
-                           dict(required='x', type_util_enum_typed='c'))
+                           dict(type_util_enum_typed='c'))
 
 
 if __name__ == '__main__':

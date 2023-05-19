@@ -85,19 +85,28 @@ class Arg:
 
         You can use ``enum.Enum`` object as a type::
 
-          class enum_obj(str, enum.Enum):
+          class EnumTyped(str, enum.Enum):
             a = 'a'
             b = 'b'
 
             def __str__(self):
             return self.name
 
-          type=enum_obj
-              # Allows only the members in enum_obj and str 'a' or 'b'.
+          type=EnumTyped
+              # Allows only the members in EnumTyped and str 'a' or 'b'.
 
-        Besides, you can use enum.Enum functional API::
+        Besides, you can use ``enum.Enum`` functional API::
 
           type=enum.Enum('enum_obj', 'a b')
+
+        It also supports ``enum.IntEnum`` object::
+
+          class IntEnumTyped(enum.IntEnum):
+            num_1 = 1
+            num_2 = 2
+
+          type=IntEnumTyped
+              # Allows only the members in IntEnumTyped and int 1 or 2.
 
         You can also use an ``Enum`` object as a type.  First import
         it::
@@ -160,6 +169,9 @@ class Arg:
       if isinstance(t, Enum):
         if value in t:
           return True
+      elif issubclass(t, enum.IntEnum):
+        if any(value == member for member in t):
+          return True
       elif issubclass(t, enum.Enum):
         if isinstance(value, t) or value in t.__members__:
           return True
@@ -205,6 +217,9 @@ class Arg:
     elif isinstance(self.type[0], Enum):
       kwargs['type'] = str
       kwargs['choices'] = self.type[0]
+    elif issubclass(self.type[0], enum.IntEnum):
+      kwargs['type'] = int
+      kwargs['choices'] = set(member.value for member in self.type[0])
     elif issubclass(self.type[0], enum.Enum):
       kwargs['type'] = str
       kwargs['choices'] = set(self.type[0].__members__)
