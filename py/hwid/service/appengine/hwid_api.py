@@ -34,9 +34,12 @@ def _NormalizeProjectString(string: str) -> Optional[str]:
   return string.strip().upper() if string else None
 
 
-class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
-  SERVICE_DESCRIPTOR = hwid_api_messages_pb2.DESCRIPTOR.services_by_name[
-      'HwidService']
+_HwidServiceProtoRPCBase = protorpc_utils.CreateProtoRPCServiceClass(
+    '_HwidServiceProtoRPCBase',
+    hwid_api_messages_pb2.DESCRIPTOR.services_by_name['HwidService'])
+
+
+class ProtoRPCService(_HwidServiceProtoRPCBase):
 
   def __init__(self, config, *args, **kwargs):
     super().__init__(*args, **kwargs)

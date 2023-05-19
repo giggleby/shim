@@ -15,8 +15,12 @@ def _ConvertMigrationResultCase(case: migration_utils.MigrationResultCase):
   return admin_pb2.MigrationScriptResult.ResultCase.Value(case.name)
 
 
-class AdminServiceServerStub(protorpc_utils.ProtoRPCServiceBase):
-  SERVICE_DESCRIPTOR = admin_pb2.DESCRIPTOR.services_by_name['AdminService']
+AdminServiceProtoRPCBase = protorpc_utils.CreateProtoRPCServiceClass(
+    'AdminServiceProtoRPCBase',
+    admin_pb2.DESCRIPTOR.services_by_name['AdminService'])
+
+
+class AdminServiceServerStub(AdminServiceProtoRPCBase):
 
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)

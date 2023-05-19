@@ -36,9 +36,12 @@ class PayloadGenerationException(protorpc_utils.ProtoRPCException):
     super().__init__(protorpc_utils.RPCCanonicalErrorCode.INTERNAL, detail=msg)
 
 
-class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
-  SERVICE_DESCRIPTOR = ingestion_pb2.DESCRIPTOR.services_by_name[
-      'HwidIngestion']
+HwidIngestionProtoRPCBase = protorpc_utils.CreateProtoRPCServiceClass(
+    'HwidIngestionProtoRPCBase',
+    ingestion_pb2.DESCRIPTOR.services_by_name['HwidIngestion'])
+
+
+class ProtoRPCService(HwidIngestionProtoRPCBase):
 
   @classmethod
   def CreateInstance(cls, config, config_data):

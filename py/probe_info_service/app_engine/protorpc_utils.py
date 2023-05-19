@@ -2,11 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 import base64
 import enum
 import http
 import logging
-from typing import Optional
+from typing import Any, Optional, Type
 import uuid
 
 import flask
@@ -45,43 +46,6 @@ class ProtoRPCException(Exception):
     self.detail_ext = detail_ext
 
 
-class _ProtoRPCServiceBaseMeta(type):
-  """Metaclass for ProtoRPC classes.
-
-  This metaclass customizes class creation flow to parse and convert the
-  service descriptor object into a friendly data structure for information
-  looking up in runtime.
-  """
-
-  # pylint: disable=return-in-init
-  def __init__(cls, name, bases, attrs, **kwargs):
-    service_descriptor = attrs.get('SERVICE_DESCRIPTOR')
-    if service_descriptor:
-      sym_db = symbol_database.Default()
-      for method_desc in service_descriptor.methods:
-        method = getattr(cls, method_desc.name, None)
-        rpc_method_spec = getattr(method, 'rpc_method_spec', None)
-        if rpc_method_spec:
-          rpc_method_spec.request_type = sym_db.GetSymbol(
-              method_desc.input_type.full_name)
-          rpc_method_spec.response_type = sym_db.GetSymbol(
-              method_desc.output_type.full_name)
-    return super().__init__(name, bases, attrs, **kwargs)
-
-
-class ProtoRPCServiceBase(metaclass=_ProtoRPCServiceBaseMeta):
-  """Base class of a ProtoRPC Service.
-
-  Sub-class must override `SERVICE_DESCRIPTOR` to the correct descriptor
-  instance.  To implement the service's methods, author should define class
-  methods with the same names and decorates it with `ProtoRPCServiceMethod`.
-  The method will be called with only one argument in type of the request
-  message defined in the protobuf file, and the return value should be in
-  type of the response message defined in the protobuf file as well.
-  """
-  SERVICE_DESCRIPTOR = None
-
-
 class _ProtoRPCServiceMethodSpec:
   """Placeholder for spec of a ProtoRPC method."""
 
@@ -112,6 +76,67 @@ def ProtoRPCServiceMethod(method):
   # place the placeholder with dummy contents.
   wrapper.rpc_method_spec = _ProtoRPCServiceMethodSpec(None, None)
   return wrapper
+
+
+class _ProtoRPCServiceBaseMeta(abc.ABCMeta):
+  """Metaclass for ProtoRPC classes.
+
+  This metaclass customizes class creation flow to parse and convert the
+  service descriptor object into a friendly data structure for information
+  looking up in runtime.
+  """
+
+  def __init__(cls, name, bases, attrs):
+    super().__init__(name, bases, attrs)
+
+    service_descriptor = getattr(cls, 'SERVICE_DESCRIPTOR', None)
+    if not service_descriptor:  # Check if `cls` is `_ProtoRPCServiceBase`.
+      return
+
+    # Stick request/response types to RPC methods.
+    sym_db = symbol_database.Default()
+    for method_desc in service_descriptor.methods:
+      method = getattr(cls, method_desc.name, None)
+      if not method:
+        continue
+      rpc_method_spec = getattr(method, 'rpc_method_spec', None)
+      if not rpc_method_spec:
+        raise TypeError(f'{name}.{method_desc.name} is a ProtoRPC handler, '
+                        'you must decorate it with `ProtoRPCServiceMethod`.')
+      rpc_method_spec.request_type = sym_db.GetSymbol(
+          method_desc.input_type.full_name)
+      rpc_method_spec.response_type = sym_db.GetSymbol(
+          method_desc.output_type.full_name)
+
+
+class _ProtoRPCServiceBase(metaclass=_ProtoRPCServiceBaseMeta):
+  """Base class for all classes created by `CreateProtoRPCServiceClass()`."""
+
+  SERVICE_DESCRIPTOR: Any
+
+
+def CreateProtoRPCServiceClass(
+    typename: str, service_descriptor) -> Type[_ProtoRPCServiceBase]:
+  """Creates an abstract base class for a protorpc service.
+
+  The created class contains corresponding methods for all service's RPC methods
+  as abstract methods.  Therefore, a subclass of the returned class can be
+  instantiated only if it implements all the service's RPC methods.
+
+  Args:
+    typename: The class name to create.
+    service_descriptor: The service descriptor from the `_pb2.py` file.
+
+  Returns:
+    The created class.
+  """
+  namespace = {
+      'SERVICE_DESCRIPTOR': service_descriptor
+  }
+  for method_desc in service_descriptor.methods:
+    namespace[method_desc.name] = abc.abstractmethod(
+        ProtoRPCServiceMethod(lambda self, request: None))
+  return type(typename, (_ProtoRPCServiceBase, ), namespace)
 
 
 class _ProtoRPCServiceFlaskAppViewFunc:
@@ -160,8 +185,8 @@ def RegisterProtoRPCServiceToFlaskApp(app_inst, path, service_inst,
   Args:
     app_inst: Instance of `flask.Flask`.
     path: Root URL of the service.
-    service_inst: The ProtoRPC service to register, must be a subclass of
-        `ProtoRPCServiceBase`.
+    service_inst: The ProtoRPC service to register, must be an instance of
+        a subclass of a class created by `CreateProtoRPCServiceClass()`.
     service_name: Specify the name of the service.  Default to
         `service_inst.SERVICE_DESCRIPTOR.name`.
   """

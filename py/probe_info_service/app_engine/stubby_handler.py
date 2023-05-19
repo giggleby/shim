@@ -45,9 +45,12 @@ class _ProbeDataSourceLookupResult(NamedTuple):
   preview_generator: Callable[[], str]
 
 
-class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
-  SERVICE_DESCRIPTOR = stubby_pb2.DESCRIPTOR.services_by_name[
-      'ProbeInfoService']
+ProbeInfoServiceProtoRPCBase = protorpc_utils.CreateProtoRPCServiceClass(
+    'ProbeInfoServiceProtoRPCBase',
+    stubby_pb2.DESCRIPTOR.services_by_name['ProbeInfoService'])
+
+
+class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
 
   MSG_NO_PROBE_STATEMENT_PREVIEW_INVALID_AVL_DATA = (
       '(no preview available due to the invalid data from AVL)')
