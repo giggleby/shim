@@ -71,10 +71,9 @@ class PrivacyScreenTest(test_case.TestCase):
 
     arg_state = f'--set_privacy_screen={self.args.target_state}'
     try:
-      process_utils.Spawn([
-          'cros-health-tool', 'diag', '--action=run_routine',
-          '--routine=privacy_screen', arg_state
-      ], check_call=True)
+      process_utils.Spawn(
+          ['cros-health-tool', 'diag', 'privacy_screen', arg_state],
+          check_call=True)
 
     except CalledProcessError as e:
       current_state = 'on' if self._IsPrivacyScreenOn() else 'off'
