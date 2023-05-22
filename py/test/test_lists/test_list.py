@@ -919,12 +919,9 @@ class NodeTransformer_AddGet(ast.NodeTransformer):
         v = v.value
       if isinstance(v, ast.Name) and v.id in self.name_list:
         new_node = ast.Call(
-            func=ast.Attribute(
-                attr='Get',
-                value=node,
-                ctx=node.ctx),
+            func=ast.Attribute(attr='Get', value=node, ctx=node.ctx),
             # Use `None` as default value
-            args=[ast.Name(id='None', ctx=ast.Load())],
+            args=[ast.Constant(None)],
             kwargs=None,
             keywords=[])
         ast.copy_location(new_node, node)
