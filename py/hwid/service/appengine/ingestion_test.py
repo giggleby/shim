@@ -39,13 +39,13 @@ def _CreateMockConfig(fake_modules: test_utils.FakeModuleCollection):
   return mock_config
 
 
-class IngestionTest(unittest.TestCase):
+class IngestionRPCProviderTest(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
     self._modules = test_utils.FakeModuleCollection()
     self._config = _CreateMockConfig(self._modules)
-    self.service = ingestion.ProtoRPCService.CreateInstance(
+    self.service = ingestion.IngestionRPCProvider.CreateInstance(
         self._config, config_data_module.CONFIG)
 
   def tearDown(self):
@@ -188,7 +188,7 @@ class IngestionTest(unittest.TestCase):
     self.assertEqual(ex.exception.detail, 'Got exception from HWID repo.')
 
 
-class AVLNameTest(unittest.TestCase):
+class SyncNameMappingRPCProviderTest(unittest.TestCase):
 
   class _FakeHWIDAction(hwid_action.HWIDAction):
 
@@ -202,8 +202,8 @@ class AVLNameTest(unittest.TestCase):
     super().setUp()
     self.fixtures = test_utils.FakeModuleCollection()
     self._config = _CreateMockConfig(self.fixtures)
-    self.service = ingestion.ProtoRPCService.CreateInstance(
-        self._config, config_data_module.CONFIG)
+    self.service = ingestion.SyncNameMappingRPCProvider.CreateInstance(
+        self._config)
     self._hwid_data_cacher = self._config.hwid_data_cachers[0]
 
     self.init_mapping_data = {

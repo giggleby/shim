@@ -61,9 +61,12 @@ def _CreateApp():
 
   protorpc_utils.RegisterProtoRPCServiceToFlaskApp(
       app, '/_ah/stubby', hwid_api.ProtoRPCService.CreateInstance(_CONFIG))
-  protorpc_utils.RegisterProtoRPCServiceToFlaskApp(
-      app, '/_ah/stubby',
-      ingestion.ProtoRPCService.CreateInstance(_CONFIG, _CONFIG_DATA))
+  protorpc_utils.RegisterProtoRPCServiceShardsToFlaskApp(
+      app, '/_ah/stubby', [
+          ingestion.SyncNameMappingRPCProvider.CreateInstance(_CONFIG),
+          ingestion.IngestionRPCProvider.CreateInstance(_CONFIG, _CONFIG_DATA),
+      ])
+
   return app
 
 

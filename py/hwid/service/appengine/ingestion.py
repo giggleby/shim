@@ -36,32 +36,52 @@ class PayloadGenerationException(protorpc_utils.ProtoRPCException):
     super().__init__(protorpc_utils.RPCCanonicalErrorCode.INTERNAL, detail=msg)
 
 
-HwidIngestionProtoRPCBase = protorpc_utils.CreateProtoRPCServiceClass(
-    'HwidIngestionProtoRPCBase',
+_HWIDIngestionProtoRPCShardBase = protorpc_utils.CreateProtoRPCServiceShardBase(
+    'HwidIngestionProtoRPCShardBase',
     ingestion_pb2.DESCRIPTOR.services_by_name['HwidIngestion'])
 
 
-class ProtoRPCService(HwidIngestionProtoRPCBase):
+class SyncNameMappingRPCProvider(_HWIDIngestionProtoRPCShardBase):
 
   @classmethod
-  def CreateInstance(cls, config, config_data):
+  def CreateInstance(cls, config):
     """Creates RPC service instance."""
-    return cls(api_connector.HWIDAPIConnector(), config, config_data)
+    return cls(api_connector.HWIDAPIConnector(), config)
 
-  def __init__(self, hwid_api_connector, config, config_data, *args, **kwargs):
+  def __init__(self, hwid_api_connector, config, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self._config = config
-    self._config_data = config_data
     self.hwid_action_manager = config.hwid_action_manager
-    self.vp_data_manager = config.vp_data_manager
-    self.hwid_db_data_manager = config.hwid_db_data_manager
     self.decoder_data_manager = config.decoder_data_manager
-    self.vpg_targets = config_data.vpg_targets
-    self.dryrun_upload = config_data.dryrun_upload
-    self.hwid_repo_manager = config.hwid_repo_manager
     self.hwid_api_connector = hwid_api_connector
-    self.goldeneye_filesystem = config.goldeneye_filesystem
     self.hwid_data_cachers = config.hwid_data_cachers
+
+  def _ListComponentIDs(self) -> Mapping[int, Collection[str]]:
+    """Lists all component IDs in HWID database.
+
+    Returns:
+      A mapping of {cid: list of projects} where HWID DB of the project contains
+      the CID.
+    """
+    np_adapter = name_pattern_adapter.NamePatternAdapter()
+
+    def _ResolveComponentIds(comp_cls, comps) -> Collection[int]:
+      comp_ids = set()
+      pattern = np_adapter.GetNamePattern(comp_cls)
+      for comp_name in comps:
+        name_info = pattern.Matches(comp_name)
+        if name_info:
+          comp_ids.add(name_info.cid)
+      return comp_ids
+
+    cid_proj_mapping = collections.defaultdict(set)
+    for project in self.hwid_action_manager.ListProjects():
+      action = self.hwid_action_manager.GetHWIDAction(project)
+      for comp_cls, comps in action.GetComponents().items():
+        for cid in _ResolveComponentIds(comp_cls, comps):
+          cid_proj_mapping[cid].add(project)
+
+    return cid_proj_mapping
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -99,6 +119,27 @@ class ProtoRPCService(HwidIngestionProtoRPCBase):
         hwid_data_cacher.ClearCache(affected_proj)
 
     return ingestion_pb2.SyncNameMappingResponse()
+
+
+class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
+
+  @classmethod
+  def CreateInstance(cls, config, config_data):
+    """Creates RPC service instance."""
+    return cls(config, config_data)
+
+  def __init__(self, config, config_data, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self._config = config
+    self._config_data = config_data
+    self.hwid_action_manager = config.hwid_action_manager
+    self.vp_data_manager = config.vp_data_manager
+    self.hwid_db_data_manager = config.hwid_db_data_manager
+    self.decoder_data_manager = config.decoder_data_manager
+    self.vpg_targets = config_data.vpg_targets
+    self.dryrun_upload = config_data.dryrun_upload
+    self.hwid_repo_manager = config.hwid_repo_manager
+    self.goldeneye_filesystem = config.goldeneye_filesystem
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -415,30 +456,3 @@ class ProtoRPCService(HwidIngestionProtoRPCBase):
     for board, payload_hash in payload_hash_mapping.items():
       self.vp_data_manager.SetLatestPayloadHash(board, payload_hash)
     return response
-
-  def _ListComponentIDs(self) -> Mapping[int, Collection[str]]:
-    """Lists all component IDs in HWID database.
-
-    Returns:
-      A mapping of {cid: list of projects} where HWID DB of the project contains
-      the CID.
-    """
-    np_adapter = name_pattern_adapter.NamePatternAdapter()
-
-    def _ResolveComponentIds(comp_cls, comps) -> Collection[int]:
-      comp_ids = set()
-      pattern = np_adapter.GetNamePattern(comp_cls)
-      for comp_name in comps:
-        name_info = pattern.Matches(comp_name)
-        if name_info:
-          comp_ids.add(name_info.cid)
-      return comp_ids
-
-    cid_proj_mapping = collections.defaultdict(set)
-    for project in self.hwid_action_manager.ListProjects():
-      action = self.hwid_action_manager.GetHWIDAction(project)
-      for comp_cls, comps in action.GetComponents().items():
-        for cid in _ResolveComponentIds(comp_cls, comps):
-          cid_proj_mapping[cid].add(project)
-
-    return cid_proj_mapping

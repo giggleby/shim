@@ -7,7 +7,7 @@ import base64
 import enum
 import http
 import logging
-from typing import Any, Optional, Type
+from typing import Any, Callable, Collection, Mapping, Optional, Type
 import uuid
 
 import flask
@@ -90,7 +90,9 @@ class _ProtoRPCServiceBaseMeta(abc.ABCMeta):
     super().__init__(name, bases, attrs)
 
     service_descriptor = getattr(cls, 'SERVICE_DESCRIPTOR', None)
-    if not service_descriptor:  # Check if `cls` is `_ProtoRPCServiceBase`.
+    if not service_descriptor:
+      # Do nothing if `cls` is `_ProtoRPCServiceBase` or
+      # `_ProtoRPCServiceShardBase`.
       return
 
     # Stick request/response types to RPC methods.
@@ -109,10 +111,14 @@ class _ProtoRPCServiceBaseMeta(abc.ABCMeta):
           method_desc.output_type.full_name)
 
 
-class _ProtoRPCServiceBase(metaclass=_ProtoRPCServiceBaseMeta):
-  """Base class for all classes created by `CreateProtoRPCServiceClass()`."""
+class _ProtoRPCServiceShardBase(metaclass=_ProtoRPCServiceBaseMeta):
+  """Base for all classes created by `CreateProtoRPCServiceShardBase()`."""
 
   SERVICE_DESCRIPTOR: Any
+
+
+class _ProtoRPCServiceBase(_ProtoRPCServiceShardBase):
+  """Base class for all classes created by `CreateProtoRPCServiceClass()`."""
 
 
 def CreateProtoRPCServiceClass(
@@ -139,22 +145,43 @@ def CreateProtoRPCServiceClass(
   return type(typename, (_ProtoRPCServiceBase, ), namespace)
 
 
-class _ProtoRPCServiceFlaskAppViewFunc:
+def CreateProtoRPCServiceShardBase(
+    typename: str, service_descriptor) -> Type[_ProtoRPCServiceShardBase]:
+  """Creates an base class for a shard of a specific protorpc service.
+
+  The created class can serve as the base class of multiple sub-classes,
+  each implements a subset of RPC methods of the target service.  Then,
+  users can leverage `RegisterProtoRPCServiceShardsToFlaskApp()` to register
+  multiple shard class instances to form the full service.
+
+  Args:
+    typename: The class name to create.
+    service_descriptor: The service descriptor from the `_pb2.py` file.
+
+  Returns:
+    The created class.
+  """
+  namespace = {
+      'SERVICE_DESCRIPTOR': service_descriptor
+  }
+  return type(typename, (_ProtoRPCServiceShardBase, ), namespace)
+
+
+class _ProtoRPCServiceMethodsFlaskAppViewFunc:
   """A helper class to handle ProtoRPC POST requests on flask apps."""
 
-  def __init__(self, service_inst):
-    self._service_inst = service_inst
+  def __init__(self, rpc_methods: Mapping[str, Callable]):
+    self._rpc_methods = rpc_methods
 
   def __call__(self, method_name):
-    method = getattr(self._service_inst, method_name, None)
-    rpc_method_spec = getattr(method, 'rpc_method_spec', None)
-    if not rpc_method_spec:
+    rpc_method = self._rpc_methods.get(method_name)
+    if not rpc_method:
       return flask.Response(status=http.HTTPStatus.NOT_FOUND)
 
     try:
-      request_msg = rpc_method_spec.request_type.FromString(
+      request_msg = rpc_method.rpc_method_spec.request_type.FromString(
           flask.request.get_data())
-      response_msg = method(request_msg)
+      response_msg = rpc_method(request_msg)
       response_raw_body = response_msg.SerializeToString()
     except ProtoRPCException as ex:
       logging.debug('RPCException: %r', ex)
@@ -178,8 +205,60 @@ class _ProtoRPCServiceFlaskAppViewFunc:
     return response
 
 
-def RegisterProtoRPCServiceToFlaskApp(app_inst, path, service_inst,
-                                      service_name=None):
+def RegisterProtoRPCServiceShardsToFlaskApp(
+    app_inst: flask.Flask, path: str,
+    service_shards: Collection[_ProtoRPCServiceShardBase],
+    service_name: str = '', accept_missing_rpc_methods: bool = False):
+  """Register the ProtoRPC service (formed by shards) to the given flask app.
+
+  Args:
+    app_inst: Instance of `flask.Flask`.
+    path: Root URL of the service.
+    service_shards: Shards of the target ProtoRPC service to register.
+      Container elements must all be instances from subclasses of classes
+      created by `CreateProtoRPCServiceShardBase()`.
+    service_name: Specify the name of the service.  Default to
+      `SERVICE_DESCRIPTOR.name` provided from `service_shards`.
+    accept_missing_rpc_methods: Specify whether some RPC methods from the
+      service descriptor missing from shards is acceptable or not.
+  """
+  rpc_methods = {}
+  if not service_shards:
+    raise ValueError('At least one service shard must be specified.')
+
+  service_shard_iter = iter(service_shards)
+  service_descriptor = next(service_shard_iter).SERVICE_DESCRIPTOR
+  if not all(service_shard.SERVICE_DESCRIPTOR is service_descriptor
+             for service_shard in service_shard_iter):
+    raise ValueError(
+        'All service shards must share the same `SERVICE_DESCRIPTOR`.')
+
+  service_name = service_name or service_descriptor.name
+  all_rpc_method_names = {m.name
+                          for m in service_descriptor.methods}
+  for service_shard in service_shards:
+    for rpc_method_name in set(dir(service_shard)) & all_rpc_method_names:
+      if rpc_method_name in rpc_methods:
+        raise ValueError(f'Duplicate implementation of {rpc_method_name}.')
+      rpc_methods[rpc_method_name] = getattr(service_shard, rpc_method_name)
+  if not accept_missing_rpc_methods:
+    missing_rpc_method_names = all_rpc_method_names - set(rpc_methods)
+    if missing_rpc_method_names:
+      raise ValueError(
+          f'RPC methods ({missing_rpc_method_names}) are not provided.')
+
+  endpoint_name = f'__protorpc_service_view_func_{uuid.uuid1()}'
+  view_func = _ProtoRPCServiceMethodsFlaskAppViewFunc(rpc_methods)
+  app_inst.add_url_rule(f'{path}/{service_name}.<method_name>',
+                        endpoint=endpoint_name, view_func=view_func,
+                        methods=['POST'])
+  logging.info('Registered the ProtoRPCService %r under URL path %r.',
+               service_name, path)
+
+
+def RegisterProtoRPCServiceToFlaskApp(app_inst: flask.Flask, path: str,
+                                      service_inst: _ProtoRPCServiceBase,
+                                      service_name: str = ''):
   """Register the given ProtoRPC service to the given flask app.
 
   Args:
@@ -190,11 +269,6 @@ def RegisterProtoRPCServiceToFlaskApp(app_inst, path, service_inst,
     service_name: Specify the name of the service.  Default to
         `service_inst.SERVICE_DESCRIPTOR.name`.
   """
-  service_name = service_name or service_inst.SERVICE_DESCRIPTOR.name
-  endpoint_name = '__protorpc_service_view_func_' + str(uuid.uuid1())
-  view_func = _ProtoRPCServiceFlaskAppViewFunc(service_inst)
-  app_inst.add_url_rule(f'{path}/{service_name}.<method_name>',
-                        endpoint=endpoint_name, view_func=view_func,
-                        methods=['POST'])
-  logging.info('Registered the ProtoRPCService %r under URL path %r.',
-               service_name, path)
+  return RegisterProtoRPCServiceShardsToFlaskApp(
+      app_inst, path, [service_inst], service_name=service_name,
+      accept_missing_rpc_methods=False)
