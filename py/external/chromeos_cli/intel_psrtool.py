@@ -49,8 +49,11 @@ class IntelPSRTool:
   def DisplayPSRLog(self):
     return self._shell(['intel-psrtool', '-d'])
 
-  def CreateOEMDataConfig(self, filename='/usr/local/oem_data.cfg'):
-    """Creates an OEM Data config with `filename`."""
+  def ReadAndCreateOEMDataConfig(self, filename):
+    """Reads OEM data in ME FW and creates a config with `filename`.
+
+    Creates a config file with OEM data values copied from ME FW.
+    """
     self._shell(['intel-psrtool', '-g', filename])
 
   def WriteNVAR(self, NVAR_name, NVAR_value):
@@ -81,3 +84,6 @@ class IntelPSRTool:
 
   def ClearAndStopPSREventLog(self):
     self._shell(['intel-psrtool', '-x'])
+
+  def RemoveConfigFile(self, filename):
+    self._shell(['rm', filename])

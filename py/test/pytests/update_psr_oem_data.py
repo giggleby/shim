@@ -13,8 +13,7 @@ Test Procedure
 This is an automated test without user interaction. There are two ways to update
 PSR OEM Data. First is to update from the dictionary `args.oem_data_value`. All
 four NVARs have to be in the dictionary and assigned a value. Second is to
-update from a config file `/usr/local/oem_data.cfg`. We will verify it in the
-second way.
+update from a config file `/usr/local/factory/py/config/oem_data.cfg`.
 
 Dependency
 ----------
@@ -51,6 +50,7 @@ to the test list::
 
 import enum
 import os
+import tempfile
 
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
@@ -58,7 +58,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.external.chromeos_cli import intel_psrtool
 
 
-DEFAULT_OEM_DATA_CONFIG_PATH = '/usr/local/factory/py/config/oem_data.cfg'
+DEFAULT_OEM_DATA_CONFIG_FILE = '/usr/local/factory/py/config/oem_data.cfg'
 
 
 class PSROEMData(str, enum.Enum):
@@ -78,12 +78,13 @@ class UpdatePSROEMData(test_case.TestCase):
       Arg('oem_data_value', dict, 'The value for each NVAR to update.',
           default={}),
       Arg('update_from_config', bool,
-          'To update from config at /usr/local/oem_data', default=True),
+          f'To update from config at {DEFAULT_OEM_DATA_CONFIG_FILE}',
+          default=True),
       Arg('clear_before_update', bool,
           'To clear PSR OEM data saved in ME FW before updating',
           default=False),
       Arg('oem_data_config_path', str, 'The file to update PSR OEM Data with',
-          default=DEFAULT_OEM_DATA_CONFIG_PATH),
+          default=DEFAULT_OEM_DATA_CONFIG_FILE),
   ]
 
   def setUp(self):
@@ -111,3 +112,7 @@ class UpdatePSROEMData(test_case.TestCase):
       for name in PSROEMData:
         self._intel_psr_tool.WriteNVAR(name, self.args.oem_data_value[name])
       self._intel_psr_tool.CommitOEMData()
+      with tempfile.TemporaryDirectory() as tmpdir:
+        oem_data_config_path = os.path.join(tmpdir, 'oem_data.cfg')
+        self._intel_psr_tool.ReadAndCreateOEMDataConfig(oem_data_config_path)
+        self._intel_psr_tool.VerifyOEMData(oem_data_config_path)
