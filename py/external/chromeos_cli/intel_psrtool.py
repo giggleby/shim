@@ -65,15 +65,15 @@ class IntelPSRTool:
     self._shell(['intel-psrtool', '-k', filename])
 
   def GetManufacturingNVAR(self):
-    """Returns Manufacturing(OEM) NVAR, which can be an integer 0 or 1 """
+    """Returns Manufacturing(EOM) NVAR, which can be an integer 0 or 1 """
     ret = self._shell(['intel-psrtool', '-m']).stdout
     match = re.search(r'NVAR\svalue\s=\s*(\w+)', ret)
     if not match:
-      raise RuntimeError(f'Failed to get PSR OEM NVAR from output: {ret}')
+      raise RuntimeError(f'Failed to get PSR EOM NVAR from output: {ret}')
     return int(match.group(1))
 
   def CloseManufacturing(self):
-    """Closes Manufacturing and sets OEM NVAR to '1'"""
+    """Closes Manufacturing and sets EOM NVAR to '1'"""
     self._shell(['intel-psrtool', '-e'])
 
   def GetMEstatus(self):
