@@ -137,3 +137,24 @@ class DisplayManager(plugin.Plugin):
             if key in _KEEP_LIST
         }
     return display_info
+
+  @plugin.RPCFunction
+  def SetInternalDisplayRotation(self, degree: int):
+    """Sets internal display rotation to certain degree.
+
+    Args:
+      degree: One of 0, 90, 180, 270, or -1 (auto rotation).
+    """
+    if degree not in [0, 90, 180, 270, -1]:
+      raise ValueError(f'Invalid degree: {degree}. '
+                       'Should be 0, 90, 180, 270, or -1 (auto rotation).')
+
+    server_proxy: goofy_rpc.GoofyRPC = state.GetInstance()
+    display_info: List[Dict[str, Any]] = server_proxy.DeviceGetDisplayInfo()
+    display_info = [info for info in display_info if info['isInternal']]
+
+    if len(display_info) != 1:
+      raise RuntimeError('Failed to get internal display.')
+
+    display_id: str = display_info[0]['id']
+    server_proxy.DeviceSetDisplayProperties(display_id, {"rotation": degree})

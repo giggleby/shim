@@ -64,6 +64,12 @@ def SetMainDisplay(manager: display_manager.DisplayManager, display_id: str,
   manager.SetMainDisplay(display_id, timeout)
 
 
+def SetInternalDisplayRotation(manager: display_manager.DisplayManager,
+                               degree: int, **unused_kwargs):
+  """Sets internal display rotation."""
+  manager.SetInternalDisplayRotation(degree=degree)
+
+
 def ParseArgument():
   parser = argparse.ArgumentParser(
       description=__doc__, epilog=EXAMPLES,
@@ -96,6 +102,11 @@ def ParseArgument():
   subparser.add_argument('--timeout', type=int, default=10,
                          help=TIMEOUT_DESCRIPTION)
   subparser.add_argument('display_id', type=str)
+
+  subparser = subparsers.add_parser('set_internal_display_rotation',
+                                    help=SetInternalDisplayRotation.__doc__)
+  subparser.set_defaults(subcommand=SetInternalDisplayRotation)
+  subparser.add_argument('--degree', type=int)
 
   return parser.parse_args()
 
