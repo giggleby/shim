@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import datetime
 import logging
 import operator
 from typing import Collection, Dict, NamedTuple, Optional, Sequence
@@ -18,6 +19,8 @@ from cros.factory.hwid.v3 import rule as v3_rule
 
 
 _CONFIG_DATA = config_data.CONFIG
+# Set TTL to 30 days.
+_DEFAULT_BOMCACHER_TTL = datetime.timedelta(days=30).total_seconds()
 
 
 def _ExtractProjectName(hwid: str) -> str:
@@ -61,7 +64,9 @@ class BOMDataCacher(hwid_action_manager.IHWIDDataCacher):
     return self._mem_adapter.Get(_GenerateCacheKeyWithProj(proj, cache_key))
 
   def SetBOMEntryCache(self, proj: str, cache_key: str, bom: BOMEntry):
-    self._mem_adapter.Put(_GenerateCacheKeyWithProj(proj, cache_key), bom)
+    self._mem_adapter.Put(
+        _GenerateCacheKeyWithProj(proj, cache_key), bom,
+        expiry=_DEFAULT_BOMCACHER_TTL)
 
   def ClearCache(self, proj: Optional[str] = None):
     """See base class."""

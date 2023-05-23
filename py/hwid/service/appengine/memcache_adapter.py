@@ -87,7 +87,10 @@ class MemcacheAdapter:
     if not serialized_data:
       logging.debug('Memcache no data found %s', key)
       return None
-    return pickle.loads(serialized_data)
+    try:
+      return pickle.loads(serialized_data)
+    except pickle.UnpicklingError:
+      return None
 
   def DelByPattern(self, entry_key_pattern: str):
     """Deletes entries by the given pattern.
