@@ -261,7 +261,11 @@ def WriteTestObjectDetail(
 
   subtests = raw_test_object.get('subtests')
   if subtests:
-    rst.WriteTitle('subtests', '`')
+    if isinstance(test, test_object_module.FactoryTest) and test.parallel:
+      group_type = 'Parallel'
+    else:
+      group_type = 'Serial'
+    rst.WriteTitle(f'{group_type} subtests', '`')
     for value in subtests:
       if isinstance(value, str):
         formatted_value = value
