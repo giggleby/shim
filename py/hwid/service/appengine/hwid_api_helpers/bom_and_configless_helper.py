@@ -20,7 +20,7 @@ from cros.factory.hwid.v3 import rule as v3_rule
 
 _CONFIG_DATA = config_data.CONFIG
 # Set TTL to 30 days.
-_DEFAULT_BOMCACHER_TTL = datetime.timedelta(days=30).total_seconds()
+_DEFAULT_BOMCACHER_TTL = int(datetime.timedelta(days=30).total_seconds())
 
 
 def _ExtractProjectName(hwid: str) -> str:
