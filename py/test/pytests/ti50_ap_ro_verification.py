@@ -74,7 +74,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
   def SetSoftwareWriteProtect(self, enable: bool):
     operation = 'enable' if enable else 'disable'
     session.console.info(f'{operation} SWWP.')
-    cmd = f'gooftool write_protect --operartion {operation}'
+    cmd = f'gooftool write_protect --operation {operation}'
     result = self._util.shell(cmd)
     if not result.success:
       raise Error(f'Fail to {operation} software write protect.')
