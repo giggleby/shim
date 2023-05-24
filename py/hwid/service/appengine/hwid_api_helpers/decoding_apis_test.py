@@ -291,6 +291,15 @@ class GetBOMShardTest(unittest.TestCase):
     super().tearDown()
     self._modules.ClearAll()
 
+  def _SetupFakeHWIDActionForFeatureEnablementLabel(
+      self, project_name: str,
+      feature_enablement_label: str = 'just_a_random_default_value'):
+    instance = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    instance.GetFeatureEnablementLabel.return_value = feature_enablement_label
+    self._modules.ConfigHWID(project_name, 3, 'unused raw HWID DB contents',
+                             hwid_action=instance)
+    return instance
+
   def testGetBom_InternalError(self):
     self._mock_bc_helper.BatchGetBOMEntry.return_value = {}
 
@@ -302,11 +311,13 @@ class GetBOMShardTest(unittest.TestCase):
                                           status=StatusMsg.SERVER_ERROR), msg)
 
   def testGetBom_Success(self):
+    self._SetupFakeHWIDActionForFeatureEnablementLabel('proj1', 'feature_value')
+
     self._mock_bc_helper.BatchGetBOMEntry.return_value = {
         TEST_HWID:
             _BOMEntry([
                 ComponentMsg(name='qux', component_class='baz'),
-            ], '', '', StatusMsg.SUCCESS)
+            ], '', '', StatusMsg.SUCCESS, 'proj1')
     }
 
     req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
@@ -316,11 +327,11 @@ class GetBOMShardTest(unittest.TestCase):
         hwid_api_messages_pb2.BomResponse(
             status=StatusMsg.SUCCESS, components=[
                 ComponentMsg(name='qux', component_class='baz'),
-            ]), msg)
+            ], feature_enablement_status='feature_value'), msg)
 
   def testGetBom_WithError(self):
     self._mock_bc_helper.BatchGetBOMEntry.return_value = {
-        TEST_HWID: _BOMEntry([], '', 'bad hwid', StatusMsg.BAD_REQUEST)
+        TEST_HWID: _BOMEntry([], '', 'bad hwid', StatusMsg.BAD_REQUEST, '')
     }
 
     req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
@@ -338,13 +349,14 @@ class GetBOMShardTest(unittest.TestCase):
             _BOMEntry([
                 ComponentMsg(name='qux1', component_class='baz1'),
                 ComponentMsg(name='rox1', component_class='baz1'),
-            ], '', '', StatusMsg.SUCCESS),
+            ], '', '', StatusMsg.SUCCESS, 'TEST'),
         hwid2:
             _BOMEntry([
                 ComponentMsg(name='qux2', component_class='baz2'),
                 ComponentMsg(name='rox2', component_class='baz2'),
-            ], '', '', StatusMsg.SUCCESS),
+            ], '', '', StatusMsg.SUCCESS, 'TEST'),
     }
+    self._SetupFakeHWIDActionForFeatureEnablementLabel('TEST', 'feature_value')
 
     req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
     msg = self.service.BatchGetBom(req)
@@ -357,13 +369,13 @@ class GetBOMShardTest(unittest.TestCase):
                         status=StatusMsg.SUCCESS, components=[
                             ComponentMsg(name='qux1', component_class='baz1'),
                             ComponentMsg(name='rox1', component_class='baz1'),
-                        ]),
+                        ], feature_enablement_status='feature_value'),
                 hwid2:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
                         status=StatusMsg.SUCCESS, components=[
                             ComponentMsg(name='qux2', component_class='baz2'),
                             ComponentMsg(name='rox2', component_class='baz2'),
-                        ]),
+                        ], feature_enablement_status='feature_value'),
             }, status=StatusMsg.SUCCESS), msg)
 
   def testBatchGetBom_WithError(self):
@@ -373,18 +385,19 @@ class GetBOMShardTest(unittest.TestCase):
     hwid4 = 'TEST HWID 4'
     self._mock_bc_helper.BatchGetBOMEntry.return_value = {
         hwid1:
-            _BOMEntry([], '', 'value error', StatusMsg.BAD_REQUEST),
+            _BOMEntry([], '', 'value error', StatusMsg.BAD_REQUEST, ''),
         hwid2:
-            _BOMEntry([], '', "'Invalid key'", StatusMsg.NOT_FOUND),
+            _BOMEntry([], '', "'Invalid key'", StatusMsg.NOT_FOUND, ''),
         hwid3:
-            _BOMEntry([], '', 'index error', StatusMsg.SERVER_ERROR),
+            _BOMEntry([], '', 'index error', StatusMsg.SERVER_ERROR, ''),
         hwid4:
             _BOMEntry([
                 ComponentMsg(name='qux', component_class='baz'),
                 ComponentMsg(name='rox', component_class='baz'),
                 ComponentMsg(name='bar', component_class='foo'),
-            ], '', '', StatusMsg.SUCCESS),
+            ], '', '', StatusMsg.SUCCESS, 'TEST'),
     }
+    self._SetupFakeHWIDActionForFeatureEnablementLabel('TEST', 'feature_value')
 
     req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
     msg = self.service.BatchGetBom(req)
@@ -407,7 +420,7 @@ class GetBOMShardTest(unittest.TestCase):
                             ComponentMsg(name='qux', component_class='baz'),
                             ComponentMsg(name='rox', component_class='baz'),
                             ComponentMsg(name='bar', component_class='foo'),
-                        ]),
+                        ], feature_enablement_status='feature_value'),
             }, status=StatusMsg.BAD_REQUEST, error='value error'), msg)
 
 

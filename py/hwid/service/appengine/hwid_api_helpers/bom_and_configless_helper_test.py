@@ -134,7 +134,25 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                             _FieldMsg(name='name', value='CPU @ 2.00GHz')
                         ], avl_info=_AvlInfoMsg(cid=1, avl_name=''),
                         has_avl=True)
-                ], '', '', _Status.SUCCESS),
+                ], '', '', _Status.SUCCESS, ''),
+        })
+
+  def testBatchGetBOMEntry_WithProjectName(self):
+    bom = hwid_action.BOM()
+    bom.project = 'proj1'
+    configless = None
+    with self._PatchBatchGetBOMAndConfigless() as patch_method:
+      patch_method.return_value = {
+          TEST_HWID: _BOMAndConfigless(bom, configless, None),
+      }
+
+      results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                                 [TEST_HWID], verbose=True)
+
+    self.assertEqual(
+        results, {
+            TEST_HWID:
+                bc_helper_module.BOMEntry([], '', '', _Status.SUCCESS, 'proj1'),
         })
 
   def testBatchGetBOMEntry_WithAvlInfo(self):
@@ -190,7 +208,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                             _FieldMsg(name='part', value='part3'),
                             _FieldMsg(name='size', value='4G'),
                         ]),
-                ], '', '', _Status.SUCCESS)
+                ], '', '', _Status.SUCCESS, '')
         })
 
   def testBatchGetBOMEntry_WithoutAVLName(self):
@@ -248,7 +266,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                             _FieldMsg(name='part', value='part3'),
                             _FieldMsg(name='size', value='4G'),
                         ]),
-                ], '', '', _Status.SUCCESS)
+                ], '', '', _Status.SUCCESS, '')
         })
 
   def testBatchGetBOMEntry_BOMIsNone(self):
@@ -318,7 +336,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                     _ComponentMsg(name='qux', component_class='baz'),
                     _ComponentMsg(name='rox', component_class='baz'),
                     _ComponentMsg(name='bar', component_class='foo'),
-                ], '', '', _Status.SUCCESS),
+                ], '', '', _Status.SUCCESS, ''),
         })
 
   def testBatchGetBOMEntry_CacheBomResult(self):
@@ -359,7 +377,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
     return mock.patch.object(self._bc_helper, 'BatchGetBOMAndConfigless')
 
   def _CreateBOMEntryWithError(self, error_code, msg):
-    return bc_helper_module.BOMEntry(None, '', msg, error_code)
+    return bc_helper_module.BOMEntry(None, '', msg, error_code, '')
 
 
 if __name__ == '__main__':

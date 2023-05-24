@@ -108,6 +108,9 @@ message BomResponse {
   // the other fields in the message should be disregarded.
   string error = 4;
   Status status = 5;
+  // A human readable string representing the versioned feature info on the
+  // device.
+  string feature_enablement_status = 6;
 }
 
 // A request to query BOM data from given HWID strings.
@@ -134,6 +137,9 @@ message BatchGetBomResponse {
     // the other fields in the message should be disregarded.
     string error = 4;
     Status status = 5;
+    // A human readable string representing the versioned feature info on the
+    // device.
+    string feature_enablement_status = 6;
   }
   map<string, Bom> boms = 1;
   string error = 2;

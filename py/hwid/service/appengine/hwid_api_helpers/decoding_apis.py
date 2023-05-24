@@ -17,6 +17,15 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 
+def _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
+    hwid: str, bom_entry: bc_helper_module.BOMEntry,
+    hwid_action_getter: hwid_action_mngr_module.IHWIDActionGetter) -> str:
+  if bom_entry.status != hwid_api_messages_pb2.Status.SUCCESS:
+    return ''
+  action = hwid_action_getter.GetHWIDAction(bom_entry.project)
+  return action.GetFeatureEnablementLabel(hwid)
+
+
 class GetBOMShard(common_helper.HWIDServiceShardBase):
 
   def __init__(
@@ -43,6 +52,9 @@ class GetBOMShard(common_helper.HWIDServiceShardBase):
           status=hwid_api_messages_pb2.Status.SERVER_ERROR)
     return hwid_api_messages_pb2.BomResponse(
         components=bom_entry.components, phase=bom_entry.phase,
+        feature_enablement_status=(
+            _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
+                request.hwid, bom_entry, hwid_action_getter)),
         error=bom_entry.error, status=bom_entry.status)
 
   @protorpc_utils.ProtoRPCServiceMethod
@@ -59,6 +71,9 @@ class GetBOMShard(common_helper.HWIDServiceShardBase):
       response.boms.get_or_create(hwid).CopyFrom(
           hwid_api_messages_pb2.BatchGetBomResponse.Bom(
               components=bom_entry.components, phase=bom_entry.phase,
+              feature_enablement_status=(
+                  _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
+                      hwid, bom_entry, hwid_action_getter)),
               error=bom_entry.error, status=bom_entry.status))
       if bom_entry.status != hwid_api_messages_pb2.Status.SUCCESS:
         if response.status == hwid_api_messages_pb2.Status.SUCCESS:

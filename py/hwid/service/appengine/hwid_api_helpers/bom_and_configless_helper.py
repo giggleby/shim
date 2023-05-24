@@ -47,6 +47,7 @@ class BOMEntry(NamedTuple):
   phase: str
   error: str
   status: 'hwid_api_messages_pb2.Status'
+  project: str
 
 
 def _GenerateCacheKeyWithProj(proj: str, cache_key: str) -> str:
@@ -148,7 +149,7 @@ class BOMAndConfiglessHelper:
       status, error = common_helper.FastFailKnownBadHWID(hwid)
       if status != hwid_api_messages_pb2.Status.SUCCESS:
         # Filter out bad HWIDs.
-        result[hwid] = BOMEntry(None, '', error, status)
+        result[hwid] = BOMEntry(None, '', error, status, '')
         continue
       project = _ExtractProjectName(hwid)
       proj_mapping[hwid] = project
@@ -169,7 +170,7 @@ class BOMAndConfiglessHelper:
       status, error = GetBOMAndConfiglessStatusAndError(bom_configless)
 
       if status != hwid_api_messages_pb2.Status.SUCCESS:
-        result[hwid] = BOMEntry(None, '', error, status)
+        result[hwid] = BOMEntry(None, '', error, status, '')
         self._bom_data_cacher.SetBOMEntryCache(project, cache_key, result[hwid])
         continue
       bom = bom_configless.bom
@@ -213,6 +214,7 @@ class BOMAndConfiglessHelper:
       components.sort(key=operator.attrgetter('component_class', 'name'))
 
       result[hwid] = BOMEntry(components, bom.phase, '',
-                              status=hwid_api_messages_pb2.Status.SUCCESS)
+                              status=hwid_api_messages_pb2.Status.SUCCESS,
+                              project=bom.project or '')
       self._bom_data_cacher.SetBOMEntryCache(project, cache_key, result[hwid])
     return result
