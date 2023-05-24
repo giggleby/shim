@@ -717,6 +717,25 @@ class GPT(pygpt.GPT):
         SysUtils.PartialCopyFromStream(src_stream, self.size, dest.image,
                                        dest.offset, sync=sync)
 
+  class ZeroedPartition(pygpt.GPT.PartitionBase, CopyablePartitionMixin):
+    """A partition with a fixed size of zeros."""
+
+    def __str__(self):
+      return 'ZeroedPartition'
+
+    @contextlib.contextmanager
+    def OpenAsStream(self):
+      """CopyablePartitionMixin override."""
+
+      class ZeroReader:
+        """A /dev/zero like stream."""
+
+        @classmethod
+        def read(cls, num):
+          return b'\x00' * num
+
+      yield ZeroReader()
+
   class Partition(pygpt.GPT.Partition, CopyablePartitionMixin):
     """A special GPT Partition object with mount and copy ability."""
 
@@ -935,6 +954,19 @@ class GPT(pygpt.GPT):
             new_size // MEGABYTE if new_size else '(ALL)')
       return real_size
 
+    def CloneAsZeroedPartition(self):
+      """Clones as a zeroed partition.
+
+      Preserves partition fields and some metadata, but erases the content to
+      1 block of zeros.
+
+      Returns:
+        A ZeroedPartition object with 1 block.
+      """
+      p = GPT.ZeroedPartition(*self, block_size=self.block_size)
+      p.Update(FirstLBA=0, LastLBA=0)
+      return p
+
     @contextlib.contextmanager
     def OpenAsStream(self):
       """CopyablePartitionMixin override."""
@@ -1146,18 +1178,46 @@ class LSBFile:
 class RMAImageBoardInfo:
   """Store the RMA image information related to one board."""
 
-  __slots__ = ['board', 'kernel', 'rootfs']
+  __slots__ = ['board', 'kernel_a', 'rootfs_a', 'kernel_b', 'rootfs_b']
+  __legacy_slots__ = ['board', 'kernel', 'rootfs']
 
-  def __init__(self,
-               board,
-               kernel=PART_CROS_KERNEL_A,
-               rootfs=PART_CROS_ROOTFS_A):
+  def __init__(self, board, kernel_a=PART_CROS_KERNEL_A,
+               rootfs_a=PART_CROS_ROOTFS_A, kernel_b=PART_CROS_KERNEL_B,
+               rootfs_b=PART_CROS_ROOTFS_B):
     self.board = board
-    self.kernel = kernel
-    self.rootfs = rootfs
+    self.kernel_a = kernel_a
+    self.rootfs_a = rootfs_a
+    self.kernel_b = kernel_b
+    self.rootfs_b = rootfs_b
 
   def ToDict(self):
     return {k: getattr(self, k) for k in self.__slots__}
+
+  @classmethod
+  def CreateFromDict(cls, d):
+    """Creates an RMAImageBoardInfo instance from a dictionary.
+
+    Args:
+      d: a dictionary containing keys in cls.__slots__.
+
+    Returns:
+      An RMAImageBoardInfo instance.
+
+    Raises:
+      RuntimeError if the dictionary doesn't contain the exact same set of keys
+      as self.__slots__.
+    """
+    keys = d.keys()
+    if set(keys) == set(cls.__slots__):
+      return RMAImageBoardInfo(**d)
+    if set(keys) == set(cls.__legacy_slots__):
+      # Support backward compatibility.
+      logging.warning('Found legacy RMA metadata. Converting to new format.')
+      logging.warning('Duplicated UniqueGUID warnings are expected.')
+      return RMAImageBoardInfo(board=d["board"], kernel_a=d["kernel"],
+                               rootfs_a=d["rootfs"], kernel_b=d["kernel"],
+                               rootfs_b=d["rootfs"])
+    raise RuntimeError(f'Invalid RMAImageMetadata keys: {keys}')
 
 
 def _WriteRMAMetadata(stateful, board_list):
@@ -1189,12 +1249,7 @@ def _ReadRMAMetadata(stateful):
       stateful, CrosPayloadUtils.GetCrosRMAMetadata())
   if os.path.exists(PATH_CROS_RMA_METADATA):
     with open(PATH_CROS_RMA_METADATA, encoding='utf8') as f:
-      metadata = json.load(f)
-      metadata = [
-          RMAImageBoardInfo(board=e['board'],
-                            kernel=e['kernel'],
-                            rootfs=e['rootfs'])
-          for e in metadata]
+      metadata = [RMAImageBoardInfo.CreateFromDict(e) for e in json.load(f)]
       return metadata
   else:
     logging.warning('Cannot find %s.', PATH_CROS_RMA_METADATA)
@@ -1203,7 +1258,13 @@ def _ReadRMAMetadata(stateful):
     if len(found) == 1:
       logging.warning('Found legacy RMA shim. Auto-generating metadata.')
       board = os.path.basename(found[0]).split('.')[0]
-      metadata = [RMAImageBoardInfo(board=board, kernel=2, rootfs=3)]
+      metadata = [
+          RMAImageBoardInfo.CreateFromDict({
+              'board': board,
+              'kernel': PART_CROS_KERNEL_A,
+              'rootfs': PART_CROS_ROOTFS_A
+          })
+      ]
       return metadata
     raise RuntimeError('Cannot get metadata, is this a RMA shim?')
 
@@ -2051,7 +2112,8 @@ class ChromeOSFactoryBundle:
 
       print(SPLIT_LINE)
       for board_info in metadata:
-        with gpt.GetPartition(board_info.rootfs).MountAsCrOSRootfs() as rootfs:
+        with gpt.GetPartition(
+            board_info.rootfs_a).MountAsCrOSRootfs() as rootfs:
           resource_versions = _ReadBoardResourceVersions(
               rootfs, stateful, board_info)
         print(resource_versions)
@@ -2065,16 +2127,21 @@ class ChromeOSFactoryBundle:
       image: The image file that the board belongs to.
       versions: An RMABoardResourceVersions object being the payload versions
                 of the board.
-      kernel: A GPT.Partition object being the kernel partition of the board.
-      rootfs: A GPT.Partition object being the rootfs partition of the board.
+      kernel_a: A GPT.Partition object as the kernel A partition of the board.
+      rootfs_a: A GPT.Partition object as the rootfs A partition of the board.
+      kernel_b: A GPT.Partition object as the kernel B partition of the board.
+      rootfs_b: A GPT.Partition object as the rootfs B partition of the board.
     """
 
-    def __init__(self, board, image, versions, kernel, rootfs):
+    def __init__(self, board, image, versions, kernel_a, rootfs_a, kernel_b,
+                 rootfs_b):
       self.board = board
       self.image = image
       self.versions = versions
-      self.kernel = kernel
-      self.rootfs = rootfs
+      self.kernel_a = kernel_a
+      self.rootfs_a = rootfs_a
+      self.kernel_b = kernel_b
+      self.rootfs_b = rootfs_b
 
     def GetPayloadSizes(self):
       """Returns a list of (resource name, resource size) of the board."""
@@ -2099,21 +2166,24 @@ class ChromeOSFactoryBundle:
   def _RecreateRMAImage(cls, output, images, select_func):
     """Recreate RMA (USB installation) disk images using existing ones.
 
-    A (universal) RMA image should have factory_install kernel and rootfs in
-    partition (2n, 2n+1), and resources in stateful partition (partition 1)
-    DIR_CROS_PAYLOADS directory.  This function extracts some stateful
-    partitions using a user defined function `select_func` and then generate the
-    output image by merging the resource files to partition 1 and cloning
-    kernel/rootfs partitions of each selected boards.
+    A (universal) RMA image should have factory_install kernel_a, rootfs_a,
+    kernal_b, rootfs_b in partition (4n+2, 4n+3, 4n+4, 4n+5) for n>=0, and
+    resources in stateful partition (partition 1) DIR_CROS_PAYLOADS directory.
+    This function extracts some stateful partitions using a user defined
+    function `select_func` and then generates the output image by merging the
+    resource files to partition 1 and cloning kernel_a, rootfs_a, kernel_b,
+    rootfs_b partitions of each selected boards.
 
     The layout of the merged output image:
        1 stateful  [cros_payloads from all rmaimgX]
-       2 kernel    [install-rmaimg1]
-       3 rootfs    [install-rmaimg1]
-       4 kernel    [install-rmaimg2]
-       5 rootfs    [install-rmaimg2]
-       6 kernel    [install-rmaimg3]
-       7 rootfs    [install-rmaimg3]
+       2 kernel_a  [install-rmaimg1]
+       3 rootfs_a  [install-rmaimg1]
+       4 kernel_b  [install-rmaimg1] (might be empty)
+       5 rootfs_b  [install-rmaimg1] (empty)
+       6 kernel_a  [install-rmaimg2]
+       7 rootfs_a  [install-rmaimg2]
+       6 kernel_b  [install-rmaimg2] (might be empty)
+       7 rootfs_b  [install-rmaimg2] (empty)
       ...
 
     Args:
@@ -2143,12 +2213,22 @@ class ChromeOSFactoryBundle:
         src_metadata = _ReadRMAMetadata(stateful)
         for board_info in src_metadata:
           with gpt.GetPartition(
-              board_info.rootfs).MountAsCrOSRootfs() as rootfs:
+              board_info.rootfs_a).MountAsCrOSRootfs() as rootfs:
             versions = _ReadBoardResourceVersions(rootfs, stateful, board_info)
           entry = ChromeOSFactoryBundle.RMABoardEntry(
               board_info.board, image, versions,
-              gpt.GetPartition(board_info.kernel),
-              gpt.GetPartition(board_info.rootfs))
+              gpt.GetPartition(board_info.kernel_a),
+              gpt.GetPartition(board_info.rootfs_a),
+              gpt.GetPartition(board_info.kernel_b),
+              gpt.GetPartition(board_info.rootfs_b))
+          # Legacy RMA shims contain only one kernel, and we use the same kernel
+          # partition for kernel_a and kernel_b. In this case we can zero
+          # kernel_b partition to save space.
+          if board_info.kernel_a == board_info.kernel_b:
+            entry.kernel_b = entry.kernel_b.CloneAsZeroedPartition()
+          # Always zero rootfs_b partition to save space. The RMA shim should
+          # use rootfs_a even when booting from kernel_b.
+          entry.rootfs_b = entry.rootfs_b.CloneAsZeroedPartition()
           image_entries.append(entry)
 
       entries += image_entries
@@ -2157,8 +2237,10 @@ class ChromeOSFactoryBundle:
     entries = select_func(entries)
 
     for entry in entries:
-      kern_rootfs_parts.append(entry.kernel)
-      kern_rootfs_parts.append(entry.rootfs)
+      kern_rootfs_parts.append(entry.kernel_a)
+      kern_rootfs_parts.append(entry.rootfs_a)
+      kern_rootfs_parts.append(entry.kernel_b)
+      kern_rootfs_parts.append(entry.rootfs_b)
 
     # Build a new image based on first image's layout.
     gpt = pygpt.GPT.LoadFromFile(images[0])
@@ -2238,14 +2320,20 @@ class ChromeOSFactoryBundle:
               lsb_path = os.path.join(src_dir, PATH_LSB_FACTORY)
               CrosPayloadUtils.AddComponent(temp_metadata_path,
                                             PAYLOAD_TYPE_LSB_FACTORY, lsb_path)
-          # Copy kernel/rootfs partitions
+          # Copy kernel_a, rootfs_a, kernel_b and rootfs_b partitions.
           print(f'Copying {entry.board} board kernel/rootfs ...')
-          new_kernel = index * 2 + PART_CROS_KERNEL_A
-          new_rootfs = index * 2 + PART_CROS_ROOTFS_A
-          entry.kernel.Copy(Partition(output, new_kernel))
-          entry.rootfs.Copy(Partition(output, new_rootfs))
+          new_kernel_a = index * 4 + PART_CROS_KERNEL_A
+          new_rootfs_a = index * 4 + PART_CROS_ROOTFS_A
+          new_kernel_b = index * 4 + PART_CROS_KERNEL_B
+          new_rootfs_b = index * 4 + PART_CROS_ROOTFS_B
+          entry.kernel_a.Copy(Partition(output, new_kernel_a))
+          entry.rootfs_a.Copy(Partition(output, new_rootfs_a))
+          entry.kernel_b.Copy(Partition(output, new_kernel_b))
+          entry.rootfs_b.Copy(Partition(output, new_rootfs_b))
+
           board_info_list.append(
-              RMAImageBoardInfo(entry.board, new_kernel, new_rootfs))
+              RMAImageBoardInfo(entry.board, new_kernel_a, new_rootfs_a,
+                                new_kernel_b, new_rootfs_b))
 
         # Write rma_metadata.json and initialize <board>.json.
         _WriteRMAMetadata(stateful, board_info_list)
