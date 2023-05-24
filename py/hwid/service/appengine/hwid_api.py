@@ -10,12 +10,12 @@ from typing import Collection
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine import hwid_action_manager
-from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import decoding_apis
 from cros.factory.hwid.service.appengine.hwid_api_helpers import project_info_apis
 from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper as sku_helper_module
 from cros.factory.hwid.service.appengine import ingestion
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
@@ -35,8 +35,6 @@ class ProtoRPCService(common_helper.HWIDServiceShardBase):
   def __init__(self, config, *args, **kwargs):
     super().__init__(*args, **kwargs)
     decoder_data_manager = config.decoder_data_manager
-    goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
-        namespace=ingestion.GOLDENEYE_MEMCACHE_NAMESPACE)
     hwid_repo_manager = config.hwid_repo_manager
     avl_converter_manager = config.avl_converter_manager
     session_cache_adapter = memcache_adapter.MemcacheAdapter(
@@ -45,13 +43,10 @@ class ProtoRPCService(common_helper.HWIDServiceShardBase):
 
     self._hwid_action_manager = config.hwid_action_manager
     self._hwid_db_data_manager = config.hwid_db_data_manager
-    self._sku_helper = sku_helper.SKUHelper(decoder_data_manager)
+    self._sku_helper = sku_helper_module.SKUHelper(decoder_data_manager)
     bom_data_cacher = config.bom_data_cacher
-    self._bc_helper = bc_helper.BOMAndConfiglessHelper(decoder_data_manager,
-                                                       bom_data_cacher)
-    self._dut_label_helper = dut_label_helper.DUTLabelHelper(
-        decoder_data_manager, goldeneye_memcache_adapter, self._bc_helper,
-        self._sku_helper, self._hwid_action_manager)
+    self._bc_helper = bc_helper_module.BOMAndConfiglessHelper(
+        decoder_data_manager, bom_data_cacher)
     self._ss_helper = ss_helper.SelfServiceHelper(
         self._hwid_action_manager,
         hwid_repo_manager,
@@ -125,7 +120,8 @@ class ProtoRPCService(common_helper.HWIDServiceShardBase):
       return hwid_api_messages_pb2.SkuResponse(
           error='Internal error',
           status=hwid_api_messages_pb2.Status.SERVER_ERROR)
-    status, error = bc_helper.GetBOMAndConfiglessStatusAndError(bom_configless)
+    status, error = bc_helper_module.GetBOMAndConfiglessStatusAndError(
+        bom_configless)
     if status != hwid_api_messages_pb2.Status.SUCCESS:
       return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
     bom = bom_configless.bom
@@ -172,11 +168,6 @@ class ProtoRPCService(common_helper.HWIDServiceShardBase):
     return hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
         status=hwid_api_messages_pb2.Status.SERVER_ERROR,
         error_message='deprecated API')
-
-  @protorpc_utils.ProtoRPCServiceMethod
-  @auth.RpcCheck
-  def GetDutLabels(self, request):
-    return self._dut_label_helper.GetDUTLabels(request)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -261,7 +252,17 @@ def GetAllHWIDServiceShards(
   project_info_shard = project_info_apis.ProjectInfoShard(
       config.hwid_action_manager, config.hwid_db_data_manager)
 
+  goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
+      namespace=ingestion.GOLDENEYE_MEMCACHE_NAMESPACE)
+  bc_helper = bc_helper_module.BOMAndConfiglessHelper(
+      config.decoder_data_manager, config.bom_data_cacher)
+  sku_helper = sku_helper_module.SKUHelper(config.decoder_data_manager)
+  get_dut_label_shard = decoding_apis.GetDUTLabelShard(
+      config.decoder_data_manager, goldeneye_memcache_adapter,
+      bc_helper, sku_helper, config.hwid_action_manager)
+
   return [
       project_info_shard,
+      get_dut_label_shard,
       ProtoRPCService.CreateInstance(config),
   ]

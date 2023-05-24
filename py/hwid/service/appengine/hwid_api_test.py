@@ -274,17 +274,6 @@ class ProtoRPCServiceTest(unittest.TestCase):
                 "'fail' does not contain size field"
             ], feature_enablement_status='feature_value'), msg)
 
-  def testGetDutLabels(self):
-    with mock.patch.object(self.service, '_dut_label_helper') as mock_helper:
-      mock_helper.GetDUTLabels.return_value = (
-          hwid_api_messages_pb2.DutLabelsResponse())
-
-      req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-      msg = self.service.GetDutLabels(req)
-
-    mock_helper.GetDUTLabels.assert_called_once_with(req)
-    self.assertEqual(msg, mock_helper.GetDUTLabels.return_value)
-
   def testGetHwidDbEditableSection_ProjectNotFound(self):
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
       req = hwid_api_messages_pb2.GetHwidDbEditableSectionRequest(project='foo')

@@ -1,4 +1,4 @@
-# Copyright 2021 The ChromiumOS Authors
+# Copyright 2023 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,7 +8,7 @@ from unittest import mock
 
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import decoding_apis
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
@@ -24,7 +24,7 @@ TEST_PROJECT = 'Foo'
 TEST_HWID = 'Foo'
 
 
-class DUTLabelHelperTest(unittest.TestCase):
+class GetDUTLabelShardTest(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -39,7 +39,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     self._sku_helper = mock.Mock(
         spec=sku_helper.SKUHelper, wraps=sku_helper.SKUHelper(
             self._module_collection.fake_decoder_data_manager))
-    self._dl_helper = dut_label_helper.DUTLabelHelper(
+    self.service = decoding_apis.GetDUTLabelShard(
         self._module_collection.fake_decoder_data_manager,
         self._module_collection.fake_goldeneye_memcache, self._bc_helper,
         self._sku_helper, self._module_collection.fake_hwid_action_manager)
@@ -80,7 +80,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     }
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self._dl_helper.GetDUTLabels(req)
+    msg = self.service.GetDutLabels(req)
 
     self.assertCountEqual(
         msg.labels,
@@ -120,7 +120,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     }
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self._dl_helper.GetDUTLabels(req)
+    msg = self.service.GetDutLabels(req)
 
     self.assertTrue(self.CheckForLabelValue(msg, 'phase', 'bar'))
     self.assertTrue(self.CheckForLabelValue(msg, 'variant', 'found_device'))
@@ -145,7 +145,7 @@ class DUTLabelHelperTest(unittest.TestCase):
         warnings=[])
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self._dl_helper.GetDUTLabels(req)
+    msg = self.service.GetDutLabels(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.DutLabelsResponse(
@@ -165,7 +165,7 @@ class DUTLabelHelperTest(unittest.TestCase):
 
   def testGetPossibleDUTLabels(self):
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid='')
-    msg = self._dl_helper.GetDUTLabels(req)
+    msg = self.service.GetDutLabels(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.DutLabelsResponse(
@@ -200,7 +200,7 @@ class DUTLabelHelperTest(unittest.TestCase):
         warnings=[])
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self._dl_helper.GetDUTLabels(req)
+    msg = self.service.GetDutLabels(req)
 
     self.assertTrue(self.CheckForLabelValue(msg, 'phase', 'bar'))
     self.assertTrue(self.CheckForLabelValue(msg, 'variant', 'found_device'))
@@ -226,7 +226,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     }
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self._dl_helper.GetDUTLabels(req)
+    msg = self.service.GetDutLabels(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.DutLabelsResponse(

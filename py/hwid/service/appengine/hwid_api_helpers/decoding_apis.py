@@ -1,4 +1,4 @@
-# Copyright 2021 The ChromiumOS Authors
+# Copyright 2023 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,24 +6,33 @@ import logging
 import operator
 import re
 
-from cros.factory.hwid.service.appengine import hwid_action_manager
-from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper
+from cros.factory.hwid.service.appengine import auth
+from cros.factory.hwid.service.appengine.data import decoder_data
+from cros.factory.hwid.service.appengine import hwid_action_manager as hwid_action_mngr_module
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper as sku_helper_module
+from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
+from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 
-class DUTLabelHelper:
+class GetDUTLabelShard(common_helper.HWIDServiceShardBase):
 
-  def __init__(self, decoder_data_manager, goldeneye_memcache_adapter,
-               bom_and_configless_helper_inst, sku_hepler_inst,
-               hwid_action_manager_inst):
+  def __init__(self, decoder_data_manager: decoder_data.DecoderDataManager,
+               goldeneye_memcache_adapter: memcache_adapter.MemcacheAdapter,
+               bc_helper: bc_helper_module.BOMAndConfiglessHelper,
+               sku_hepler: sku_helper_module.SKUHelper,
+               hwid_action_manager: hwid_action_mngr_module.HWIDActionManager):
     self._decoder_data_manager = decoder_data_manager
     self._goldeneye_memcache_adapter = goldeneye_memcache_adapter
-    self._bom_and_configless_helper = bom_and_configless_helper_inst
-    self._sku_helper = sku_hepler_inst
-    self._hwid_action_manager_inst = hwid_action_manager_inst
+    self._bc_helper = bc_helper
+    self._sku_helper = sku_hepler
+    self._hwid_action_manager_inst = hwid_action_manager
 
-  def GetDUTLabels(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def GetDutLabels(self, request):
     """Return the components of the SKU identified by the HWID."""
     hwid = request.hwid
 
@@ -52,9 +61,9 @@ class DUTLabelHelper:
       return hwid_api_messages_pb2.DutLabelsResponse(
           error=error, possible_labels=possible_labels, status=status)
 
-    hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
+    hwid_action_getter = hwid_action_mngr_module.InMemoryCachedHWIDActionGetter(
         self._hwid_action_manager_inst)
-    bc_dict = self._bom_and_configless_helper.BatchGetBOMAndConfigless(
+    bc_dict = self._bc_helper.BatchGetBOMAndConfigless(
         hwid_action_getter, [hwid], verbose=True, require_vp_info=True)
     bom_configless = bc_dict.get(hwid)
     if bom_configless is None:
@@ -64,7 +73,7 @@ class DUTLabelHelper:
           possible_labels=possible_labels)
     bom = bom_configless.bom
     configless = bom_configless.configless
-    status, error = bom_and_configless_helper.GetBOMAndConfiglessStatusAndError(
+    status, error = bc_helper_module.GetBOMAndConfiglessStatusAndError(
         bom_configless)
 
     if status != hwid_api_messages_pb2.Status.SUCCESS:
