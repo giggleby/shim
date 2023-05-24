@@ -507,7 +507,6 @@ def WriteProtect(options):
   target_order += [
       WriteProtectTargetType.AP,
       WriteProtectTargetType.EC,
-      WriteProtectTargetType.PD,
   ]
 
   targets = [target for target in target_order if target in options.targets]
