@@ -194,7 +194,7 @@ class HexToHexValueFormatter(converter_types.StrFormatter):
     self._source_has_prefix = source_has_prefix
     self._target_has_prefix = target_has_prefix
 
-  def __call__(self, value):
+  def __call__(self, value, *unused_args, **unused_kwargs):
     source_prefix = '0x' if self._source_has_prefix else ''
     if not re.fullmatch(
         f'{source_prefix.lower()}0*[0-9a-f]{{1,{self._num_digits}}}', value,
@@ -219,7 +219,7 @@ class HexEncodedStrValueFormatter(converter_types.StrFormatter):
     self._value_pattern = f'{prefix_pattern}{byte_in_hex}{repeat_pattern}'
     self._encoding = encoding
 
-  def __call__(self, value):
+  def __call__(self, value, *unused_args, **unused_kwargs):
     if not re.fullmatch(self._value_pattern, value, flags=re.I):
       raise converter_types.StrFormatterError('Not a hex-encoded string.')
     the_bytes = bytes.fromhex(value[self._skip_prefix_len:])
