@@ -59,8 +59,8 @@ def _CreateApp():
   app.route('/cron/<service>.<method>', methods=('GET', ))(_CronJobHandler)
   app.route('/_ah/warmup', methods=('GET', ))(_WarmupHandler)
 
-  protorpc_utils.RegisterProtoRPCServiceToFlaskApp(
-      app, '/_ah/stubby', hwid_api.ProtoRPCService.CreateInstance(_CONFIG))
+  protorpc_utils.RegisterProtoRPCServiceShardsToFlaskApp(
+      app, '/_ah/stubby', hwid_api.GetAllHWIDServiceShards(_CONFIG))
   protorpc_utils.RegisterProtoRPCServiceShardsToFlaskApp(
       app, '/_ah/stubby', [
           ingestion.SyncNameMappingRPCProvider.CreateInstance(_CONFIG),

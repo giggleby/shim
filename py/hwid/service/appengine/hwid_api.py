@@ -6,13 +6,14 @@
 This file is also the place that all the binding is done for various components.
 """
 
-from typing import Optional
+from typing import Collection
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import project_info_apis
 from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine import ingestion
@@ -29,17 +30,7 @@ KNOWN_BAD_SUBSTR = [
 _SESSION_CACHE_NAMESPACE = 'SessionCache'
 
 
-def _NormalizeProjectString(string: str) -> Optional[str]:
-  """Normalizes a string to account for things like case."""
-  return string.strip().upper() if string else None
-
-
-_HwidServiceProtoRPCBase = protorpc_utils.CreateProtoRPCServiceClass(
-    '_HwidServiceProtoRPCBase',
-    hwid_api_messages_pb2.DESCRIPTOR.services_by_name['HwidService'])
-
-
-class ProtoRPCService(_HwidServiceProtoRPCBase):
+class ProtoRPCService(common_helper.HWIDServiceShardBase):
 
   def __init__(self, config, *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -75,19 +66,6 @@ class ProtoRPCService(_HwidServiceProtoRPCBase):
   def CreateInstance(cls, config):
     """Creates RPC service instance."""
     return cls(config)
-
-  @protorpc_utils.ProtoRPCServiceMethod
-  @auth.RpcCheck
-  def GetProjects(self, request):
-    """Return all of the supported projects in sorted order."""
-    versions = list(request.versions) if request.versions else None
-    metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata(
-        versions=versions)
-    projects = [m.project for m in metadata_list]
-
-    response = hwid_api_messages_pb2.ProjectsResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS, projects=sorted(projects))
-    return response
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -161,63 +139,6 @@ class ProtoRPCService(_HwidServiceProtoRPCBase):
         sku=sku.sku_str, warnings=sku.warnings,
         feature_enablement_status=(action.GetFeatureEnablementLabel(
             request.hwid)))
-
-  @protorpc_utils.ProtoRPCServiceMethod
-  @auth.RpcCheck
-  def GetHwids(self, request):
-    """Return a filtered list of HWIDs for the given project."""
-    project = _NormalizeProjectString(request.project)
-    parse_filter_field = lambda value: set(filter(None, value)) or None
-    try:
-      action = self._hwid_action_manager.GetHWIDAction(project)
-      hwids = action.EnumerateHWIDs(
-          with_classes=parse_filter_field(request.with_classes),
-          without_classes=parse_filter_field(request.without_classes),
-          with_components=parse_filter_field(request.with_components),
-          without_components=parse_filter_field(request.without_components))
-    except (KeyError, ValueError, RuntimeError) as ex:
-      return hwid_api_messages_pb2.HwidsResponse(
-          status=common_helper.ConvertExceptionToStatus(ex), error=str(ex))
-
-    return hwid_api_messages_pb2.HwidsResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS, hwids=hwids)
-
-  @protorpc_utils.ProtoRPCServiceMethod
-  @auth.RpcCheck
-  def GetComponentClasses(self, request):
-    """Return a list of all component classes for the given project."""
-    project = _NormalizeProjectString(request.project)
-    try:
-      action = self._hwid_action_manager.GetHWIDAction(project)
-      classes = action.GetComponentClasses()
-    except (KeyError, ValueError, RuntimeError) as ex:
-      return hwid_api_messages_pb2.ComponentClassesResponse(
-          status=common_helper.ConvertExceptionToStatus(ex), error=str(ex))
-
-    return hwid_api_messages_pb2.ComponentClassesResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS, component_classes=classes)
-
-  @protorpc_utils.ProtoRPCServiceMethod
-  @auth.RpcCheck
-  def GetComponents(self, request):
-    """Return a filtered list of components for the given project."""
-    project = _NormalizeProjectString(request.project)
-    try:
-      action = self._hwid_action_manager.GetHWIDAction(project)
-      components = action.GetComponents(
-          with_classes=set(filter(None, request.with_classes)) or None)
-    except (KeyError, ValueError, RuntimeError) as ex:
-      return hwid_api_messages_pb2.ComponentsResponse(
-          status=common_helper.ConvertExceptionToStatus(ex), error=str(ex))
-
-    components_list = []
-    for cls, comps in components.items():
-      for comp in comps:
-        components_list.append(
-            hwid_api_messages_pb2.Component(component_class=cls, name=comp))
-
-    return hwid_api_messages_pb2.ComponentsResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS, components=components_list)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -333,3 +254,14 @@ class ProtoRPCService(_HwidServiceProtoRPCBase):
   @auth.RpcCheck
   def UpdateAudioCodecKernelNames(self, request):
     return self._ss_helper.UpdateAudioCodecKernelNames(request)
+
+
+def GetAllHWIDServiceShards(
+    config) -> Collection[common_helper.HWIDServiceShardBase]:
+  project_info_shard = project_info_apis.ProjectInfoShard(
+      config.hwid_action_manager, config.hwid_db_data_manager)
+
+  return [
+      project_info_shard,
+      ProtoRPCService.CreateInstance(config),
+  ]

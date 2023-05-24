@@ -47,3 +47,8 @@ def ConvertExceptionToProtoRPCException(ex):
         protorpc_utils.RPCCanonicalErrorCode.UNIMPLEMENTED, str(ex))
   return protorpc_utils.ProtoRPCException(
       protorpc_utils.RPCCanonicalErrorCode.INTERNAL, str(ex))
+
+
+HWIDServiceShardBase = protorpc_utils.CreateProtoRPCServiceShardBase(
+    'HWIDServiceShardBase',
+    hwid_api_messages_pb2.DESCRIPTOR.services_by_name['HwidService'])
