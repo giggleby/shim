@@ -20,7 +20,6 @@ from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 TEST_HWID = 'Foo'
 
-ComponentMsg = hwid_api_messages_pb2.Component
 StatusMsg = hwid_api_messages_pb2.Status
 _BOMAndConfigless = bc_helper.BOMAndConfigless
 
@@ -54,131 +53,6 @@ class ProtoRPCServiceTest(unittest.TestCase):
   def tearDown(self):
     super().tearDown()
     self._modules.ClearAll()
-
-  def testGetBom_InternalError(self):
-    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
-      mock_helper.BatchGetBOMEntry.return_value = {}
-
-      req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-      msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(error='Internal error',
-                                          status=StatusMsg.SERVER_ERROR), msg)
-
-  def testGetBom_Success(self):
-    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
-      mock_helper.BatchGetBOMEntry.return_value = {
-          TEST_HWID:
-              bc_helper.BOMEntry([
-                  ComponentMsg(name='qux', component_class='baz'),
-              ], '', '', StatusMsg.SUCCESS)
-      }
-
-      req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-      msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=StatusMsg.SUCCESS, components=[
-                ComponentMsg(name='qux', component_class='baz'),
-            ]), msg)
-
-  def testGetBom_WithError(self):
-    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
-      mock_helper.BatchGetBOMEntry.return_value = {
-          TEST_HWID:
-              bc_helper.BOMEntry([], '', 'bad hwid', StatusMsg.BAD_REQUEST)
-      }
-
-      req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-      msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(status=StatusMsg.BAD_REQUEST,
-                                          error='bad hwid'), msg)
-
-  def testBatchGetBom(self):
-    hwid1 = 'TEST HWID 1'
-    hwid2 = 'TEST HWID 2'
-    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
-      mock_helper.BatchGetBOMEntry.return_value = {
-          hwid1:
-              bc_helper.BOMEntry([
-                  ComponentMsg(name='qux1', component_class='baz1'),
-                  ComponentMsg(name='rox1', component_class='baz1'),
-              ], '', '', StatusMsg.SUCCESS),
-          hwid2:
-              bc_helper.BOMEntry([
-                  ComponentMsg(name='qux2', component_class='baz2'),
-                  ComponentMsg(name='rox2', component_class='baz2'),
-              ], '', '', StatusMsg.SUCCESS),
-      }
-
-      req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
-      msg = self.service.BatchGetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BatchGetBomResponse(
-            boms={
-                hwid1:
-                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.SUCCESS, components=[
-                            ComponentMsg(name='qux1', component_class='baz1'),
-                            ComponentMsg(name='rox1', component_class='baz1'),
-                        ]),
-                hwid2:
-                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.SUCCESS, components=[
-                            ComponentMsg(name='qux2', component_class='baz2'),
-                            ComponentMsg(name='rox2', component_class='baz2'),
-                        ]),
-            }, status=StatusMsg.SUCCESS), msg)
-
-  def testBatchGetBom_WithError(self):
-    hwid1 = 'TEST HWID 1'
-    hwid2 = 'TEST HWID 2'
-    hwid3 = 'TEST HWID 3'
-    hwid4 = 'TEST HWID 4'
-    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
-      mock_helper.BatchGetBOMEntry.return_value = {
-          hwid1:
-              bc_helper.BOMEntry([], '', 'value error', StatusMsg.BAD_REQUEST),
-          hwid2:
-              bc_helper.BOMEntry([], '', "'Invalid key'", StatusMsg.NOT_FOUND),
-          hwid3:
-              bc_helper.BOMEntry([], '', 'index error', StatusMsg.SERVER_ERROR),
-          hwid4:
-              bc_helper.BOMEntry([
-                  ComponentMsg(name='qux', component_class='baz'),
-                  ComponentMsg(name='rox', component_class='baz'),
-                  ComponentMsg(name='bar', component_class='foo'),
-              ], '', '', StatusMsg.SUCCESS),
-      }
-
-      req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
-      msg = self.service.BatchGetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BatchGetBomResponse(
-            boms={
-                hwid1:
-                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.BAD_REQUEST, error='value error'),
-                hwid2:
-                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.NOT_FOUND, error="'Invalid key'"),
-                hwid3:
-                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.SERVER_ERROR, error='index error'),
-                hwid4:
-                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.SUCCESS, components=[
-                            ComponentMsg(name='qux', component_class='baz'),
-                            ComponentMsg(name='rox', component_class='baz'),
-                            ComponentMsg(name='bar', component_class='foo'),
-                        ]),
-            }, status=StatusMsg.BAD_REQUEST, error='value error'), msg)
 
   def _SetupFakeHWIDActionForFeatureEnablementLabel(
       self, project_name: str,

@@ -17,6 +17,58 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 
+class GetBOMShard(common_helper.HWIDServiceShardBase):
+
+  def __init__(
+      self,
+      hwid_action_manager: hwid_action_mngr_module.HWIDActionManager,
+      bc_helper: bc_helper_module.BOMAndConfiglessHelper,
+  ):
+    self._hwid_action_manager = hwid_action_manager
+    self._bc_helper = bc_helper
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def GetBom(self, request):
+    """Return the components of the BOM identified by the HWID."""
+    hwid_action_getter = hwid_action_mngr_module.InMemoryCachedHWIDActionGetter(
+        self._hwid_action_manager)
+    bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
+        hwid_action_getter, [request.hwid], request.verbose,
+        request.no_avl_name)
+    bom_entry = bom_entry_dict.get(request.hwid)
+    if bom_entry is None:
+      return hwid_api_messages_pb2.BomResponse(
+          error='Internal error',
+          status=hwid_api_messages_pb2.Status.SERVER_ERROR)
+    return hwid_api_messages_pb2.BomResponse(
+        components=bom_entry.components, phase=bom_entry.phase,
+        error=bom_entry.error, status=bom_entry.status)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def BatchGetBom(self, request):
+    """Return the components of the BOM identified by the batch HWIDs."""
+    response = hwid_api_messages_pb2.BatchGetBomResponse(
+        status=hwid_api_messages_pb2.Status.SUCCESS)
+    hwid_action_getter = hwid_action_mngr_module.InMemoryCachedHWIDActionGetter(
+        self._hwid_action_manager)
+    bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
+        hwid_action_getter, request.hwid, request.verbose, request.no_avl_name)
+    for hwid, bom_entry in bom_entry_dict.items():
+      response.boms.get_or_create(hwid).CopyFrom(
+          hwid_api_messages_pb2.BatchGetBomResponse.Bom(
+              components=bom_entry.components, phase=bom_entry.phase,
+              error=bom_entry.error, status=bom_entry.status))
+      if bom_entry.status != hwid_api_messages_pb2.Status.SUCCESS:
+        if response.status == hwid_api_messages_pb2.Status.SUCCESS:
+          # Set the status and error of the response to the first unsuccessful
+          # one.
+          response.status = bom_entry.status
+          response.error = bom_entry.error
+    return response
+
+
 class GetDUTLabelShard(common_helper.HWIDServiceShardBase):
 
   def __init__(self, decoder_data_manager: decoder_data.DecoderDataManager,

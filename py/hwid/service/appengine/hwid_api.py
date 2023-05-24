@@ -64,47 +64,6 @@ class ProtoRPCService(common_helper.HWIDServiceShardBase):
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
-  def GetBom(self, request):
-    """Return the components of the BOM identified by the HWID."""
-    hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
-        self._hwid_action_manager)
-    bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
-        hwid_action_getter, [request.hwid], request.verbose,
-        request.no_avl_name)
-    bom_entry = bom_entry_dict.get(request.hwid)
-    if bom_entry is None:
-      return hwid_api_messages_pb2.BomResponse(
-          error='Internal error',
-          status=hwid_api_messages_pb2.Status.SERVER_ERROR)
-    return hwid_api_messages_pb2.BomResponse(
-        components=bom_entry.components, phase=bom_entry.phase,
-        error=bom_entry.error, status=bom_entry.status)
-
-  @protorpc_utils.ProtoRPCServiceMethod
-  @auth.RpcCheck
-  def BatchGetBom(self, request):
-    """Return the components of the BOM identified by the batch HWIDs."""
-    response = hwid_api_messages_pb2.BatchGetBomResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS)
-    hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
-        self._hwid_action_manager)
-    bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
-        hwid_action_getter, request.hwid, request.verbose, request.no_avl_name)
-    for hwid, bom_entry in bom_entry_dict.items():
-      response.boms.get_or_create(hwid).CopyFrom(
-          hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-              components=bom_entry.components, phase=bom_entry.phase,
-              error=bom_entry.error, status=bom_entry.status))
-      if bom_entry.status != hwid_api_messages_pb2.Status.SUCCESS:
-        if response.status == hwid_api_messages_pb2.Status.SUCCESS:
-          # Set the status and error of the response to the first unsuccessful
-          # one.
-          response.status = bom_entry.status
-          response.error = bom_entry.error
-    return response
-
-  @protorpc_utils.ProtoRPCServiceMethod
-  @auth.RpcCheck
   def GetSku(self, request):
     """Return the components of the SKU identified by the HWID."""
     status, error = common_helper.FastFailKnownBadHWID(request.hwid)
@@ -257,12 +216,15 @@ def GetAllHWIDServiceShards(
   bc_helper = bc_helper_module.BOMAndConfiglessHelper(
       config.decoder_data_manager, config.bom_data_cacher)
   sku_helper = sku_helper_module.SKUHelper(config.decoder_data_manager)
+  get_bom_shard = decoding_apis.GetBOMShard(
+      config.hwid_action_manager, bc_helper)
   get_dut_label_shard = decoding_apis.GetDUTLabelShard(
       config.decoder_data_manager, goldeneye_memcache_adapter,
       bc_helper, sku_helper, config.hwid_action_manager)
 
   return [
       project_info_shard,
+      get_bom_shard,
       get_dut_label_shard,
       ProtoRPCService.CreateInstance(config),
   ]

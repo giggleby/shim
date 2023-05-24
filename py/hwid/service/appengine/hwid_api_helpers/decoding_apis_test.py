@@ -7,7 +7,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.hwid.service.appengine import hwid_action
-from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import decoding_apis
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
@@ -15,7 +15,10 @@ from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
 
 
-_BOMAndConfigless = bc_helper.BOMAndConfigless
+_BOMAndConfigless = bc_helper_module.BOMAndConfigless
+_BOMEntry = bc_helper_module.BOMEntry
+ComponentMsg = hwid_api_messages_pb2.Component
+StatusMsg = hwid_api_messages_pb2.Status
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata',
     'v3-golden.yaml')
@@ -31,8 +34,8 @@ class GetDUTLabelShardTest(unittest.TestCase):
     self._module_collection = test_utils.FakeModuleCollection()
     self._vpg_targets = {}
     self._bc_helper = mock.Mock(
-        spec=bc_helper.BOMAndConfiglessHelper,
-        wraps=bc_helper.BOMAndConfiglessHelper(
+        spec=bc_helper_module.BOMAndConfiglessHelper,
+        wraps=bc_helper_module.BOMAndConfiglessHelper(
             self._module_collection.fake_decoder_data_manager,
             self._module_collection.fake_bom_data_cacher,
         ))
@@ -268,6 +271,145 @@ class GetDUTLabelShardTest(unittest.TestCase):
           return False
         return True
     return False
+
+
+class GetBOMShardTest(unittest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._modules = test_utils.FakeModuleCollection()
+    self._default_fake_bc_helper = bc_helper_module.BOMAndConfiglessHelper(
+        self._modules.fake_decoder_data_manager,
+        self._modules.fake_bom_data_cacher)
+    self._mock_bc_helper = mock.Mock(
+        spec=bc_helper_module.BOMAndConfiglessHelper,
+        wrap=self._default_fake_bc_helper)
+    self.service = decoding_apis.GetBOMShard(
+      self._modules.fake_hwid_action_manager, self._mock_bc_helper)
+
+  def tearDown(self):
+    super().tearDown()
+    self._modules.ClearAll()
+
+  def testGetBom_InternalError(self):
+    self._mock_bc_helper.BatchGetBOMEntry.return_value = {}
+
+    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
+    msg = self.service.GetBom(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.BomResponse(error='Internal error',
+                                          status=StatusMsg.SERVER_ERROR), msg)
+
+  def testGetBom_Success(self):
+    self._mock_bc_helper.BatchGetBOMEntry.return_value = {
+        TEST_HWID:
+            _BOMEntry([
+                ComponentMsg(name='qux', component_class='baz'),
+            ], '', '', StatusMsg.SUCCESS)
+    }
+
+    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
+    msg = self.service.GetBom(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.BomResponse(
+            status=StatusMsg.SUCCESS, components=[
+                ComponentMsg(name='qux', component_class='baz'),
+            ]), msg)
+
+  def testGetBom_WithError(self):
+    self._mock_bc_helper.BatchGetBOMEntry.return_value = {
+        TEST_HWID:
+            _BOMEntry([], '', 'bad hwid', StatusMsg.BAD_REQUEST)
+    }
+
+    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
+    msg = self.service.GetBom(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.BomResponse(status=StatusMsg.BAD_REQUEST,
+                                          error='bad hwid'), msg)
+
+  def testBatchGetBom(self):
+    hwid1 = 'TEST HWID 1'
+    hwid2 = 'TEST HWID 2'
+    self._mock_bc_helper.BatchGetBOMEntry.return_value = {
+        hwid1:
+            _BOMEntry([
+                ComponentMsg(name='qux1', component_class='baz1'),
+                ComponentMsg(name='rox1', component_class='baz1'),
+            ], '', '', StatusMsg.SUCCESS),
+        hwid2:
+            _BOMEntry([
+                ComponentMsg(name='qux2', component_class='baz2'),
+                ComponentMsg(name='rox2', component_class='baz2'),
+            ], '', '', StatusMsg.SUCCESS),
+    }
+
+    req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
+    msg = self.service.BatchGetBom(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.BatchGetBomResponse(
+            boms={
+                hwid1:
+                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
+                        status=StatusMsg.SUCCESS, components=[
+                            ComponentMsg(name='qux1', component_class='baz1'),
+                            ComponentMsg(name='rox1', component_class='baz1'),
+                        ]),
+                hwid2:
+                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
+                        status=StatusMsg.SUCCESS, components=[
+                            ComponentMsg(name='qux2', component_class='baz2'),
+                            ComponentMsg(name='rox2', component_class='baz2'),
+                        ]),
+            }, status=StatusMsg.SUCCESS), msg)
+
+  def testBatchGetBom_WithError(self):
+    hwid1 = 'TEST HWID 1'
+    hwid2 = 'TEST HWID 2'
+    hwid3 = 'TEST HWID 3'
+    hwid4 = 'TEST HWID 4'
+    self._mock_bc_helper.BatchGetBOMEntry.return_value = {
+        hwid1:
+            _BOMEntry([], '', 'value error', StatusMsg.BAD_REQUEST),
+        hwid2:
+            _BOMEntry([], '', "'Invalid key'", StatusMsg.NOT_FOUND),
+        hwid3:
+            _BOMEntry([], '', 'index error', StatusMsg.SERVER_ERROR),
+        hwid4:
+            _BOMEntry([
+                ComponentMsg(name='qux', component_class='baz'),
+                ComponentMsg(name='rox', component_class='baz'),
+                ComponentMsg(name='bar', component_class='foo'),
+            ], '', '', StatusMsg.SUCCESS),
+    }
+
+    req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
+    msg = self.service.BatchGetBom(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.BatchGetBomResponse(
+            boms={
+                hwid1:
+                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
+                        status=StatusMsg.BAD_REQUEST, error='value error'),
+                hwid2:
+                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
+                        status=StatusMsg.NOT_FOUND, error="'Invalid key'"),
+                hwid3:
+                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
+                        status=StatusMsg.SERVER_ERROR, error='index error'),
+                hwid4:
+                    hwid_api_messages_pb2.BatchGetBomResponse.Bom(
+                        status=StatusMsg.SUCCESS, components=[
+                            ComponentMsg(name='qux', component_class='baz'),
+                            ComponentMsg(name='rox', component_class='baz'),
+                            ComponentMsg(name='bar', component_class='foo'),
+                        ]),
+            }, status=StatusMsg.BAD_REQUEST, error='value error'), msg)
 
 
 if __name__ == '__main__':
