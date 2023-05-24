@@ -69,6 +69,52 @@ class GetBOMShard(common_helper.HWIDServiceShardBase):
     return response
 
 
+class GetSKUShard(common_helper.HWIDServiceShardBase):
+
+  def __init__(
+      self,
+      hwid_action_manager: hwid_action_mngr_module.HWIDActionManager,
+      bc_helper: bc_helper_module.BOMAndConfiglessHelper,
+      sku_helper: sku_helper_module.SKUHelper,
+  ):
+    self._hwid_action_manager = hwid_action_manager
+    self._bc_helper = bc_helper
+    self._sku_helper = sku_helper
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def GetSku(self, request):
+    """Return the components of the SKU identified by the HWID."""
+    status, error = common_helper.FastFailKnownBadHWID(request.hwid)
+    if status != hwid_api_messages_pb2.Status.SUCCESS:
+      return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
+
+    hwid_action_getter = hwid_action_mngr_module.InMemoryCachedHWIDActionGetter(
+        self._hwid_action_manager)
+    bc_dict = self._bc_helper.BatchGetBOMAndConfigless(
+        hwid_action_getter, [request.hwid], verbose=True)
+    bom_configless = bc_dict.get(request.hwid)
+    if bom_configless is None:
+      return hwid_api_messages_pb2.SkuResponse(
+          error='Internal error',
+          status=hwid_api_messages_pb2.Status.SERVER_ERROR)
+    status, error = bc_helper_module.GetBOMAndConfiglessStatusAndError(
+        bom_configless)
+    if status != hwid_api_messages_pb2.Status.SUCCESS:
+      return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
+    bom = bom_configless.bom
+    configless = bom_configless.configless
+
+    sku = self._sku_helper.GetSKUFromBOM(bom, configless)
+    action = hwid_action_getter.GetHWIDAction(bom.project)
+    return hwid_api_messages_pb2.SkuResponse(
+        status=hwid_api_messages_pb2.Status.SUCCESS, project=sku.project,
+        cpu=sku.cpu, memory_in_bytes=sku.total_bytes, memory=sku.memory_str,
+        sku=sku.sku_str, warnings=sku.warnings,
+        feature_enablement_status=(action.GetFeatureEnablementLabel(
+            request.hwid)))
+
+
 class GetDUTLabelShard(common_helper.HWIDServiceShardBase):
 
   def __init__(self, decoder_data_manager: decoder_data.DecoderDataManager,

@@ -9,7 +9,6 @@ This file is also the place that all the binding is done for various components.
 from typing import Collection
 
 from cros.factory.hwid.service.appengine import auth
-from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import decoding_apis
@@ -34,7 +33,6 @@ class ProtoRPCService(common_helper.HWIDServiceShardBase):
 
   def __init__(self, config, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    decoder_data_manager = config.decoder_data_manager
     hwid_repo_manager = config.hwid_repo_manager
     avl_converter_manager = config.avl_converter_manager
     session_cache_adapter = memcache_adapter.MemcacheAdapter(
@@ -43,10 +41,6 @@ class ProtoRPCService(common_helper.HWIDServiceShardBase):
 
     self._hwid_action_manager = config.hwid_action_manager
     self._hwid_db_data_manager = config.hwid_db_data_manager
-    self._sku_helper = sku_helper_module.SKUHelper(decoder_data_manager)
-    bom_data_cacher = config.bom_data_cacher
-    self._bc_helper = bc_helper_module.BOMAndConfiglessHelper(
-        decoder_data_manager, bom_data_cacher)
     self._ss_helper = ss_helper.SelfServiceHelper(
         self._hwid_action_manager,
         hwid_repo_manager,
@@ -61,39 +55,6 @@ class ProtoRPCService(common_helper.HWIDServiceShardBase):
   def CreateInstance(cls, config):
     """Creates RPC service instance."""
     return cls(config)
-
-  @protorpc_utils.ProtoRPCServiceMethod
-  @auth.RpcCheck
-  def GetSku(self, request):
-    """Return the components of the SKU identified by the HWID."""
-    status, error = common_helper.FastFailKnownBadHWID(request.hwid)
-    if status != hwid_api_messages_pb2.Status.SUCCESS:
-      return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
-
-    hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
-        self._hwid_action_manager)
-    bc_dict = self._bc_helper.BatchGetBOMAndConfigless(
-        hwid_action_getter, [request.hwid], verbose=True)
-    bom_configless = bc_dict.get(request.hwid)
-    if bom_configless is None:
-      return hwid_api_messages_pb2.SkuResponse(
-          error='Internal error',
-          status=hwid_api_messages_pb2.Status.SERVER_ERROR)
-    status, error = bc_helper_module.GetBOMAndConfiglessStatusAndError(
-        bom_configless)
-    if status != hwid_api_messages_pb2.Status.SUCCESS:
-      return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
-    bom = bom_configless.bom
-    configless = bom_configless.configless
-
-    sku = self._sku_helper.GetSKUFromBOM(bom, configless)
-    action = hwid_action_getter.GetHWIDAction(bom.project)
-    return hwid_api_messages_pb2.SkuResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS, project=sku.project,
-        cpu=sku.cpu, memory_in_bytes=sku.total_bytes, memory=sku.memory_str,
-        sku=sku.sku_str, warnings=sku.warnings,
-        feature_enablement_status=(action.GetFeatureEnablementLabel(
-            request.hwid)))
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -218,6 +179,8 @@ def GetAllHWIDServiceShards(
   sku_helper = sku_helper_module.SKUHelper(config.decoder_data_manager)
   get_bom_shard = decoding_apis.GetBOMShard(
       config.hwid_action_manager, bc_helper)
+  get_sku_shard = decoding_apis.GetSKUShard(
+      config.hwid_action_manager, bc_helper, sku_helper)
   get_dut_label_shard = decoding_apis.GetDUTLabelShard(
       config.decoder_data_manager, goldeneye_memcache_adapter,
       bc_helper, sku_helper, config.hwid_action_manager)
@@ -225,6 +188,7 @@ def GetAllHWIDServiceShards(
   return [
       project_info_shard,
       get_bom_shard,
+      get_sku_shard,
       get_dut_label_shard,
       ProtoRPCService.CreateInstance(config),
   ]

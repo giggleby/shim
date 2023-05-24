@@ -9,7 +9,6 @@ from unittest import mock
 
 from cros.factory.hwid.service.appengine import config as config_module
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
-from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_api
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -53,100 +52,6 @@ class ProtoRPCServiceTest(unittest.TestCase):
   def tearDown(self):
     super().tearDown()
     self._modules.ClearAll()
-
-  def _SetupFakeHWIDActionForFeatureEnablementLabel(
-      self, project_name: str,
-      feature_enablement_label: str = 'just_a_random_default_value'):
-    instance = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    instance.GetFeatureEnablementLabel.return_value = feature_enablement_label
-    self._modules.ConfigHWID(project_name, 3, 'unused raw HWID DB contents',
-                             hwid_action=instance)
-    return instance
-
-  def testGetSku(self):
-    bom = hwid_action.BOM()
-    bom.AddAllComponents({
-        'cpu': ['bar1', 'bar2'],
-        'dram': ['foo']
-    })
-    bom.project = 'foo'
-    configless = None
-    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
-                                                       'feature_value')
-    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
-      mock_helper.BatchGetBOMAndConfigless.return_value = {
-          TEST_HWID: _BOMAndConfigless(bom, configless, None)
-      }
-
-      with mock.patch.object(
-          self.service._sku_helper,  # pylint: disable=protected-access
-          'GetTotalRAMFromHWIDData') as mock_func:
-        mock_func.return_value = ('1MB', 100000000, [])
-
-        req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
-        msg = self.service.GetSku(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.SkuResponse(
-            status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
-            memory='1MB', memory_in_bytes=100000000, sku='foo_bar1_bar2_1MB',
-            feature_enablement_status='feature_value'), msg)
-
-  def testGetSku_WithConfigless(self):
-    bom = hwid_action.BOM()
-    bom.AddAllComponents({
-        'cpu': ['bar1', 'bar2'],
-        'dram': ['foo']
-    })
-    bom.project = 'foo'
-    configless = {
-        'memory': 4
-    }
-    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
-                                                       'feature_value')
-    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
-      mock_helper.BatchGetBOMAndConfigless.return_value = {
-          TEST_HWID: _BOMAndConfigless(bom, configless, None)
-      }
-
-      with mock.patch.object(
-          self.service._sku_helper,  # pylint: disable=protected-access
-          'GetTotalRAMFromHWIDData') as mock_func:
-        mock_func.return_value = ('1MB', 100000000, [])
-
-        req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
-        msg = self.service.GetSku(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.SkuResponse(
-            status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
-            memory='4GB', memory_in_bytes=4294967296, sku='foo_bar1_bar2_4GB',
-            feature_enablement_status='feature_value'), msg)
-
-  def testGetSku_DramWithoutSize(self):
-    bom = hwid_action.BOM()
-    bom.AddAllComponents({
-        'cpu': 'bar',
-        'dram': ['fail']
-    })
-    bom.project = 'foo'
-    configless = None
-    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
-                                                       'feature_value')
-    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
-      mock_helper.BatchGetBOMAndConfigless.return_value = {
-          TEST_HWID: _BOMAndConfigless(bom, configless, None)
-      }
-
-      req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
-      msg = self.service.GetSku(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.SkuResponse(
-            project='foo', cpu='bar', memory_in_bytes=0, sku='foo_bar_0B',
-            memory='0B', status=StatusMsg.SUCCESS, warnings=[
-                "'fail' does not contain size field"
-            ], feature_enablement_status='feature_value'), msg)
 
   def testGetHwidDbEditableSection_ProjectNotFound(self):
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:

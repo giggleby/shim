@@ -9,7 +9,7 @@ from unittest import mock
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import decoding_apis
-from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper as sku_helper_module
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
@@ -40,7 +40,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
             self._module_collection.fake_bom_data_cacher,
         ))
     self._sku_helper = mock.Mock(
-        spec=sku_helper.SKUHelper, wraps=sku_helper.SKUHelper(
+        spec=sku_helper_module.SKUHelper, wraps=sku_helper_module.SKUHelper(
             self._module_collection.fake_decoder_data_manager))
     self.service = decoding_apis.GetDUTLabelShard(
         self._module_collection.fake_decoder_data_manager,
@@ -74,7 +74,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
     bom.project = TEST_PROJECT
     bom.phase = 'bar'
     configless = None
-    self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
+    self._sku_helper.GetSKUFromBOM.return_value = sku_helper_module.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
         warnings=[])
     self._SetupFakeHWIDActionForTestProject('feature_enablement_value')
@@ -114,7 +114,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
     bom.project = TEST_PROJECT
     bom.phase = 'bar'
     configless = None
-    self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
+    self._sku_helper.GetSKUFromBOM.return_value = sku_helper_module.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
         warnings=['warning1', 'warning2'])
     self._SetupFakeHWIDActionForTestProject()
@@ -143,7 +143,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
-    self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
+    self._sku_helper.GetSKUFromBOM.return_value = sku_helper_module.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
         warnings=[])
 
@@ -198,7 +198,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
-    self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
+    self._sku_helper.GetSKUFromBOM.return_value = sku_helper_module.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
         warnings=[])
 
@@ -285,7 +285,7 @@ class GetBOMShardTest(unittest.TestCase):
         spec=bc_helper_module.BOMAndConfiglessHelper,
         wrap=self._default_fake_bc_helper)
     self.service = decoding_apis.GetBOMShard(
-      self._modules.fake_hwid_action_manager, self._mock_bc_helper)
+        self._modules.fake_hwid_action_manager, self._mock_bc_helper)
 
   def tearDown(self):
     super().tearDown()
@@ -320,8 +320,7 @@ class GetBOMShardTest(unittest.TestCase):
 
   def testGetBom_WithError(self):
     self._mock_bc_helper.BatchGetBOMEntry.return_value = {
-        TEST_HWID:
-            _BOMEntry([], '', 'bad hwid', StatusMsg.BAD_REQUEST)
+        TEST_HWID: _BOMEntry([], '', 'bad hwid', StatusMsg.BAD_REQUEST)
     }
 
     req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
@@ -410,6 +409,119 @@ class GetBOMShardTest(unittest.TestCase):
                             ComponentMsg(name='bar', component_class='foo'),
                         ]),
             }, status=StatusMsg.BAD_REQUEST, error='value error'), msg)
+
+
+class GetSKUShardTest(unittest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._modules = test_utils.FakeModuleCollection()
+    self._fake_default_bc_helper = bc_helper_module.BOMAndConfiglessHelper(
+        self._modules.fake_decoder_data_manager,
+        self._modules.fake_bom_data_cacher,
+    )
+    self._mock_bc_helper = mock.Mock(
+        spec=bc_helper_module.BOMAndConfiglessHelper,
+        wraps=self._fake_default_bc_helper)
+    self._fake_sku_helper = sku_helper_module.SKUHelper(
+        self._modules.fake_decoder_data_manager)
+
+    self.service = decoding_apis.GetSKUShard(
+        self._modules.fake_hwid_action_manager, self._mock_bc_helper,
+        self._fake_sku_helper)
+
+  def tearDown(self):
+    super().tearDown()
+    self._modules.ClearAll()
+
+  def _SetupFakeHWIDActionForFeatureEnablementLabel(
+      self, project_name: str,
+      feature_enablement_label: str = 'just_a_random_default_value'):
+    instance = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    instance.GetFeatureEnablementLabel.return_value = feature_enablement_label
+    self._modules.ConfigHWID(project_name, 3, 'unused raw HWID DB contents',
+                             hwid_action=instance)
+    return instance
+
+  def testGetSku(self):
+    bom = hwid_action.BOM()
+    bom.AddAllComponents({
+        'cpu': ['bar1', 'bar2'],
+        'dram': ['foo']
+    })
+    bom.project = 'foo'
+    configless = None
+    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
+                                                       'feature_value')
+    self._mock_bc_helper.BatchGetBOMAndConfigless.return_value = {
+        TEST_HWID: _BOMAndConfigless(bom, configless, None)
+    }
+
+    with mock.patch.object(
+        self._fake_sku_helper, 'GetTotalRAMFromHWIDData') as mock_func:
+      mock_func.return_value = ('1MB', 100000000, [])
+
+      req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
+      msg = self.service.GetSku(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.SkuResponse(
+            status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
+            memory='1MB', memory_in_bytes=100000000, sku='foo_bar1_bar2_1MB',
+            feature_enablement_status='feature_value'), msg)
+
+  def testGetSku_WithConfigless(self):
+    bom = hwid_action.BOM()
+    bom.AddAllComponents({
+        'cpu': ['bar1', 'bar2'],
+        'dram': ['foo']
+    })
+    bom.project = 'foo'
+    configless = {
+        'memory': 4
+    }
+    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
+                                                       'feature_value')
+    self._mock_bc_helper.BatchGetBOMAndConfigless.return_value = {
+        TEST_HWID: _BOMAndConfigless(bom, configless, None)
+    }
+
+    with mock.patch.object(
+        self._fake_sku_helper, 'GetTotalRAMFromHWIDData') as mock_func:
+      mock_func.return_value = ('1MB', 100000000, [])
+
+      req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
+      msg = self.service.GetSku(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.SkuResponse(
+            status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
+            memory='4GB', memory_in_bytes=4294967296, sku='foo_bar1_bar2_4GB',
+            feature_enablement_status='feature_value'), msg)
+
+  def testGetSku_DramWithoutSize(self):
+    bom = hwid_action.BOM()
+    bom.AddAllComponents({
+        'cpu': 'bar',
+        'dram': ['fail']
+    })
+    bom.project = 'foo'
+    configless = None
+    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
+                                                       'feature_value')
+    self._mock_bc_helper.BatchGetBOMAndConfigless.return_value = {
+        TEST_HWID: _BOMAndConfigless(bom, configless, None)
+    }
+
+    req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
+    msg = self.service.GetSku(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.SkuResponse(
+            project='foo', cpu='bar', memory_in_bytes=0, sku='foo_bar_0B',
+            memory='0B', status=StatusMsg.SUCCESS, warnings=[
+                "'fail' does not contain size field"
+            ], feature_enablement_status='feature_value'), msg)
 
 
 if __name__ == '__main__':
