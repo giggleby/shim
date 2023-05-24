@@ -17,6 +17,7 @@ import uuid
 from google.protobuf import descriptor
 from google.protobuf import json_format
 
+from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
@@ -652,7 +653,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
         feature_matcher_source=feature_matcher_source)
 
 
-class SelfServiceHelper:
+class SelfServiceShard(common_helper.HWIDServiceShardBase):
 
   def __init__(self,
                hwid_action_manager_inst: hwid_action_manager.HWIDActionManager,
@@ -670,7 +671,9 @@ class SelfServiceHelper:
     self._avl_metadata_manager = avl_metadata_manager
     self._feature_matcher_builder_class = feature_matcher_builder_class
 
-  def GetHWIDDBEditableSection(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def GetHwidDbEditableSection(self, request):
     project = _NormalizeProjectString(request.project)
     try:
       action = self._hwid_action_manager.GetHWIDAction(project)
@@ -703,7 +706,9 @@ class SelfServiceHelper:
     self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
         limit_models=[project])
 
-  def CreateHWIDDBEditableSectionChangeCL(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateHwidDbEditableSectionChangeCl(self, request):
     project = _NormalizeProjectString(request.project)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     cache = self._session_cache_adapter.Get(request.validation_token)
@@ -787,7 +792,9 @@ class SelfServiceHelper:
 
     return resp
 
-  def CreateHWIDDBFirmwareInfoUpdateCL(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateHwidDbFirmwareInfoUpdateCl(self, request):
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     bundle_record = request.bundle_record
     request_uuid = str(uuid.uuid4())
@@ -1013,7 +1020,9 @@ class SelfServiceHelper:
       return None
     return cl_info
 
-  def BatchGetHWIDDBEditableSectionChangeCLInfo(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def BatchGetHwidDbEditableSectionChangeClInfo(self, request):
     response = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
@@ -1039,7 +1048,9 @@ class SelfServiceHelper:
 
     return response
 
-  def AnalyzeHWIDDBEditableSection(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def AnalyzeHwidDbEditableSection(self, request):
     project = _NormalizeProjectString(request.project)
     response = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse()
     require_hwid_db_lines = request.require_hwid_db_lines
@@ -1101,7 +1112,9 @@ class SelfServiceHelper:
         _ConvertTouchedSectionToMsg(report.touched_sections))
     return response
 
-  def BatchGenerateAVLComponentName(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def BatchGenerateAvlComponentName(self, request):
     response = hwid_api_messages_pb2.BatchGenerateAvlComponentNameResponse()
     np_adapter = name_pattern_adapter.NamePatternAdapter()
     nps = {}
@@ -1121,7 +1134,9 @@ class SelfServiceHelper:
           np.GenerateAVLName(name_info, seq=str(mat.seq_no)))
     return response
 
-  def GetHWIDBundleResourceInfo(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def GetHwidBundleResourceInfo(self, request):
     project = _NormalizeProjectString(request.project)
     try:
       gerrit_hwid_repo = self._hwid_repo_manager.GetGerritToTHWIDRepo()
@@ -1144,7 +1159,9 @@ class SelfServiceHelper:
           _ConvertCompInfoToMsg(comp_info))
     return response
 
-  def CreateHWIDBundle(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateHwidBundle(self, request):
     project = _NormalizeProjectString(request.project)
     try:
       action = self._hwid_action_manager.GetHWIDAction(project)
@@ -1169,7 +1186,9 @@ class SelfServiceHelper:
             name_ext=bundle_info.bundle_file_ext))
     return response
 
-  def CreateHWIDDBInitCL(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateHwidDbInitCl(self, request):
     project = _NormalizeProjectString(request.project)
     board = _NormalizeProjectString(request.board)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
@@ -1225,7 +1244,9 @@ class SelfServiceHelper:
     resp.commit.new_hwid_db_contents = editable_section
     return resp
 
-  def SetChangeCLBotApprovalStatus(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def SetChangeClBotApprovalStatus(self, request):
     for cl_number, cl_action in request.cl_actions.items():
       if cl_action.approval_case not in _APPROVAL_CASE:
         logging.error('Approval case unspecified.')
@@ -1243,6 +1264,8 @@ class SelfServiceHelper:
             protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from ex
     return hwid_api_messages_pb2.SetChangeClBotApprovalStatusResponse()
 
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
   def SetFirmwareInfoSupportStatus(self, request):
     project = _NormalizeProjectString(request.project)
     live_hwid_repo, action = self._GetRepoAndAction(project)
@@ -1323,7 +1346,9 @@ class SelfServiceHelper:
 
     return resp
 
-  def SplitHWIDDBChange(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def SplitHwidDbChange(self, request):
     session_cache = self._GetSessionCache(request.session_token)
     project = session_cache.project
     avl_resource = request.db_external_resource
@@ -1356,7 +1381,9 @@ class SelfServiceHelper:
             change_unit_manager.GetChangeUnits().items()
         })
 
-  def CreateSplittedHWIDDBCLs(self, request):
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateSplittedHwidDbCls(self, request):
 
     def _CommitSplittedCL(
         db: database.Database, msg: str, change_unit_identities: Sequence[str],
@@ -1498,6 +1525,8 @@ class SelfServiceHelper:
       resp.final_hwid_db_commit.new_hwid_db_contents = final_hwid_db_content
     return resp
 
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
   def UpdateAudioCodecKernelNames(self, request):
     allowlist = set(request.allowlisted_kernel_names)
     blocklist = set(request.blocklisted_kernel_names)

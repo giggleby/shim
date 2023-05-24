@@ -109,7 +109,7 @@ def _ApplyUnifiedDiff(src: str, diff: str) -> str:
   return ''.join(result_lines + src_lines[src_next_line_no:])
 
 
-def _CreateFakeSelfServiceHelper(
+def _CreateFakeSelfServiceShard(
     modules: test_utils.FakeModuleCollection,
     hwid_repo_manager: hwid_repo.HWIDRepoManager,
     hwid_action_manager_inst: Optional[
@@ -120,14 +120,14 @@ def _CreateFakeSelfServiceHelper(
     avl_metadata_manager: Optional[avl_metadata_util.AVLMetadataManager] = None,
     feature_matcher_builder_class: (
         Optional[Type[ss_helper_module.FeatureMatcherBuilder]]) = None,
-) -> ss_helper_module.SelfServiceHelper:
+) -> ss_helper_module.SelfServiceShard:
   avl_metadata_manager = (
       avl_metadata_manager or avl_metadata_util.AVLMetadataManager(
           modules.ndb_connector,
           config_data.AVLMetadataSetting.CreateInstance(
               False, 'namespace.prefix', 'avl-metadata-topic',
               ['cc1@notgoogle.com'])))
-  return ss_helper_module.SelfServiceHelper(
+  return ss_helper_module.SelfServiceShard(
       hwid_action_manager_inst or modules.fake_hwid_action_manager,
       hwid_repo_manager, hwid_db_data_manager or
       modules.fake_hwid_db_data_manager, avl_converter_manager or
@@ -137,21 +137,21 @@ def _CreateFakeSelfServiceHelper(
        ss_helper_module.FeatureMatcherBuilderImpl))
 
 
-def _AnalyzeHWIDDBEditableSection(ss_helper: ss_helper_module.SelfServiceHelper,
+def _AnalyzeHwidDbEditableSection(shard: ss_helper_module.SelfServiceShard,
                                   project: str, hwid_db_editable_section: str):
   analyze_req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
       project=project, hwid_db_editable_section=hwid_db_editable_section,
       require_hwid_db_lines=False)
 
-  return ss_helper.AnalyzeHWIDDBEditableSection(analyze_req)
+  return shard.AnalyzeHwidDbEditableSection(analyze_req)
 
 
-def _SplitHWIDDBChange(
-    ss_helper: ss_helper_module.SelfServiceHelper, session_token: str,
+def _SplitHwidDbChange(
+    shard: ss_helper_module.SelfServiceShard, session_token: str,
     db_external_resource: hwid_api_messages_pb2.HwidDbExternalResource):
   split_req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
       session_token=session_token, db_external_resource=db_external_resource)
-  return ss_helper.SplitHWIDDBChange(split_req)
+  return shard.SplitHwidDbChange(split_req)
 
 
 _ComponentClass = str
@@ -546,7 +546,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
         {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
 
 
-class SelfServiceHelperTest(unittest.TestCase):
+class SelfServiceShardTest(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -562,69 +562,69 @@ class SelfServiceHelperTest(unittest.TestCase):
             has_warnings=False, commit_message='',
             feature_matcher_source='unused value'))
 
-    self._ss_helper = _CreateFakeSelfServiceHelper(
+    self.service = _CreateFakeSelfServiceShard(
         self._modules, self._mock_hwid_repo_manager,
         feature_matcher_builder_class=self._mock_feature_matcher_builder_class)
 
   def tearDown(self):
     self._modules.ClearAll()
 
-  def testGetHWIDDBEditableSection_ProjectDoesntExist(self):
+  def testGetHwidDbEditableSection_ProjectDoesntExist(self):
     # Default there's no project in the datastore.
     req = hwid_api_messages_pb2.GetHwidDbEditableSectionRequest(
         project='testproject')
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.GetHWIDDBEditableSection(req)
+      self.service.GetHwidDbEditableSection(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
 
-  def testGetHWIDDBEditableSection_InternalError(self):
+  def testGetHwidDbEditableSection_InternalError(self):
     self._modules.ConfigHWID('PROJ', '2', 'db data', hwid_action=None)
 
     req = hwid_api_messages_pb2.GetHwidDbEditableSectionRequest(project='proj')
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.GetHWIDDBEditableSection(req)
+      self.service.GetHwidDbEditableSection(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
 
-  def testGetHWIDDBEditableSection_NotV3(self):
+  def testGetHwidDbEditableSection_NotV3(self):
     action = hwid_action.HWIDAction()  # Default doesn't support any operations.
     action.HWID_VERSION = 0
     self._modules.ConfigHWID('PROJ', '0', 'db data', hwid_action=action)
 
     req = hwid_api_messages_pb2.GetHwidDbEditableSectionRequest(project='proj')
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.GetHWIDDBEditableSection(req)
+      self.service.GetHwidDbEditableSection(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
-  def testGetHWIDDBEditableSection_Success(self):
+  def testGetHwidDbEditableSection_Success(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     action.GetDBEditableSection.return_value = 'aa\nbb'
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
 
     req = hwid_api_messages_pb2.GetHwidDbEditableSectionRequest(project='proj')
-    resp = self._ss_helper.GetHWIDDBEditableSection(req)
+    resp = self.service.GetHwidDbEditableSection(req)
 
     self.assertEqual(resp.hwid_db_editable_section, 'aa\nbb')
 
-  def testGetHWIDDBEditableSectionChange_ProjectNotV3(self):
+  def testGetHwidDbEditableSectionChange_ProjectNotV3(self):
     action = hwid_action.HWIDAction()  # Default doesn't support any operations.
     action.HWID_VERSION = 0
     self._modules.ConfigHWID('PROJ', '0', 'db data', hwid_action=action)
 
     req = hwid_api_messages_pb2.GetHwidDbEditableSectionRequest(project='proj')
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.GetHWIDDBEditableSection(req)
+      self.service.GetHwidDbEditableSection(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
-  def testCreateHWIDDBEditableSectionChangeCL_InvalidValidationToken(self):
+  def testCreateHwidDbEditableSectionChangeCl_InvalidValidationToken(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
@@ -637,13 +637,13 @@ class SelfServiceHelperTest(unittest.TestCase):
         project='proj', validation_token='validation-token-value-1')
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
+      self.service.CreateHwidDbEditableSectionChangeCl(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.ABORTED)
 
   @mock.patch.object(database.Database, 'LoadData')
-  def testCreateHWIDDBEditableSectionChangeCL_BuildFeatureMatcherFail(
+  def testCreateHwidDbEditableSectionChangeCl_BuildFeatureMatcherFail(
       self, mock_load_data):
     del mock_load_data
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
@@ -665,14 +665,14 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', validation_token='validation-token-value-1')
-    self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
+    self.service.CreateHwidDbEditableSectionChangeCl(req)
 
     unused_args, kwargs = live_hwid_repo.CommitHWIDDB.call_args
     self.assertIn('THIS_IS_THE_ERROR', kwargs['commit_msg'])
     self.assertIsNone(kwargs['feature_matcher_source'])
 
   @mock.patch.object(database.Database, 'LoadData')
-  def testCreateHWIDDBEditableSectionChangeCL_BuildFeatureMatcherSuccess(
+  def testCreateHwidDbEditableSectionChangeCl_BuildFeatureMatcherSuccess(
       self, mock_load_data):
     del mock_load_data
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
@@ -694,14 +694,14 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', validation_token='validation-token-value-1')
-    self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
+    self.service.CreateHwidDbEditableSectionChangeCl(req)
 
     unused_args, kwargs = live_hwid_repo.CommitHWIDDB.call_args
     self.assertIn('Some commit info.', kwargs['commit_msg'])
     self.assertEqual('the result payload', kwargs['feature_matcher_source'])
 
   @mock.patch.object(database.Database, 'LoadData')
-  def testCreateHWIDDBEditableSectionChangeCL_Succeed(self, mock_load_data):
+  def testCreateHwidDbEditableSectionChangeCl_Succeed(self, mock_load_data):
     del mock_load_data
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
@@ -766,7 +766,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                                                   'db data after change'))
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', validation_token='validation-token-value-1')
-    resp = self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
+    resp = self.service.CreateHwidDbEditableSectionChangeCl(req)
 
     self.assertEqual(resp.cl_number, 123)
     self.assertEqual(
@@ -833,7 +833,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual('db data after change 1 (internal)',
                      kwargs['hwid_db_contents_internal'])
 
-  def testCreateHWIDDBEditableSectionChangeCL_ValidationExpired(self):
+  def testCreateHwidDbEditableSectionChangeCl_ValidationExpired(self):
     """Test that the validation token becomes expired once the live HWID repo is
     updated."""
 
@@ -850,7 +850,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                              hwid_action_factory=CreateMockHWIDAction)
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='db data after change')
-    resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
+    resp = self.service.AnalyzeHwidDbEditableSection(req)
     token_that_will_become_expired = resp.validation_token
 
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data ver 2')
@@ -859,7 +859,7 @@ class SelfServiceHelperTest(unittest.TestCase):
         project='proj', validation_token=token_that_will_become_expired)
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
+      self.service.CreateHwidDbEditableSectionChangeCl(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.ABORTED)
@@ -885,7 +885,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                                   comment_threads, bot_commit, commit_queue,
                                   parent_cl_numbers, verified)
 
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo(self):
+  def testBatchGetHwidDbEditableSectionChangeClInfo(self):
     all_hwid_commit_infos = {
         1:
             self._CreateHWIDDBCLWithDefaults(1, hwid_repo.HWIDDBCLStatus.NEW),
@@ -917,7 +917,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[1, 2, 3, 4, 5, 6]))
-    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    resp = self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
     expected_resp = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
@@ -936,7 +936,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     expected_comment_thread.comments.add(email='user1@email', message='msg1')
     self.assertEqual(resp, expected_resp)
 
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo_AbandonLegacyCLs(self):
+  def testBatchGetHwidDbEditableSectionChangeClInfo_AbandonLegacyCLs(self):
     long_time_ago = datetime.datetime.utcnow() - datetime.timedelta(days=365 *
                                                                     9)
     orig_cl_info = self._CreateHWIDDBCLWithDefaults(
@@ -952,7 +952,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
-    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    resp = self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
     expected_resp = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
@@ -961,7 +961,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     cl_status.status = cl_status.ABANDONED
     self.assertEqual(resp, expected_resp)
 
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo_AbandonMergeConflictCLs(
+  def testBatchGetHwidDbEditableSectionChangeClInfo_AbandonMergeConflictCLs(
       self):
     long_time_ago = datetime.datetime.utcnow() - datetime.timedelta(days=35)
     orig_cl_info = self._CreateHWIDDBCLWithDefaults(
@@ -977,7 +977,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
-    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    resp = self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
     expected_resp = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
@@ -986,7 +986,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     cl_status.status = cl_status.ABANDONED
     self.assertEqual(resp, expected_resp)
 
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo_AbandonReviewRejectedCLs(
+  def testBatchGetHwidDbEditableSectionChangeClInfo_AbandonReviewRejectedCLs(
       self):
     now = datetime.datetime.utcnow()
     orig_cl_info = self._CreateHWIDDBCLWithDefaults(
@@ -1003,7 +1003,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
-    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    resp = self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
     expected_resp = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
@@ -1012,7 +1012,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     cl_status.status = cl_status.ABANDONED
     self.assertEqual(resp, expected_resp)
 
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo_AbandonCLChain(self):
+  def testBatchGetHwidDbEditableSectionChangeClInfo_AbandonCLChain(self):
     # Arrange.
     now = datetime.datetime.utcnow()
     cl_info = self._CreateHWIDDBCLWithDefaults(
@@ -1040,7 +1040,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
-    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    resp = self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
 
     # Assert.
     abandon_reason = 'The CL is rejected by the reviewer.'
@@ -1056,7 +1056,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     cl_status.status = cl_status.ABANDONED
     self.assertEqual(expected_resp, resp)
 
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo_RebaseMergeConflict(self):
+  def testBatchGetHwidDbEditableSectionChangeClInfo_RebaseMergeConflict(self):
     now = datetime.datetime.utcnow()
     cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.NEW, mergeable=False, created_time=now,
@@ -1066,11 +1066,11 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
-    self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
 
     self._mock_hwid_repo_manager.RebaseCLMetadata.assert_called_once()
 
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo_RebaseFailed(self):
+  def testBatchGetHwidDbEditableSectionChangeClInfo_RebaseFailed(self):
     now = datetime.datetime.utcnow()
     orig_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.NEW, mergeable=False, created_time=now,
@@ -1086,7 +1086,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
-    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    resp = self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
     expected_resp = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
@@ -1098,7 +1098,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   @mock.patch('cros.factory.hwid.service.appengine.git_util.ReviewCL')
   @mock.patch(
       'cros.factory.hwid.service.appengine.git_util.GetGerritAuthCookie')
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo_TriggerParentCQ(
+  def testBatchGetHwidDbEditableSectionChangeClInfo_TriggerParentCQ(
       self, mock_auth_cookie, mock_review_cl):
     del mock_auth_cookie
     now = datetime.datetime.utcnow()
@@ -1128,7 +1128,7 @@ class SelfServiceHelperTest(unittest.TestCase):
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
 
-    self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
 
     # Verify that the CL and its parent CLs are put into CQ.
     self.assertCountEqual([
@@ -1144,7 +1144,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   @mock.patch('cros.factory.hwid.service.appengine.git_util.ReviewCL')
   @mock.patch(
       'cros.factory.hwid.service.appengine.git_util.GetGerritAuthCookie')
-  def testBatchGetHWIDDBEditableSectionChangeCLInfo_NotCQReady(
+  def testBatchGetHwidDbEditableSectionChangeClInfo_NotCQReady(
       self, mock_auth_cookie, mock_review_cl):
     del mock_auth_cookie
     now = datetime.datetime.utcnow()
@@ -1157,25 +1157,25 @@ class SelfServiceHelperTest(unittest.TestCase):
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
 
-    self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    self.service.BatchGetHwidDbEditableSectionChangeClInfo(req)
 
     # Verify that the CL and its parent CLs are not put into CQ since the
     # Verified vote has not been set.
     self.assertFalse(mock_review_cl.call_args_list)
 
-  def testBatchGenerateAVLComponentName(self):
+  def testBatchGenerateAvlComponentName(self):
     req = hwid_api_messages_pb2.BatchGenerateAvlComponentNameRequest()
     for comp_cls, cid, qid, seq_no in [('class1', 1, 0, 1), ('class2', 4, 5, 6),
                                        ('class2', 7, 8, 0)]:
       req.component_name_materials.add(component_class=comp_cls, avl_cid=cid,
                                        avl_qid=qid, seq_no=seq_no)
 
-    resp = self._ss_helper.BatchGenerateAVLComponentName(req)
+    resp = self.service.BatchGenerateAvlComponentName(req)
 
     self.assertEqual(resp.component_names,
                      ['class1_1#1', 'class2_4_5#6', 'class2_7_8#0'])
 
-  def testAnalyzeHWIDDBEditableSection_PreconditionErrors(self):
+  def testAnalyzeHwidDbEditableSection_PreconditionErrors(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDBEditableSection.return_value = (
@@ -1192,7 +1192,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='editable contents')
-    resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
+    resp = self.service.AnalyzeHwidDbEditableSection(req)
 
     ValidationResultMsg = (
         hwid_api_messages_pb2.HwidDbEditableSectionChangeValidationResult)
@@ -1204,7 +1204,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                                       message='some_contents_error'),
         ])
 
-  def testAnalyzeHWIDDBEditableSection_Pass(self):
+  def testAnalyzeHwidDbEditableSection_Pass(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     ModificationStatus = (
@@ -1263,7 +1263,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='editable contents',
         require_hwid_db_lines=True)
-    resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
+    resp = self.service.AnalyzeHwidDbEditableSection(req)
 
     LineMsg = _AnalysisReportMsg.HwidDbLine
     LinePartMsg = _AnalysisReportMsg.HwidDbLinePart
@@ -1325,7 +1325,7 @@ class SelfServiceHelperTest(unittest.TestCase):
             )), validation_token='fingerprint')
     self.assertEqual(resp, expected_resp)
 
-  def testAnalyzeHWIDDBEditableSection_NoopChange(self):
+  def testAnalyzeHwidDbEditableSection_NoopChange(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDBEditableSection.return_value = (
@@ -1334,7 +1334,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='new_db_content')
-    resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
+    resp = self.service.AnalyzeHwidDbEditableSection(req)
 
     expected_resp = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse(
         analysis_report=_AnalysisReportMsg(
@@ -1345,7 +1345,7 @@ class SelfServiceHelperTest(unittest.TestCase):
             noop_for_external_db=True), validation_token='fingerprint')
     self.assertEqual(resp, expected_resp)
 
-  def testGetHWIDBundleResourceInfo_RefreshDatastoreFirst(self):
+  def testGetHwidBundleResourceInfo_RefreshDatastoreFirst(self):
 
     def CreateMockHWIDAction(hwid_data):
       # Configure the mocked HWIDAction so that it returns the resource info
@@ -1362,17 +1362,17 @@ class SelfServiceHelperTest(unittest.TestCase):
                                 'db data ver 1(internal)')
     req1 = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
         project='proj')
-    resp1 = self._ss_helper.GetHWIDBundleResourceInfo(req1)
+    resp1 = self.service.GetHwidBundleResourceInfo(req1)
     self._ConfigHWIDRepoManager('PROJ', 3, 'db data ver 2',
                                 'db data ver 2(internal)')
     req2 = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
         project='proj')
-    resp2 = self._ss_helper.GetHWIDBundleResourceInfo(req2)
+    resp2 = self.service.GetHwidBundleResourceInfo(req2)
 
     self.assertNotEqual(resp1.bundle_creation_token,
                         resp2.bundle_creation_token)
 
-  def testGetHWIDBundleResourceInfo_Pass(self):
+  def testGetHwidBundleResourceInfo_Pass(self):
 
     def CreateMockHWIDAction(hwid_data):
       # Configure the mocked HWIDAction so that it returns the resource info
@@ -1411,7 +1411,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                              raw_db_internal='db data')
     self._ConfigHWIDRepoManager('PROJ', 3, 'db data', 'db data(internal)')
     req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(project='proj')
-    resp = self._ss_helper.GetHWIDBundleResourceInfo(req)
+    resp = self.service.GetHwidBundleResourceInfo(req)
     expected_resp = hwid_api_messages_pb2.GetHwidBundleResourceInfoResponse(
         bundle_creation_token='fingerprint of db data',
         resource_info=hwid_api_messages_pb2.HwidBundleResourceInfo(
@@ -1443,7 +1443,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                 })))
     self.assertEqual(resp, expected_resp)
 
-  def testCreateHWIDBundle_ResourceInfoTokenInvalid(self):
+  def testCreateHwidBundle_ResourceInfoTokenInvalid(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     action.GetHWIDBundleResourceInfo.return_value = (
         hwid_action.BundleResourceInfo('fingerprint_value_1', {}))
@@ -1452,12 +1452,12 @@ class SelfServiceHelperTest(unittest.TestCase):
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
       req = hwid_api_messages_pb2.CreateHwidBundleRequest(
           project='proj', bundle_creation_token='fingerprint_value_2')
-      self._ss_helper.CreateHWIDBundle(req)
+      self.service.CreateHwidBundle(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.ABORTED)
 
-  def testAnalyzeHWIDDBEditableSection_DiffStatus(self):
+  def testAnalyzeHwidDbEditableSection_DiffStatus(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDBEditableSection.return_value = (
@@ -1527,7 +1527,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='editable contents',
         require_hwid_db_lines=False)
-    resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
+    resp = self.service.AnalyzeHwidDbEditableSection(req)
 
     expected_resp = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse(
         analysis_report=_AnalysisReportMsg(
@@ -1599,7 +1599,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self.assertEqual(resp, expected_resp)
 
-  def testCreateHWIDDBInitCL_Succeed(self):
+  def testCreateHwidDbInitCl_Succeed(self):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.return_value = 123
     live_hwid_repo.GetHWIDDBMetadataByName.side_effect = ValueError
@@ -1611,24 +1611,24 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
         project='proj', board='board', phase='EVT', bug_number=12345)
-    resp = self._ss_helper.CreateHWIDDBInitCL(req)
+    resp = self.service.CreateHwidDbInitCl(req)
 
     self.assertEqual(resp.commit.cl_number, 123)
     self.assertEqual(expected_db_content, resp.commit.new_hwid_db_contents)
 
-  def testCreateHWIDDBInitCL_ProjectExists(self):
+  def testCreateHwidDbInitCl_ProjectExists(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
 
     req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
         project='proj', board='board', phase='EVT', bug_number=12345)
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.CreateHWIDDBInitCL(req)
+      self.service.CreateHwidDbInitCl(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
-  def testCreateHWIDDBInitCL_NoBugNumber(self):
+  def testCreateHwidDbInitCl_NoBugNumber(self):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.return_value = 123
     live_hwid_repo.GetHWIDDBMetadataByName.side_effect = ValueError
@@ -1637,12 +1637,12 @@ class SelfServiceHelperTest(unittest.TestCase):
         project='proj', board='board', phase='EVT')
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.CreateHWIDDBInitCL(req)
+      self.service.CreateHwidDbInitCl(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
-  def testCreateHWIDDBFirmwareInfoUpdateCL_Succeed(self):
+  def testCreateHwidDbFirmwareInfoUpdateCl_Succeed(self):
     raw_db = file_utils.ReadFile(HWIDV3_FILE)
     self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
@@ -1652,7 +1652,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=self._CreateBundleRecord(['proj']))
-    resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+    resp = self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
     comps = action.GetComponents(
         ['ro_main_firmware', 'ro_fp_firmware', 'firmware_keys'])
 
@@ -1665,7 +1665,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
                      action.GetDBEditableSection())
 
-  def testCreateHWIDDBFirmwareInfoUpdateCL_Succeed_DevSignedFirmware(self):
+  def testCreateHwidDbFirmwareInfoUpdateCl_Succeed_DevSignedFirmware(self):
     raw_db = file_utils.ReadFile(HWIDV3_FILE)
     self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
@@ -1682,7 +1682,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                                          firmware_records=[firmware_record])
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=bundle_record)
-    resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+    resp = self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
     comps = action.GetComponents(['firmware_keys'])
 
     self.assertIn('firmware_keys_dev', comps['firmware_keys'])
@@ -1691,7 +1691,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
                      action.GetDBEditableSection())
 
-  def testCreateHWIDDBFirmwareInfoUpdateCL_NoComponentAdded(self):
+  def testCreateHwidDbFirmwareInfoUpdateCl_NoComponentAdded(self):
     raw_db = file_utils.ReadFile(HWIDV3_FROM_FACTORY_BUNDLE_AFTER_FILE)
     self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
     action = self._CreateFakeHWIDBAction('PROJ', raw_db)
@@ -1699,11 +1699,11 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=self._CreateBundleRecord(['proj']))
-    resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+    resp = self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
 
     self.assertEqual(len(resp.commits), 0)
 
-  def testCreateHWIDDBFirmwareInfoUpdateCL_ProjectNotFound(self):
+  def testCreateHwidDbFirmwareInfoUpdateCl_ProjectNotFound(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
 
     firmware_record = _FirmwareRecord(model='notproj')
@@ -1711,12 +1711,12 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=bundle_record)
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+      self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
 
-  def testCreateHWIDDBFirmwareInfoUpdateCL_InvalidSigner(self):
+  def testCreateHwidDbFirmwareInfoUpdateCl_InvalidSigner(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     action.GetDBV3.return_value = mock.MagicMock(spec=database.WritableDatabase)
@@ -1729,12 +1729,12 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=bundle_record)
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+      self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
-  def testCreateHWIDDBFirmwareInfoUpdateCL_InternalError(self):
+  def testCreateHwidDbFirmwareInfoUpdateCl_InternalError(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.side_effect = [hwid_repo.HWIDRepoError]
@@ -1745,7 +1745,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=self._CreateBundleRecord(['proj']))
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+      self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
@@ -1753,7 +1753,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   @mock.patch('cros.factory.hwid.service.appengine.hwid_action_helpers'
               '.v3_self_service_helper.HWIDV3SelfServiceActionHelper'
               '.RemoveHeader')
-  def testCreateHWIDDBFirmwareInfoUpdateCL_InternalError_AbandonCL(
+  def testCreateHwidDbFirmwareInfoUpdateCl_InternalError_AbandonCL(
       self, remove_header):
     self._ConfigLiveHWIDRepo('PROJ1', 3, 'db data')
     self._ConfigLiveHWIDRepo('PROJ2', 3, 'db data')
@@ -1768,7 +1768,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=self._CreateBundleRecord(['proj1', 'proj2']))
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+      self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
 
     self._mock_hwid_repo_manager.AbandonCL.assert_called_with(123)
     self.assertEqual(ex.exception.code,
@@ -1784,7 +1784,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
         project='proj', version_string='google_proj.1111.1.1')
-    resp = self._ss_helper.SetFirmwareInfoSupportStatus(req)
+    resp = self.service.SetFirmwareInfoSupportStatus(req)
     comps = action.GetComponents(['ro_main_firmware', 'ro_ec_firmware'])
 
     self.assertEqual(comps['ro_main_firmware']['ro_main_firmware_1'].status,
@@ -1801,7 +1801,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
         project='notproj')
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.SetFirmwareInfoSupportStatus(req)
+      self.service.SetFirmwareInfoSupportStatus(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
@@ -1814,7 +1814,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
         project='proj', version_string='google_proj.2222.2.2')
-    resp = self._ss_helper.SetFirmwareInfoSupportStatus(req)
+    resp = self.service.SetFirmwareInfoSupportStatus(req)
     comps = action.GetComponents(['ro_main_firmware', 'ro_ec_firmware'])
 
     self.assertEqual(comps['ro_main_firmware']['ro_main_firmware_2'].status,
@@ -1833,23 +1833,23 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
         project='proj', version_string='google_proj.1111.1.1')
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.SetFirmwareInfoSupportStatus(req)
+      self.service.SetFirmwareInfoSupportStatus(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
 
-  def testSplitHWIDDBChange_InvalidToken(self):
+  def testSplitHwidDbChange_InvalidToken(self):
     req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
         session_token='invalid_token')
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.SplitHWIDDBChange(req)
+      self.service.SplitHwidDbChange(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.ABORTED)
     self.assertEqual(ex.exception.detail, 'The validation token is expired.')
 
-  def testSplitHWIDDBChange_Pass(self):
+  def testSplitHwidDbChange_Pass(self):
     project = 'CHROMEBOOK'
     old_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_BEFORE)
     new_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_AFTER)
@@ -1858,8 +1858,8 @@ class SelfServiceHelperTest(unittest.TestCase):
     action = self._CreateFakeHWIDBAction(project, old_db_data)
     self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
 
-    # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
-    analyze_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project,
+    # Call AnalyzeHwidDbEditableSection to start a HWID DB change workflow.
+    analyze_resp = _AnalyzeHwidDbEditableSection(self.service, project,
                                                  new_db_data)
     session_token = analyze_resp.validation_token
 
@@ -1867,7 +1867,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     split_req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
         session_token=session_token, db_external_resource=db_external_resource)
 
-    split_resp = self._ss_helper.SplitHWIDDBChange(split_req)
+    split_resp = self.service.SplitHwidDbChange(split_req)
 
     new_comp_msg = _ComponentInfoMsg(
         component_class='comp_cls_1', original_name='new_comp',
@@ -1898,7 +1898,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                 with_new_encoding_pattern=True)),
     ], list(split_resp.change_units.values()))
 
-  def testSplitHWIDDBChange_PassWhenNoChange(self):
+  def testSplitHwidDbChange_PassWhenNoChange(self):
     # Arrange.
     project = 'CHROMEBOOK'
     old_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_BEFORE)
@@ -1906,21 +1906,21 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._ConfigLiveHWIDRepo(project, 3, old_db_data)
     action = self._CreateFakeHWIDBAction(project, old_db_data)
     self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
-    # Call AnalyzeHWIDDBEditableSection without new_db_data to start a HWID DB
+    # Call AnalyzeHwidDbEditableSection without new_db_data to start a HWID DB
     # change workflow.
-    analyze_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project, '')
+    analyze_resp = _AnalyzeHwidDbEditableSection(self.service, project, '')
     session_token = analyze_resp.validation_token
 
     # Act.
     db_external_resource = hwid_api_messages_pb2.HwidDbExternalResource()
     split_req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
         session_token=session_token, db_external_resource=db_external_resource)
-    split_resp = self._ss_helper.SplitHWIDDBChange(split_req)
+    split_resp = self.service.SplitHwidDbChange(split_req)
 
     # Assert.
     self.assertFalse(split_resp.change_units)
 
-  def testCreateSplittedHWIDDBCLs_Pass(self):
+  def testCreateSplittedHwidDbCls_Pass(self):
     # Arrange.
     project = 'CHROMEBOOK'
     old_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_BEFORE)
@@ -1934,12 +1934,12 @@ class SelfServiceHelperTest(unittest.TestCase):
             has_warnings=False, commit_message='unused msg',
             feature_matcher_source='generated feature matcher payload'))
 
-    # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
-    analyze_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project,
+    # Call AnalyzeHwidDbEditableSection to start a HWID DB change workflow.
+    analyze_resp = _AnalyzeHwidDbEditableSection(self.service, project,
                                                  new_db_data)
     session_token = analyze_resp.validation_token
-    split_resp = _SplitHWIDDBChange(
-        self._ss_helper, session_token,
+    split_resp = _SplitHwidDbChange(
+        self.service, session_token,
         hwid_api_messages_pb2.HwidDbExternalResource())
 
     create_cl_req = hwid_api_messages_pb2.CreateSplittedHwidDbClsRequest(
@@ -1976,7 +1976,7 @@ class SelfServiceHelperTest(unittest.TestCase):
           f'reason2 of {identity}.',
       ]
 
-    create_cl_resp = self._ss_helper.CreateSplittedHWIDDBCLs(create_cl_req)
+    create_cl_resp = self.service.CreateSplittedHwidDbCls(create_cl_req)
 
     # Assert: both auto-approved and reviewed-required CLs are created.
     self.assertTrue(create_cl_resp.auto_mergeable_change_cl_created)
@@ -2159,7 +2159,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual('generated feature matcher payload',
                      review_required_call['feature_matcher_source'])
 
-  def testCreateSplittedHWIDDBCLs_AVLAlignmentChanges(self):
+  def testCreateSplittedHwidDbCls_AVLAlignmentChanges(self):
 
     def CreateMockAVLConverterManager(
         match_result_mapping: Mapping[
@@ -2233,14 +2233,14 @@ class SelfServiceHelperTest(unittest.TestCase):
             ),
         ],
     })
-    # Mock ConverterManager instance in SelfServiceHelper.
-    ss_helper = _CreateFakeSelfServiceHelper(
+    # Mock ConverterManager instance in SelfServiceShard.
+    shard = _CreateFakeSelfServiceShard(
         self._modules,
         self._mock_hwid_repo_manager,
         avl_converter_manager=mock_avl_converter_manager,
     )
-    # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
-    analyze_resp = _AnalyzeHWIDDBEditableSection(ss_helper, project,
+    # Call AnalyzeHwidDbEditableSection to start a HWID DB change workflow.
+    analyze_resp = _AnalyzeHwidDbEditableSection(shard, project,
                                                  editable_content)
     session_token = analyze_resp.validation_token
 
@@ -2253,8 +2253,7 @@ class SelfServiceHelperTest(unittest.TestCase):
             # CID 1 and 6 are skipped as non-AVL-linked cases.
             for i in [2, 3, 4, 5, 7, 8, 9, 10]
         ])
-    split_resp = _SplitHWIDDBChange(ss_helper, session_token,
-                                    db_external_resource)
+    split_resp = _SplitHwidDbChange(shard, session_token, db_external_resource)
 
     create_cl_req = hwid_api_messages_pb2.CreateSplittedHwidDbClsRequest(
         session_token=session_token,
@@ -2277,7 +2276,7 @@ class SelfServiceHelperTest(unittest.TestCase):
       else:
         approval_status[identity].CopyFrom(review_required_cl_action)
 
-    ss_helper.CreateSplittedHWIDDBCLs(create_cl_req)
+    shard.CreateSplittedHwidDbCls(create_cl_req)
 
     # Assert
     # Validate the two CommitHWIDDB calls.
@@ -2428,7 +2427,7 @@ class SelfServiceHelperTest(unittest.TestCase):
         blocklisted_kernel_names=['blocklist1', 'blocklist2', 'common'])
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self._ss_helper.UpdateAudioCodecKernelNames(req)
+      self.service.UpdateAudioCodecKernelNames(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
@@ -2451,7 +2450,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     blocklist_req = hwid_api_messages_pb2.UpdateAudioCodecKernelNamesRequest(
         allowlisted_kernel_names=['allowed1', 'allowed2', 'allowed3'],
         blocklisted_kernel_names=['blocked3', 'blocked2', 'blocked1'])
-    self._ss_helper.UpdateAudioCodecKernelNames(blocklist_req)
+    self.service.UpdateAudioCodecKernelNames(blocklist_req)
 
     # Assert.
     unused_args, kwargs = mock_create_cl.call_args
@@ -2473,7 +2472,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   @mock.patch('cros.factory.hwid.service.appengine.git_util.GetCurrentBranch')
   @mock.patch(
       'cros.factory.hwid.service.appengine.git_util.GetGerritCredentials')
-  def testAnalyzeHWIDDBEditableSection_ReportAVLSkippableComps(
+  def testAnalyzeHwidDbEditableSection_ReportAVLSkippableComps(
       self, mock_gerrit_cred, mock_get_curr_branch, mock_create_cl):
     # Arrange.
     del mock_get_curr_branch
@@ -2489,10 +2488,10 @@ class SelfServiceHelperTest(unittest.TestCase):
     # Update blocklist of audio codec kernel names.
     blocklist_req = hwid_api_messages_pb2.UpdateAudioCodecKernelNamesRequest(
         blocklisted_kernel_names=['skippable_kernel_names'])
-    self._ss_helper.UpdateAudioCodecKernelNames(blocklist_req)
+    self.service.UpdateAudioCodecKernelNames(blocklist_req)
 
     # Act.
-    analysis_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project,
+    analysis_resp = _AnalyzeHwidDbEditableSection(self.service, project,
                                                   new_db_data)
 
     # Assert.
@@ -2583,6 +2582,99 @@ class SelfServiceHelperTest(unittest.TestCase):
             external_db=db_contents,
             feature_matcher_source=None,
         ))
+
+  def testGetHwidDbEditableSection_ProjectNotFound(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.GetHwidDbEditableSectionRequest(project='foo')
+      self.service.GetHwidDbEditableSection(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testAnalyzeHwidDbEditableSectionChange_ProjectNotFound(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
+          project='foo')
+      self.service.AnalyzeHwidDbEditableSection(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testCreateHwidDbEditableSectionChangeCl_InvalidRequest(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
+          project='foo')
+      self.service.CreateHwidDbEditableSectionChangeCl(req)
+
+    # No token is provided which causes no cache found.
+    self.assertEqual(protorpc_utils.RPCCanonicalErrorCode.ABORTED,
+                     ex.exception.code)
+    self.assertEqual('The validation token is expired.', ex.exception.detail)
+
+  def testCreateHwidDbFirmwareInfoUpdateCl_Empty(self):
+    resp = self.service.CreateHwidDbFirmwareInfoUpdateCl(
+        hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest())
+
+    self.assertEqual(
+        resp, hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClResponse())
+
+  def testBatchGetHwidDbEditableSectionChangeClInfo_Empty(self):
+    resp = self.service.BatchGetHwidDbEditableSectionChangeClInfo(
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
+        ))
+
+    self.assertEqual(
+        resp,
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
+        ))
+
+  def testBatchGenerateAvlComponentName_Empty(self):
+    resp = self.service.BatchGenerateAvlComponentName(
+        hwid_api_messages_pb2.BatchGenerateAvlComponentNameRequest())
+
+    self.assertEqual(
+        resp, hwid_api_messages_pb2.BatchGenerateAvlComponentNameResponse())
+
+  def testAnalyzeHwidDbEditableSection_ProjectNotFound(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
+          project='foo')
+      self.service.AnalyzeHwidDbEditableSection(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testGetHwidBundleResourceInfo_ProjectNotFound(self):
+    gerrit_tot_hwid_repo = (
+        self._mock_hwid_repo_manager.GetGerritToTHWIDRepo.return_value)
+    gerrit_tot_hwid_repo.GetHWIDDBMetadataByName.side_effect = KeyError
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
+          project='foo')
+      self.service.GetHwidBundleResourceInfo(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testCreateHwidBundle_ProjectNotFound(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.CreateHwidBundleRequest(project='foo')
+      self.service.CreateHwidBundle(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testSetFirmwareInfoSupportStatus_InvalidRequest(self):
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.GetHWIDDBMetadataByName.side_effect = ValueError
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
+          project='foo')
+      self.service.SetFirmwareInfoSupportStatus(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
 
 if __name__ == '__main__':
