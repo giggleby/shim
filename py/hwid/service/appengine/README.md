@@ -60,7 +60,7 @@ Download database:
     2. GCP console -> Cloud Storage -> Select bucket -> Download redis rdb
 
   * Datastore:
-    1. GCP console -> memorystore -> Export
+    1. GCP console -> Datastore -> Export
     2. Select namespace="all namespace" -> Select bucket -> Export
     3. GCP console -> Cloud Storage -> Select bucket -> Download Datastore folder
 
