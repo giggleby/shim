@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-05-18 10:57+CST\n"
+"PO-Revision-Date: 2023-05-29 13:27+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -166,6 +166,10 @@ msgstr "kiểm tra số serial VPD serial number"
 #: ../build/pytests_label_generated.json
 msgid "Check Test List"
 msgstr "Kiểm tra danh sách kiểm tra"
+
+#: ../build/pytests_label_generated.json
+msgid "Clear Inactive GSC Slot"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Compass"
@@ -3990,6 +3994,10 @@ msgstr "Cập nhật firmware Ti50"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Ti50 Firmware Version"
 msgstr "Xác nhận phiên bản firmware"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Clear Inactive Ti50 Slot"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Upload Reg (ECHO) Codes to activate"

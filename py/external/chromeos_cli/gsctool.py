@@ -9,6 +9,7 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external.chromeos_cli import shell
 
+
 # Path to the relied `gsctool` command line utility.
 GSCTOOL_PATH = '/usr/sbin/gsctool'
 
@@ -81,6 +82,11 @@ class GSCTool:
 
   def __init__(self, dut=None):
     self._shell = shell.Shell(dut)
+
+  def ClearInactiveGSCSlot(self):
+    """Clears the inactive GSC RW slot."""
+    cmd = [GSCTOOL_PATH, '-a', '-c']
+    self._InvokeCommand(cmd, 'failed to clear inactive GSC slot.')
 
   def GetCr50FirmwareVersion(self):
     """Get the version of the current Cr50 firmware.
