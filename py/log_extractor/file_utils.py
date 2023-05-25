@@ -119,6 +119,9 @@ class LogExtractorStateMachine:
     """Check if there's any test running."""
     return bool(self._f_map)
 
+  def GetRunningTests(self):
+    return self._f_map.keys()
+
 
 def GetExtractedLogOutputPath(test_name: str, test_run_id: str, root: str,
                               fname: str) -> str:
@@ -203,6 +206,8 @@ def ExtractAndWriteRecordByTestRun(
         test_run_info_list.append(
             TestRunInfo(test_name, test_run_id, status, record.GetTime()))
 
+  running_tests = state_machine.GetRunningTests()
+  logging.warning('Tests that are still running: %r', running_tests)
   return test_run_info_list
 
 # pylint: disable=unused-argument
