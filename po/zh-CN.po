@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-05-18 10:57+CST\n"
+"PO-Revision-Date: 2023-05-29 13:27+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -166,6 +166,10 @@ msgstr "检查Secdata版本"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Serial Number"
 msgstr "检查机器序号"
+
+#: ../build/pytests_label_generated.json
+msgid "Clear Inactive GSC Slot"
+msgstr "清除未使用的 GSC 韧体"
 
 #: ../build/pytests_label_generated.json
 msgid "Compass"
@@ -3817,6 +3821,10 @@ msgstr "更新 Ti50 韧体"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Ti50 Firmware Version"
 msgstr "检查 Ti50 韧体版本"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Clear Inactive Ti50 Slot"
+msgstr "清除未使用的 Ti50 韧体"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Upload Reg (ECHO) Codes to activate"

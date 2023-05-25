@@ -1641,6 +1641,10 @@
           "args": {
             "method": "CHECK_VERSION"
           }
+        },
+        {
+          "pytest_name": "clear_inactive_gsc_slot",
+          "label": "Clear Inactive Ti50 Slot"
         }
       ]
     },
