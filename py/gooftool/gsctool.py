@@ -77,6 +77,11 @@ class GSCTool:
   def __init__(self, shell=None):
     self._shell = shell or gooftool_common.Shell
 
+  def ClearInactiveGSCSlot(self):
+    """Clears the inactive GSC RW slot."""
+    cmd = [GSCTOOL_PATH, '-a', '-c']
+    self._InvokeCommand(cmd, 'failed to clear inactive GSC slot.')
+
   def GetCr50FirmwareVersion(self):
     """Get the version of the current Cr50 firmware.
 
