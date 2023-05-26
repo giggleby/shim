@@ -42,12 +42,12 @@ from cros.factory.gooftool.common import Util
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import gsctool
 from cros.factory.test import device_data
+from cros.factory.gooftool import write_protect_target
 from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.gsc_utils import GSCUtils
-from cros.factory.utils.type_utils import Error
 
 
 class Ti50APROVerficationTest(test_case.TestCase):
@@ -66,14 +66,8 @@ class Ti50APROVerficationTest(test_case.TestCase):
     self.goofy = state.GetInstance()
     self.device_data_key = f'factory.{type(self).__name__}.has_rebooted'
     self._util = Util()
-
-  def setSoftwareWriteProtect(self, enable: bool):
-    operation = 'enable' if enable else 'disable'
-    session.console.info(f'{operation} SWWP.')
-    cmd = f'gooftool write_protect --operation {operation}'
-    result = self._util.shell(cmd)
-    if not result.success:
-      raise Error(f'Fail to {operation} software write protect.')
+    self.ap_wp_target = write_protect_target.CreateWriteProtectTarget(
+        write_protect_target.WriteProtectTargetType.AP)
 
   def runTest(self):
     # Skip the test if thr firmware is not Ti50.
@@ -100,7 +94,9 @@ class Ti50APROVerficationTest(test_case.TestCase):
       else:
         # Enable software write protect.
         if self.args.enable_swwp:
-          self.setSoftwareWriteProtect(enable=True)
+          session.console.info('Enable SWWP.')
+          self.ap_wp_target.SetProtectionStatus(enable=True,
+                                                skip_enable_check=True)
 
         # Set board ID.
         session.console.info('Set board ID.')
@@ -124,7 +120,8 @@ class Ti50APROVerficationTest(test_case.TestCase):
     finally:
       # Disable software write protect.
       if self.args.enable_swwp:
-        self.setSoftwareWriteProtect(enable=False)
+        session.console.info('Disable SWWP.')
+        self.ap_wp_target.SetProtectionStatus(enable=False)
 
   def tearDown(self):
     device_data.DeleteDeviceData(self.device_data_key, True)
