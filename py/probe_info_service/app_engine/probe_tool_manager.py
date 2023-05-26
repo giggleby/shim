@@ -187,65 +187,198 @@ class _ParamValueConverter:
     return value
 
 
-class _InformationalParam(NamedTuple):
-  """Holds an "information parameter" for `_SingleProbeFuncConverter`.
+class _ProbeParamInput(NamedTuple):
+  index: int
+  raw_value: stubby_pb2.ProbeParameter
 
-  The informational parameter values will not be put into the probe statement
-  while generation.  It's just for other clients to reference in the probe
-  info instance.
+
+class _IProbeStatementParam(abc.ABC):
+  """Interface of parameter definitions.
+
+  This is for `_SingleProbeFuncConverter` to convert probe info parameters to
+  expected values in probe statements.
   """
-  description: str
-  value_converter: _ParamValueConverter
+
+  @property
+  @abc.abstractmethod
+  def probe_info_param_definitions(
+      self) -> Mapping[str, stubby_pb2.ProbeParameterDefinition]:
+    """All related probe info parameter definitions."""
+
+  @property
+  @abc.abstractmethod
+  def probe_statement_param_name(self) -> Optional[str]:
+    """The parameter name used in the probe statement."""
+
+  @abc.abstractmethod
+  def ConvertValues(
+      self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
+  ) -> Tuple[Sequence[Any], Sequence[ProbeParameterSuggestion]]:
+    """Converts `probe_parameters` to expected values in probe statements.
+
+    This function tries to collect and convert the values of the parameters
+    defined in `self.probe_info_param_definitions` in `probe_parameters` into
+    the expected values of the parameter with name
+    `self.probe_statement_param_name` in the probe statement.
+
+    Args:
+      probe_parameters: The target message dictionary that maps probe
+          parameter names to `_ProbeParamInput` list to convert.
+
+    Returns:
+      A pair of the following values:
+        1. A list of converted values.
+        2. A `ProbeParameterSuggestion` list containing parameters that were
+            failed to convert or validate.
+    """
+
+
+class _SingleProbeStatementParam(_IProbeStatementParam):
+  """Holds a parameter mapping one probe info parameter to one probe statement
+  parameter for `_SingleProbeFuncConverter`.
+  """
+
+  def __init__(self, name: str, description: str,
+               value_converter: _ParamValueConverter,
+               ps_gen_checker: Optional[Callable]):
+    self._name = name
+    self._description = description
+    self._value_converter = value_converter
+    self._ps_gen_checker = ps_gen_checker
+    self._is_informational = ps_gen_checker is None
+
+  @property
+  def probe_info_param_definitions(
+      self) -> Mapping[str, stubby_pb2.ProbeParameterDefinition]:
+    """See base class."""
+    definition = stubby_pb2.ProbeParameterDefinition(
+        name=self._name, description=self._description,
+        value_type=self._value_converter.value_type)
+    return {
+        self._name: definition
+    }
+
+  @property
+  def probe_statement_param_name(self) -> Optional[str]:
+    """See base class."""
+    return None if self._is_informational else self._name
+
+  def ConvertValues(
+      self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
+  ) -> Tuple[Sequence[Any], Sequence[ProbeParameterSuggestion]]:
+    """See base class."""
+    converted_values = []
+    suggestions = []
+    for probe_parameter in probe_parameters.get(self._name, []):
+      try:
+        value = self._value_converter.ConvertValue(probe_parameter.raw_value)
+        if not self._is_informational:
+          # Attempt to trigger the probe statement generator directly to see if
+          # it's convertible.
+          self._ps_gen_checker(value)
+        converted_values.append(value)
+      except _IncompatibleError as e:
+        raise _IncompatibleError(
+            f'Got improper probe parameter {self._name!r}: '
+            f'{e}.') from e
+      except (TypeError, ValueError) as e:
+        suggestions.append(
+            ProbeParameterSuggestion(index=probe_parameter.index, hint=str(e)))
+
+    return converted_values, suggestions
+
+
+class _IProbeParamSpec(abc.ABC):
+  """Interface of probe parameter spec.
+
+  This is for `_IComponentProbeStatementConverter` to define the relationship
+  and conversion between probe info parameters and probe statement parameters.
+  """
+
+  @abc.abstractmethod
+  def BuildProbeStatementParam(
+      self,
+      output_fields: Mapping[str, probe_config_types.OutputFieldDefinition],
+  ) -> _IProbeStatementParam:
+    """Builds an `_IProbeStatementParam` instance.
+
+    Args:
+      output_fields: A dictionary that maps probe statement parameter names to
+          the corresponding `OutputFieldDefinition`. This can be used to get
+          the default description and probe statement generator to initialize
+          the `_IProbeStatementParam` instance.
+    """
+
+
+class _ProbeFunctionParam(_IProbeParamSpec):
+  _DEFAULT_VALUE_TYPE_MAPPING = {
+      probe_config_types.ValueType.INT: _ParamValueConverter('int'),
+      probe_config_types.ValueType.STRING: _ParamValueConverter('string'),
+  }
+
+  def __init__(self, param_name: str, description: Optional[str] = None,
+               value_converter: Optional[_ParamValueConverter] = None):
+    self._param_name = param_name
+    self._description = description
+    self._value_converter = value_converter
+
+  def BuildProbeStatementParam(
+      self,
+      output_fields: Mapping[str, probe_config_types.OutputFieldDefinition],
+  ) -> _IProbeStatementParam:
+    """See base class."""
+    output_field = output_fields[self._param_name]
+    return _SingleProbeStatementParam(
+        self._param_name, self._description or output_field.description,
+        (self._value_converter or
+         self._DEFAULT_VALUE_TYPE_MAPPING[output_field.value_type]),
+        output_field.probe_statement_generator)
+
+
+class _InformationalParam(_IProbeParamSpec):
+
+  def __init__(self, param_name: str, description: str,
+               value_converter: _ParamValueConverter):
+    self._param_name = param_name
+    self._description = description
+    self._value_converter = value_converter
+
+  def BuildProbeStatementParam(
+      self,
+      output_fields: Mapping[str, probe_config_types.OutputFieldDefinition],
+  ) -> _IProbeStatementParam:
+    """See base class."""
+    del output_fields
+    ps_gen_checker = None
+    return _SingleProbeStatementParam(self._param_name, self._description,
+                                      self._value_converter, ps_gen_checker)
 
 
 class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
   """Converts probe info into a statement of one single probe function call."""
-
-  class _ProbeParam:
-
-    def __init__(self, description, value_converter: _ParamValueConverter,
-                 ps_gen: Optional[Callable]):
-      # TODO(yhong): Consider define whether to accept non-singular parameter
-      #     values.
-      self.description = description
-      self.value_converter = value_converter
-      self.ps_gen = ps_gen
 
   _DEFAULT_VALUE_TYPE_MAPPING = {
       probe_config_types.ValueType.INT: _ParamValueConverter('int'),
       probe_config_types.ValueType.STRING: _ParamValueConverter('string'),
   }
 
-  def __init__(
-      self, ps_generator: probe_config_types.ProbeStatementDefinition,
-      probe_function_name: str,
-      probe_params: Optional[Mapping[str,
-                                     Optional[_ParamValueConverter]]] = None,
-      informational_params: Optional[Mapping[str, _InformationalParam]] = None):
+  def __init__(self, ps_generator: probe_config_types.ProbeStatementDefinition,
+               probe_function_name: str,
+               probe_params: Optional[Sequence[_IProbeParamSpec]] = None):
     self._ps_generator = ps_generator
     self._probe_func_def = self._ps_generator.probe_functions[
         probe_function_name]
+    output_fields: Mapping[str, probe_config_types.OutputFieldDefinition] = {
+        f.name: f
+        for f in self._probe_func_def.output_fields
+    }
 
-    self._probe_param_infos: Mapping[str, self._ProbeParam] = {}
-    probe_params = (
-        probe_params or
-        {f.name: None
-         for f in self._probe_func_def.output_fields})
-    not_found_flag = object()
-    for output_field in self._probe_func_def.output_fields:
-      probe_param = probe_params.get(output_field.name, not_found_flag)
-      if probe_param is not_found_flag:
-        continue
-      probe_param = (
-          probe_param or
-          self._DEFAULT_VALUE_TYPE_MAPPING[output_field.value_type])
-      self._probe_param_infos[output_field.name] = self._ProbeParam(
-          output_field.description, probe_param,
-          output_field.probe_statement_generator)
-    for param_name, informational_param in (informational_params or {}).items():
-      self._probe_param_infos[param_name] = self._ProbeParam(
-          informational_param.description, informational_param.value_converter,
-          None)
+    if probe_params is None:
+      probe_params = [_ProbeFunctionParam(n) for n in output_fields]
+
+    self._probe_params: List[_IProbeStatementParam] = [
+        spec.BuildProbeStatementParam(output_fields) for spec in probe_params
+    ]
 
     self._name = (
         f'{self._ps_generator.category_name}.{self._probe_func_def.name}')
@@ -253,13 +386,10 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
   @classmethod
   def FromDefaultRuntimeProbeStatementGenerator(
       cls, runtime_probe_category_name: str, runtime_probe_func_name: str,
-      probe_params: Optional[Mapping[str,
-                                     Optional[_ParamValueConverter]]] = None,
-      informational_params: Optional[Mapping[str, _InformationalParam]] = None):
+      probe_params: Optional[Sequence[_IProbeParamSpec]] = None):
     ps_generator = probe_config_definition.GetProbeStatementDefinition(
         runtime_probe_category_name)
-    return cls(ps_generator, runtime_probe_func_name, probe_params=probe_params,
-               informational_params=informational_params)
+    return cls(ps_generator, runtime_probe_func_name, probe_params=probe_params)
 
   def GetName(self) -> str:
     """See base class."""
@@ -269,10 +399,10 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
     """See base class."""
     ret = ProbeFunctionDefinition(name=self._name,
                                   description=self._probe_func_def.description)
-    for probe_param_name, probe_param in self._probe_param_infos.items():
-      ret.parameter_definitions.add(
-          name=probe_param_name, description=probe_param.description,
-          value_type=probe_param.value_converter.value_type)
+    ret.parameter_definitions.extend(
+        definition for probe_param in self._probe_params
+        for definition in probe_param.probe_info_param_definitions.values())
+
     return ret
 
   def ParseProbeParams(
@@ -283,29 +413,16 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
     """See base class."""
     probe_param_errors = []
     expected_values_of_field = collections.defaultdict(list)
+    probe_param_inputs = collections.defaultdict(list)
 
-    informational_probe_params = set()
+    for index, probe_param in enumerate(probe_params):
+      probe_param_inputs[probe_param.name].append(
+          _ProbeParamInput(index, probe_param))
+
     try:
-      for index, probe_param in enumerate(probe_params):
-        try:
-          param_info, value = (
-              self._ConvertProbeParamToProbeStatementValue(probe_param))
-        except ValueError as e:
-          expected_values_of_field[probe_param.name].append(None)
-          probe_param_errors.append(
-              ProbeParameterSuggestion(index=index, hint=str(e)))
-        else:
-          if param_info.ps_gen:
-            expected_values_of_field[probe_param.name].append(value)
-          else:
-            informational_probe_params.add(probe_param.name)
-
-      missing_param_names = (
-          set(self._probe_param_infos) - set(expected_values_of_field) -
-          informational_probe_params)
-      if missing_param_names and not allow_missing_params:
-        raise _IncompatibleError(
-            f'Missing probe parameters: {", ".join(missing_param_names)}.')
+      expected_values_of_field, probe_param_errors = (
+          self._ConvertProbeParamInputsToProbeStatementValues(
+              probe_param_inputs, allow_missing_params))
     except _IncompatibleError as e:
       return (ProbeInfoParsedResult(
           result_type=ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
@@ -335,39 +452,58 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
             general_error_msg=str(e)), None)
     return ProbeInfoParsedResult(result_type=ProbeInfoParsedResult.PASSED), ps
 
-  def _ConvertProbeParamToProbeStatementValue(
-      self, probe_param) -> Tuple['_ProbeParam', Any]:
-    """Tries to convert the given `ProbeParameter` into the expected value in
-    the probe statement.
+  def _ConvertProbeParamInputsToProbeStatementValues(
+      self, probe_param_inputs: Mapping[str, Sequence[_ProbeParamInput]],
+      allow_missing_params: bool
+  ) -> Tuple[Mapping[str, Any], Sequence[ProbeParameterSuggestion]]:
+    """Tries to convert the given `_ProbeParamInput` dictionary into the
+    expected values in the probe statement.
 
     Args:
-      probe_param: The target `ProbeParameter` message to convert.
+      probe_param_inputs: The target message dictionary that maps probe
+          parameter names to `_ProbeParamInput` list to convert.
+      allow_missing_params: Whether missing required probe parameters is
+          allowed.
 
     Returns:
       A tuple of the following 2 items:
-        1. The corresponding probe parameter info instance.
-        2. The converted value.
+        1. A dictionary that maps probe parameter names to converted value list
+        2. A `ProbeParameterSuggestion` list containing parameters that were
+            failed to convert.
 
     Raises:
-      - `ValueError` for any kind of formatting error.
-      - `_IncompatibleError` for all other errors.
+      `_IncompatibleError` if the parameter inputs are invalid.
     """
-    probe_param_info = self._probe_param_infos.get(probe_param.name)
-    if probe_param_info is None:
-      raise _IncompatibleError(f'Unknown probe parameter: {probe_param.name}.')
+    probe_param_names = {
+        probe_info_param_name
+        for probe_param in self._probe_params
+        for probe_info_param_name in probe_param.probe_info_param_definitions
+    }
+    probe_param_input_names = set(probe_param_inputs)
 
-    try:
-      value = probe_param_info.value_converter.ConvertValue(probe_param)
-    except _IncompatibleError as e:
+    missing_param_names = probe_param_names - probe_param_input_names
+    if missing_param_names and not allow_missing_params:
       raise _IncompatibleError(
-          f'Got improper probe parameter {probe_param.name!r}: {e}.') from e
+          f'Missing probe parameters: {", ".join(missing_param_names)}.')
 
-    if probe_param_info.ps_gen:
-      # Attempt to trigger the probe statement generator directly to see if
-      # it's convertible.
-      unused_ps = probe_param_info.ps_gen(value)
+    unknown_param_names = probe_param_input_names - probe_param_names
+    if unknown_param_names:
+      raise _IncompatibleError(
+          f'Unknown probe parameters: {", ".join(unknown_param_names)}.')
 
-    return probe_param_info, value
+    expected_values_of_field = collections.defaultdict(list)
+    probe_param_errors = []
+
+    for probe_param in self._probe_params:
+      values, suggestions = probe_param.ConvertValues(probe_param_inputs)
+      if probe_param.probe_statement_param_name:
+        expected_values_of_field[
+            probe_param.probe_statement_param_name] = values
+
+      for suggestion in suggestions:
+        probe_param_errors.append(suggestion)
+
+    return expected_values_of_field, probe_param_errors
 
 
 def _RemoveHexPrefixAndNormalize(value: str) -> str:
@@ -401,80 +537,74 @@ def _GetAllConverters() -> Sequence[_IComponentProbeStatementConverter]:
 
   return [
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'audio_codec', 'audio_codec', {
-              'name': _ParamValueConverter('string'),
-          }),
+          'audio_codec', 'audio_codec', [
+              _ProbeFunctionParam('name'),
+          ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'battery', 'generic_battery', {
-              'manufacturer': _ParamValueConverter('string'),
-              'model_name': _ParamValueConverter('string'),
-          }),
+          'battery', 'generic_battery', [
+              _ProbeFunctionParam('manufacturer'),
+              _ProbeFunctionParam('model_name'),
+          ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'camera', 'usb_camera', {
-              'usb_vendor_id':
-                  _ParamValueConverter('string',
-                                       _NormalizeHexValueWithoutPrefix),
-              'usb_product_id':
-                  _ParamValueConverter('string',
-                                       _NormalizeHexValueWithoutPrefix),
-              'usb_bcd_device':
-                  _ParamValueConverter('string',
-                                       _NormalizeHexValueWithoutPrefix),
-          }),
+          'camera', 'usb_camera', [
+              _ProbeFunctionParam(
+                  'usb_vendor_id', value_converter=_ParamValueConverter(
+                      'string', _NormalizeHexValueWithoutPrefix)),
+              _ProbeFunctionParam(
+                  'usb_product_id', value_converter=_ParamValueConverter(
+                      'string', _NormalizeHexValueWithoutPrefix)),
+              _ProbeFunctionParam(
+                  'usb_bcd_device', value_converter=_ParamValueConverter(
+                      'string', _NormalizeHexValueWithoutPrefix)),
+          ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'display_panel', 'edid', {
-              'product_id':
-                  _ParamValueConverter('string',
-                                       _NormalizeHexValueWithoutPrefix),
-              'vendor':
-                  _ParamValueConverter('string'),
-          }, informational_params={
-              'width':
-                  _InformationalParam('The width of display panel.',
-                                      _ParamValueConverter('int')),
-              'height':
-                  _InformationalParam('The height of display panel.',
-                                      _ParamValueConverter('int')),
-          }),
+          'display_panel', 'edid', [
+              _ProbeFunctionParam(
+                  'product_id', value_converter=_ParamValueConverter(
+                      'string', _NormalizeHexValueWithoutPrefix)),
+              _ProbeFunctionParam('vendor'),
+              _InformationalParam('width', 'The width of display panel.',
+                                  _ParamValueConverter('int')),
+              _InformationalParam('height', 'The height of display panel.',
+                                  _ParamValueConverter('int')),
+          ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'storage', 'mmc_storage', {
-              'mmc_manfid':
-                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
-              'mmc_name':
-                  _ParamValueConverter(
+          'storage', 'mmc_storage', [
+              _ProbeFunctionParam(
+                  'mmc_manfid', value_converter=_ParamValueConverter(
+                      'string', _RemoveHexPrefixAndNormalize)),
+              _ProbeFunctionParam(
+                  'mmc_name', value_converter=_ParamValueConverter(
                       'string', lambda hex_with_prefix: bytes.fromhex(
-                          hex_with_prefix[2:]).decode('ascii')),
-              'mmc_prv':
-                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
-          }, informational_params={
-              'size_in_gb':
-                  _InformationalParam('The storage size in GB.',
-                                      _ParamValueConverter('int')),
-          }),
+                          hex_with_prefix[2:]).decode('ascii'))),
+              _ProbeFunctionParam(
+                  'mmc_prv', value_converter=_ParamValueConverter(
+                      'string', _RemoveHexPrefixAndNormalize)),
+              _InformationalParam('size_in_gb', 'The storage size in GB.',
+                                  _ParamValueConverter('int')),
+          ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'storage', 'nvme_storage', {
-              'pci_vendor':
-                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
-              'pci_device':
-                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
-              'pci_class':
-                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
-              'nvme_model':
-                  None,
-          }, informational_params={
-              'size_in_gb':
-                  _InformationalParam('The storage size in GB.',
-                                      _ParamValueConverter('int')),
-          }),
+          'storage', 'nvme_storage', [
+              _ProbeFunctionParam(
+                  'pci_vendor', value_converter=_ParamValueConverter(
+                      'string', _RemoveHexPrefixAndNormalize)),
+              _ProbeFunctionParam(
+                  'pci_device', value_converter=_ParamValueConverter(
+                      'string', _RemoveHexPrefixAndNormalize)),
+              _ProbeFunctionParam(
+                  'pci_class', value_converter=_ParamValueConverter(
+                      'string', _RemoveHexPrefixAndNormalize)),
+              _ProbeFunctionParam('nvme_model'),
+              _InformationalParam('size_in_gb', 'The storage size in GB.',
+                                  _ParamValueConverter('int')),
+          ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'storage', 'ufs_storage', {
-              'ufs_vendor': _ParamValueConverter('string'),
-              'ufs_model': _ParamValueConverter('string'),
-          }, informational_params={
-              'size_in_gb':
-                  _InformationalParam('The storage size in GB.',
-                                      _ParamValueConverter('int')),
-          }),
+          'storage', 'ufs_storage', [
+              _ProbeFunctionParam('ufs_vendor'),
+              _ProbeFunctionParam('ufs_model'),
+              _InformationalParam('size_in_gb', 'The storage size in GB.',
+                                  _ParamValueConverter('int')),
+          ]),
       _BuildCPUProbeStatementConverter(),
       RawProbeStatementConverter(),
   ]
