@@ -33,7 +33,6 @@ from cros.factory.test.test_lists import test_object as test_object_module
 from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
-from cros.factory.utils.type_utils import Enum
 
 
 DOC_GENERATORS = {}
@@ -155,8 +154,6 @@ def WriteArgsTable(rst, title, args):
       description = f"({'; '.join(annotations)}) {description}"
 
     def FormatArgType(arg_type):
-      if isinstance(arg_type, Enum):
-        return repr(sorted(arg_type))
       if issubclass(arg_type, enum.Enum):
         return repr(sorted(list(arg_type.__members__)))
       if arg_type == type(None):

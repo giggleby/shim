@@ -67,24 +67,6 @@ class Obj:
     return not self.__eq__(rhs)
 
 
-class Enum(frozenset):
-  """An enumeration type.
-
-  Examples:
-    To create a enum object:
-      dummy_enum = type_utils.Enum(['A', 'B', 'C'])
-
-    To access a enum object, use:
-      dummy_enum.A
-      dummy_enum.B
-  """
-
-  def __getattr__(self, name):
-    if name in self:
-      return name
-    raise AttributeError
-
-
 def DrainQueue(q: 'queue.Queue[T]') -> List[T]:
   """Returns as many elements as can be obtained from a queue without blocking.
 

@@ -13,7 +13,6 @@ from unittest import mock
 from cros.factory.doc import generate_rsts
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.file_utils import UnopenedTemporaryFile
-from cros.factory.utils.type_utils import Enum
 
 
 class GenerateDocsTest(unittest.TestCase):
@@ -29,7 +28,6 @@ class GenerateDocsTest(unittest.TestCase):
                 '\n'
                 '  - bar\n'
                 '  - baz\n', default='b1'),
-            Arg('c', Enum(['c1', 'c2']), 'C', default='c1'),
         ]
 
         def runTest(self):
@@ -74,10 +72,6 @@ Test Arguments
      - (optional; default: ``\'b1\'``) Foo:
        \n         - bar
          - baz
-
-   * - c
-     - ['c1', 'c2']
-     - (optional; default: ``\'c1\'``) C
 """
       self.maxDiff = None
       self.assertEqual(pseudo_output, '\n'.join(lines))

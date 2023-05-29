@@ -12,7 +12,6 @@ from unittest import mock
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.arg_utils import Args
 from cros.factory.utils.arg_utils import _DEFAULT_NOT_SET
-from cros.factory.utils.type_utils import Enum
 
 
 class EnumTyped_1(str, enum.Enum):
@@ -60,11 +59,6 @@ class ArgTest(unittest.TestCase):
     self.assertTrue(int_enum_arg.ValueMatchesType(IntEnumTyped.num_1))
     self.assertTrue(int_enum_arg.ValueMatchesType(2))
     self.assertFalse(int_enum_arg.ValueMatchesType(3))
-
-  def testValueMatchesType_type_util_Enum(self):
-    type_util_enum_arg = Arg('type_util_enum_typed', Enum(['a']), 'X')
-    self.assertTrue(type_util_enum_arg.ValueMatchesType('a'))
-    self.assertFalse(type_util_enum_arg.ValueMatchesType('b'))
 
   def testValueMatchesType_DefaultNone(self):
     int_arg_1 = Arg('int_arg_1', int, 'X')
@@ -115,12 +109,6 @@ class ArgTest(unittest.TestCase):
     self.parser.add_argument.assert_called_once_with('int_enum_arg', type=int,
                                                      help='X', choices={1, 2},
                                                      default=_DEFAULT_NOT_SET)
-
-  def testAddToParser_AddTypeUtilEnum(self):
-    Arg('type_util_enum_arg', Enum(['1', '2']), 'X').AddToParser(self.parser)
-    self.parser.add_argument.assert_called_once_with(
-        'type_util_enum_arg', type=str, help='X', choices={'1', '2'},
-        default=_DEFAULT_NOT_SET)
 
 
 class ArgsTest(unittest.TestCase):
@@ -211,20 +199,6 @@ class ArgsTest(unittest.TestCase):
         r'\(\<enum \'IntEnumTyped\'\>', re.DOTALL)
     self.assertRaisesRegex(ValueError, error_pattern, self.Parse,
                            dict(int_enum_typed=3))
-
-
-  def testTypeUtilEnum(self):
-    self.parser = Args(
-        Arg('type_util_enum_typed', Enum(['a', 'b']), 'X', default=None))
-    self.assertEqual(
-        dict(type_util_enum_typed='a'),
-        self.Parse(dict(type_util_enum_typed='a')))
-
-    error_pattern = re.compile(
-        r'.*type_util_enum_typed.*The argument should have type \(Enum',
-        re.DOTALL)
-    self.assertRaisesRegex(ValueError, error_pattern, self.Parse,
-                           dict(type_util_enum_typed='c'))
 
 
 if __name__ == '__main__':

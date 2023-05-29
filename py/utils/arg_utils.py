@@ -25,8 +25,6 @@ use the args attribute to access the attribute values.
 
 import enum
 
-from .type_utils import Enum
-
 
 # Save the 'type' function (since we'll be overloading it in Arg.__init__).
 TYPE = type
@@ -108,16 +106,6 @@ class Arg:
           type=IntEnumTyped
               # Allows only the members in IntEnumTyped and int 1 or 2.
 
-        You can also use an ``Enum`` object as a type.  First import
-        it::
-
-          from cros.factory.utils.type_utils import Enum
-
-        Then in an ``Arg`` constructor, you can write::
-
-          type=Enum(['CHARGE', 'DISCHARGE'])
-              # Allow only the strings 'CHARGE' or 'DISCHARGE'
-
       help: A string describing how to use the argument. This will be
         included in the test catalog in the documentation bundle and
         may be formatted using `reStructuredText
@@ -136,7 +124,7 @@ class Arg:
     # Always make type a tuple.
     if not isinstance(type, tuple):
       type = (type,)
-    if any(not isinstance(x, TYPE) and not isinstance(x, Enum) for x in type):
+    if any(not isinstance(x, TYPE) for x in type):
       raise ArgError(f'Argument {name} has invalid types {type!r}')
 
     if not help:
@@ -166,10 +154,7 @@ class Arg:
   def ValueMatchesType(self, value):
     """Returns True if value matches the type for this argument."""
     for t in self.type:
-      if isinstance(t, Enum):
-        if value in t:
-          return True
-      elif issubclass(t, enum.IntEnum):
+      if issubclass(t, enum.IntEnum):
         if any(value == member for member in t):
           return True
       elif issubclass(t, enum.Enum):
@@ -190,7 +175,6 @@ class Arg:
       parser: argparse.ArgumentParser object
     """
     if (len(self.type) >= 1 and self.type[0] not in [str, list, bool, int] and
-        not isinstance(self.type[0], Enum) and
         not issubclass(self.type[0], enum.Enum)):
       raise ValueError(f'Arg {self.name} cannot be transfered. {self.type}')
 
@@ -214,9 +198,6 @@ class Arg:
       kwargs['type'] = int
     elif self.type[0] == list:
       kwargs['nargs'] = '*'
-    elif isinstance(self.type[0], Enum):
-      kwargs['type'] = str
-      kwargs['choices'] = self.type[0]
     elif issubclass(self.type[0], enum.IntEnum):
       kwargs['type'] = int
       kwargs['choices'] = set(member.value for member in self.type[0])
