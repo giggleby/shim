@@ -35,7 +35,6 @@ class StubbyHandlerTest(unittest.TestCase):
     self._create_bundle_request.hwid_option.update_db_firmware_info = False
 
     self._get_bundle_info_request = factorybundle_v2_pb2.GetBundleInfoRequest()
-    self._get_bundle_info_request.email = 'foo@bar'
     self._get_bundle_info_request.project = 'project'
 
     self._download_bundle_request = factorybundle_v2_pb2.DownloadBundleRequest()
@@ -124,7 +123,7 @@ class StubbyHandlerTest(unittest.TestCase):
         self._CreateStorageBundleInfo('foo2@bar', 'fake_bundle_2.tar.bz2',
                                       base_timestamp_sec + 100),
     ]
-    self._mock_firestore_connector.GetUserRequestsByEmail.return_value = [
+    self._mock_firestore_connector.GetUserRequestsByProject.return_value = [
         self._CreateUserRequest(
             firestore_connector.UserRequestStatus.SUCCEEDED, base_datetime,
             start_time=base_datetime + datetime.timedelta(seconds=1),

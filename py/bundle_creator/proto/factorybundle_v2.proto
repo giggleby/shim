@@ -50,7 +50,8 @@ message CreateBundleMessage {
 }
 
 message GetBundleInfoRequest {
-  string email = 1;
+  reserved 1;
+
   string project = 2;
 }
 

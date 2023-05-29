@@ -268,37 +268,36 @@ class FirestoreConnectorTest(unittest.TestCase):
             DatetimeWithNanoseconds(2022, 5, 20, 0, 0, tzinfo=pytz.UTC),
     }])
 
-  def testGetUserRequestsByEmail_withProject_returnsExpectedDocuments(self):
-    email = 'foo@bar'
+  def testGetUserRequestsByProject_succeed_returnsExpectedDocuments(self):
     project = 'project'
     self._user_requests_col.document('doc_1').set({
-        'email': email,
+        'email': 'foo@bar',
         'project': project,
         'request_time': datetime.datetime(2022, 12, 24, 0, 0),
     })
     self._user_requests_col.document('doc_2').set({
-        'email': email,
+        'email': 'foo2@bar',
         'project': 'other_project',
         'request_time': datetime.datetime(2022, 12, 25, 0, 0),
     })
     self._user_requests_col.document('doc_3').set({
-        'email': email,
+        'email': 'foo3@bar',
         'project': project,
         'request_time': datetime.datetime(2022, 12, 26, 0, 0),
     })
 
-    user_requests = self._connector.GetUserRequestsByEmail(email, project)
+    user_requests = self._connector.GetUserRequestsByProject(project)
 
     self.assertEqual(user_requests, [{
         'email':
-            email,
+            'foo3@bar',
         'project':
             project,
         'request_time':
             DatetimeWithNanoseconds(2022, 12, 26, 0, 0, tzinfo=pytz.UTC),
     }, {
         'email':
-            email,
+            'foo@bar',
         'project':
             project,
         'request_time':

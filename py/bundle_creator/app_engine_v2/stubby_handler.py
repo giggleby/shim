@@ -74,8 +74,8 @@ class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
           storage_bundle_info.created_timestamp_sec)
       response.bundle_infos.append(bundle_info)
 
-    for snapshot in self._firestore_connector.GetUserRequestsByEmail(
-        request.email, request.project):
+    for snapshot in self._firestore_connector.GetUserRequestsByProject(
+        request.project):
       status = snapshot.get('status', '')
       if status == firestore_connector.UserRequestStatus.SUCCEEDED.name:
         continue

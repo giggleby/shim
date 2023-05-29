@@ -203,20 +203,31 @@ class FirestoreConnector:
     """
     self._TryUpdateUserRequestDocRef(doc_id, {'gs_path': gs_path})
 
-  def GetUserRequestsByEmail(self, email: str,
-                             project: Optional[str] = None) -> List[Dict]:
+  def GetUserRequestsByEmail(self, email: str) -> List[Dict]:
     """Returns user requests with the specific email.
 
     Args:
       email: The requester's email.
-      project: An optional field used to filter with email together.
 
     Returns:
       A list of dictionaries which represent the specific user requests in
       descending order of `request_time`.
     """
     query = self._user_request_col_ref.where('email', '==', email)
-    query = query.where('project', '==', project) if project else query
+    query = query.order_by('request_time', direction=firestore.Query.DESCENDING)
+    return [doc.to_dict() for doc in query.stream()]
+
+  def GetUserRequestsByProject(self, project: str) -> List[Dict]:
+    """Returns user requests with the specific project.
+
+    Args:
+      project: The project name used to filter user requests.
+
+    Returns:
+      A list of dictionaries which represent the specific user requests in
+      descending order of `request_time`.
+    """
+    query = self._user_request_col_ref.where('project', '==', project)
     query = query.order_by('request_time', direction=firestore.Query.DESCENDING)
     return [doc.to_dict() for doc in query.stream()]
 
