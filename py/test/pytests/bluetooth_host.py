@@ -1,11 +1,27 @@
 # Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Station-based Bluetooth scan and pair test, using hciconfig and hcitool.
 
-Make the host machine discoverable, scan for the host MAC address from the
-DUT, and make the host non-discoverable.
+Description
+-----------
+Station-based Bluetooth scan and pair test, using hciconfig and hcitool.
+
+Test Procedure
+--------------
+This is an automated test.
+
+Dependency
+----------
+- A bluetooth.
+
+Examples
+--------
+To run this test, add this into test list::
+
+  {
+    "pytest_name": "bluetooth_host",
+  }
 """
 
 import collections
@@ -107,14 +123,16 @@ class BluetoothScanTest(unittest.TestCase):
     host_devices = self._GetHostDevicesInfo(self.host_interfaces)
 
     # DUT scans the host station.
-    self.assertTrue(
-        sync_utils.Retry(self.args.max_retry_times, 0, None,
-                         lambda: self.ScanTask(host_devices)))
+    retry_wrapper = sync_utils.RetryDecorator(
+        max_attempt_count=self.args.max_retry_times, interval_sec=0,
+        target_condition=bool)
+    scan_result = retry_wrapper(self.ScanTask)(host_devices)
+
+    self.assertTrue(scan_result)
 
     if self.args.enable_pair:
-      self.assertTrue(
-          sync_utils.Retry(self.args.max_retry_times, 0, None,
-                           self.PairTask))
+      pair_result = retry_wrapper(self.PairTask)()
+      self.assertTrue(pair_result)
 
   def ScanTask(self, host_devices):
     """Scans the Bluetooth devices and checks the host station is found."""

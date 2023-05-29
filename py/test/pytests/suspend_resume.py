@@ -465,7 +465,10 @@ class SuspendResumeTest(test_case.TestCase):
       except IOError:
         logging.exception('Unable to read %s.', _MESSAGES)
       return None
-    messages = sync_utils.Retry(10, 0.2, None, ReadMessages, messages_start)
+
+    retry_wrapper = sync_utils.RetryDecorator(max_attempt_count=10,
+                                              interval_sec=0.2)
+    messages = retry_wrapper(ReadMessages)(messages_start)
 
     if not messages:
       # We never found it. Just use the entire last chunk read

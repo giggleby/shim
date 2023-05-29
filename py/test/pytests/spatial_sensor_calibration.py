@@ -1,12 +1,15 @@
 # Copyright 2015 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Perform calibration on spatial sensors
 
+Description
+-----------
 Spatial sensors are sensors with X, Y, Z values such as accelerometer or
 gyroscope.
 
+Test Procedure
+--------------
 The step for calibration is as follows:
 1) Put the device on a flat table, facing up.
 
@@ -20,6 +23,19 @@ The step for calibration is as follows:
   - cat /sys/bus/iio/devices/iio:deviceX/in_(accel|anglvel)_(x|y|z)_calibbias
 
 4) Save them in VPD.
+
+Dependency
+----------
+- A spatial_sensor.
+
+Examples
+--------
+To run this test, add this into test list::
+
+  {
+    "pytest_name": "spatial_sensor",
+  }
+
 """
 
 from cros.factory.device import device_utils
@@ -146,17 +162,24 @@ class SpatialSensorCalibration(test_case.TestCase):
         raise InvalidPositionError
 
   def EnableAutoCalibration(self, path):
+
     RETRIES = 20
-    for unused_i in range(RETRIES):
+
+    @sync_utils.RetryDecorator(max_attempt_count=RETRIES, interval_sec=1,
+                               target_condition=bool)
+    def _WriteFile():
       try:
         self._dut.WriteFile(self._dut.path.join(path, 'calibrate'), '1')
       except Exception:
         session.console.info('calibrate activation failed, retrying')
-        self.Sleep(1)
+        return False
       else:
-        break
-    else:
-      raise RuntimeError('calibrate activation failed')
+        return True
+
+    try:
+      _WriteFile()
+    except type_utils.MaxRetryError as e:
+      raise RuntimeError('calibrate activation failed') from e
     self.Sleep(self.args.stabilize_time)
 
   def RetrieveCalibbiasAndWriteVPD(self):

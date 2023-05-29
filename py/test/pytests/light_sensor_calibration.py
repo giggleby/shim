@@ -155,6 +155,8 @@ from cros.factory.test.utils import media_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils
+from cros.factory.utils import sync_utils
+from cros.factory.utils import type_utils
 
 from cros.factory.external.py_lib import numpy as np
 
@@ -390,17 +392,22 @@ class ALSFixture(test_case.TestCase):
 
   def _OnU2SInsertion(self, device):
     del device  # unused
-    cnt = 0
-    while cnt < self.args.chamber_n_retries:
+
+    @sync_utils.RetryDecorator(max_attempt_count=self.args.chamber_n_retries,
+                               interval_sec=self.args.chamber_retry_delay)
+    def _SetupFixture():
       try:
         self._SetupFixture()
         self._SetFixtureStatus(FixtureStatus.CONNECTED)
         return
       except Exception:
-        cnt += 1
         self._SetFixtureStatus(FixtureStatus.DISCONNECTED)
-        self.Sleep(self.args.chamber_retry_delay)
-    raise light_chamber.LightChamberError('Error connecting to light chamber')
+
+    try:
+      _SetupFixture()
+    except type_utils.MaxRetryError as e:
+      raise light_chamber.LightChamberError(
+          'Error connecting to light chamber') from e
 
   def _OnU2SRemoval(self, device):
     del device  # unused
