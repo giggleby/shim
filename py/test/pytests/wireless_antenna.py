@@ -74,6 +74,7 @@ from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
+from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
 
@@ -238,9 +239,11 @@ class SwitchAntennaWiFiChip(wifi.WiFiChip):
       return
     tx_bitmap, rx_bitmap = self._switch_antenna_config[antenna]
     self._device.wifi.BringsDownInterface(self._interface)
-    try_count = 0
     success = False
-    while try_count < max_retries:
+
+    @sync_utils.RetryDecorator(max_attempt_count=max_retries, interval_sec=0,
+                               target_condition=bool, exceptions_to_catch=[])
+    def _SwitchAntenna():
       process = self._device.Popen(
           ['iw', 'phy', self._phy_name, 'set', 'antenna', str(tx_bitmap),
            str(rx_bitmap)],
@@ -258,17 +261,17 @@ class SwitchAntennaWiFiChip(wifi.WiFiChip):
               'Failed to switch antenna. '
               'Expected TX %s RX %s, but got TX %s RX %s.', hex(tx_bitmap),
               hex(rx_bitmap), hex(configured_tx), hex(configured_rx))
-        break
+        return True
       # (-95) EOPNOTSUPP Operation not supported on transport endpoint
       # Do ifconfig down again may solve this problem.
       if retcode == 161:
-        try_count += 1
         logging.info('Retry...')
         self._device.wifi.BringsDownInterface(self._interface)
-      else:
-        raise wifi.WiFiError(
-            f'Failed to set antenna. ret code: {int(retcode)}. stderr: {stderr}'
-        )
+        return False
+      raise wifi.WiFiError(
+          f'Failed to set antenna. ret code: {int(retcode)}. stderr: {stderr}')
+
+    _SwitchAntenna()
     self._device.wifi.BringsUpInterface(self._interface,
                                         self._switch_antenna_sleep_secs)
     if not success:

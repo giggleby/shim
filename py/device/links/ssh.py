@@ -127,7 +127,10 @@ class SSHLink(device_types.IDeviceLink):
       logging.info('rsync: src=%s, dst=%s (%d/%d)', src, dst, retry_time,
                    max_retry_times)
 
-    result = sync_utils.Retry(3, 0.1, callback=_Callback, target=_TryOnce)
+    retry_wrapper = sync_utils.RetryDecorator(
+        max_attempt_count=3, interval_sec=0.1, retry_callback=_Callback,
+        target_condition=bool)
+    result = retry_wrapper(_TryOnce)()
     returncode = result[1] if result else 255
     if returncode:
       raise subprocess.CalledProcessError(

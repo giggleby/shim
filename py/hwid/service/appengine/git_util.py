@@ -7,7 +7,6 @@ import collections
 import contextlib
 import datetime
 import enum
-import functools
 import hashlib
 import http
 import http.client
@@ -16,7 +15,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, DefaultDict, Deque, MutableMapping, MutableSequence, NamedTuple, Optional, Sequence, Tuple, Type, Union
+from typing import Any, DefaultDict, Deque, MutableMapping, MutableSequence, NamedTuple, Optional, Sequence, Tuple, Union
 import urllib.parse
 
 import certifi
@@ -34,7 +33,7 @@ import urllib3.exceptions
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import json_utils
 from cros.factory.utils import schema
-
+from cros.factory.utils import sync_utils
 
 # Constants.
 HEAD = b'HEAD'
@@ -53,6 +52,9 @@ _COMMIT_QUEUE = 'Commit-Queue'
 _VERIFIED = 'Verified'
 _AUTO_SUBMIT = 'Auto-Submit'
 _RUBBER_STAMPER_ACCOUNT = 'rubber-stamper@appspot.gserviceaccount.com'
+
+DEFAULT_DELAY_SEC = 1
+DEFAULT_RETRY_COUNT = 5
 
 
 class ReviewVote(NamedTuple):
@@ -91,36 +93,6 @@ _REVIEW_VOTES_OF_CASE = {
         ReviewVote(_COMMIT_QUEUE, 2)
     ],
 }
-
-
-def RetryOnException(retry_value: Tuple[Type[Exception], ...] = (Exception, ),
-                     delay_sec: int = 1, num_retries: int = 5):
-  """Retries when fail to request to Gerrit server.
-
-  Args:
-    retry_value: Tuple of The expected exceptions to trigger retries.
-    delay_sec: Delay seconds between retries.
-    num_retries: Max number of retries.
-
-  Returns:
-    A wrapper function which can be used as a decorator.
-  """
-
-  def RetryDecorator(func):
-
-    @functools.wraps(func)
-    def RetryFunction(*args, **kwargs):
-      for retried in range(1, num_retries + 1):
-        try:
-          return func(*args, **kwargs)
-        except retry_value as ex:
-          logging.info('%s failed: %s. Retry: %d', func.__name__, ex, retried)
-          time.sleep(delay_sec)
-      return func(*args, **kwargs)
-
-    return RetryFunction
-
-  return RetryDecorator
 
 
 def _B(s):
@@ -574,7 +546,9 @@ def CreateCL(
   return change_id, _ParseCLNumber(stderr.getvalue().decode())
 
 
-@RetryOnException(retry_value=(GitUtilException, ))
+@sync_utils.RetryDecorator(max_attempt_count=DEFAULT_RETRY_COUNT,
+                           interval_sec=DEFAULT_DELAY_SEC,
+                           exceptions_to_catch=[GitUtilException], reraise=True)
 def GetCurrentBranch(git_url_prefix, project, auth_cookie=''):
   """Gets the branch HEAD tracks.
 
@@ -605,7 +579,9 @@ _BRANCH_INFO_SCHEMA = schema.FixedDict(
     }, allow_undefined_keys=True)
 
 
-@RetryOnException(retry_value=(GitUtilException, ))
+@sync_utils.RetryDecorator(max_attempt_count=DEFAULT_RETRY_COUNT,
+                           interval_sec=DEFAULT_DELAY_SEC,
+                           exceptions_to_catch=[GitUtilException], reraise=True)
 def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
   """Gets branch commit.
 
@@ -630,7 +606,9 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
   return branch_info['revision']
 
 
-@RetryOnException(retry_value=(GitUtilException, ))
+@sync_utils.RetryDecorator(max_attempt_count=DEFAULT_RETRY_COUNT,
+                           interval_sec=DEFAULT_DELAY_SEC,
+                           exceptions_to_catch=[GitUtilException], reraise=True)
 def GetFileContent(git_url_prefix: str, project: str, path: str,
                    commit_id: Optional[str] = None,
                    change_id: Optional[str] = None,
@@ -892,7 +870,9 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
   base_url = f'{review_host}/changes/{change_id}'
   gerrit_resps = []
 
-  @RetryOnException(retry_value=(GitUtilException, ))
+  @sync_utils.RetryDecorator(
+      max_attempt_count=DEFAULT_RETRY_COUNT, interval_sec=DEFAULT_DELAY_SEC,
+      exceptions_to_catch=[GitUtilException], reraise=True)
   def _GetChangeInfo(scope: str, params: Sequence[Tuple[str, str]],
                      response_schema: schema.BaseType):
     resp = _InvokeGerritAPIJSON('GET', f'{base_url}{scope}', params,

@@ -95,6 +95,7 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import sync_utils
+from cros.factory.utils import type_utils
 
 
 INPUT_MAX_RETRY_TIMES = 10
@@ -1034,17 +1035,26 @@ class BluetoothTest(test_case.TestCase):
       Return the return value of the target function.
     """
     self.ui.DrawProgressBar(max_retry_times)
-    result = None
-    for unused_retry in range(max_retry_times):
+
+    @sync_utils.RetryDecorator(max_attempt_count=max_retry_times,
+                               interval_sec=retry_interval,
+                               target_condition=bool)
+    def _Execute(*args, **kwargs):
       try:
-        result = target(*args, **kwargs)
+        target_result = target(*args, **kwargs)
       except Exception:
         pass
       self.ui.AdvanceProgress()
-      if result:
-        break
-      self.Sleep(retry_interval)
+      return target_result
+
+    result = None
+    try:
+      result = _Execute(*args, **kwargs)
+    except type_utils.MaxRetryError:
+      logging.info('%s failed.', action_string)
+    else:
+      logging.info('%s was done.', action_string)
+
 
     self.ui.SetProgress(max_retry_times)
-    logging.info('%s was done.' if result else '%s failed.', action_string)
     return result

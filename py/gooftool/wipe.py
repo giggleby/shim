@@ -1,7 +1,6 @@
 # Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Transition to release state directly without reboot."""
 
 import json
@@ -81,11 +80,10 @@ class WipeError(Exception):
 
 
 def _CopyLogFileToStateDev(state_dev, logfile):
-  with sys_utils.MountPartition(state_dev,
-                                rw=True,
+  with sys_utils.MountPartition(state_dev, rw=True,
                                 fstype='ext4') as mount_point:
-    shutil.copyfile(logfile,
-                    os.path.join(mount_point, os.path.basename(logfile)))
+    shutil.copyfile(logfile, os.path.join(mount_point,
+                                          os.path.basename(logfile)))
 
 
 def _OnError(ip, port, token, state_dev, wipe_in_ramfs_log=None,
@@ -155,6 +153,7 @@ def Daemonize(logfile=None):
   # Set the default umask.
   os.umask(0o022)
 
+
 def ResetLog(logfile=None):
   if logging.getLogger().handlers:
     for handler in logging.getLogger().handlers:
@@ -184,6 +183,7 @@ def WipeInRamFs(is_fast=None, shopfloor_url=None, station_ip=None,
             'dhcpcd is still locking on /var/run. Please use a newer ChromeOS '
             f'image with CL:1021611 included. Lock info: "{lock_result.stdout}'
             '"')
+
   _CheckBug78323428()
 
   Daemonize()
@@ -275,10 +275,10 @@ def WipeInRamFs(is_fast=None, shopfloor_url=None, station_ip=None,
       # --enable-vt1 allows drawing escapes (OSC) on VT1 but it'll also display
       # etc-issue and login prompt.
       # For now we only want login prompts on VT2+.
-      process_utils.Spawn(['sed', '-i',
-                           's/--no-login/--dev-mode/g;s/--enable-vt1//g',
-                           '/usr/sbin/display_boot_message'],
-                          call=True)
+      process_utils.Spawn([
+          'sed', '-i', 's/--no-login/--dev-mode/g;s/--enable-vt1//g',
+          '/usr/sbin/display_boot_message'
+      ], call=True)
 
       # Restart gooftool under new root. Since current gooftool might be using
       # some resource under stateful partition, restarting gooftool ensures that
@@ -336,6 +336,7 @@ def _GetToStopServiceList(exclude_list):
       service for service in running_service_list
       if not (service[0] in exclude_list or service[0].startswith('console-'))
   ]
+
 
 def _StopAllUpstartJobs(exclude_list=None):
   logging.debug('stopping upstart jobs')
@@ -427,15 +428,17 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
 
   def _ListProcOpening(path_list):
     lsof_cmd = ['lsof', '-t'] + path_list
-    return [int(line)
-            for line in process_utils.SpawnOutput(lsof_cmd).splitlines()]
+    return [
+        int(line) for line in process_utils.SpawnOutput(lsof_cmd).splitlines()
+    ]
 
   def _ListMinijail():
     # Not sure why, but if we use 'minijail0', then we can't find processes that
     # starts with /sbin/minijail0.
     list_cmd = ['pgrep', 'minijail']
-    return [int(line)
-            for line in process_utils.SpawnOutput(list_cmd).splitlines()]
+    return [
+        int(line) for line in process_utils.SpawnOutput(list_cmd).splitlines()
+    ]
 
   # Find processes that are using stateful partitions.
   proc_list = _ListProcOpening(mount_point_list)
@@ -447,6 +450,8 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
         process_utils.SpawnOutput(f'lsof -p {os.getpid()}', shell=True))
     raise WipeError('wipe_init itself is using stateful partition')
 
+  @sync_utils.RetryDecorator(max_attempt_count=10, interval_sec=0.1,
+                             target_condition=bool)
   def _KillOpeningBySignal(sig):
     for mount_point in mount_point_list:
       cmd = ['fuser', '-k', f'-{int(sig)}', '-m', mount_point]
@@ -462,8 +467,8 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
     return False  # need to check again
 
   # Try to kill processes using stateful partition gracefully.
-  sync_utils.Retry(10, 0.1, None, _KillOpeningBySignal, signal.SIGTERM)
-  sync_utils.Retry(10, 0.1, None, _KillOpeningBySignal, signal.SIGKILL)
+  _KillOpeningBySignal(signal.SIGTERM)
+  _KillOpeningBySignal(signal.SIGKILL)
 
   proc_list = _ListProcOpening(mount_point_list)
   assert not proc_list, f"processes using stateful partition: {proc_list}"
@@ -502,8 +507,9 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
         "processes still using minijail: "
         f"{process_utils.SpawnOutput(['pgrep', '-al', 'minijail'])}")
 
-    process_utils.Spawn(['dmsetup', 'remove', 'encstateful',
-                         '--noudevrules', '--noudevsync'], check_call=True)
+    process_utils.Spawn(
+        ['dmsetup', 'remove', 'encstateful', '--noudevrules', '--noudevsync'],
+        check_call=True)
     process_utils.Spawn(['losetup', '-D'], check_call=True)
 
   _UnmountAll(critical=True)
@@ -540,9 +546,8 @@ def _InformStation(ip, port, token, wipe_init_log=None, wipe_in_ramfs_log=None,
 
   try:
     sync_utils.WaitFor(
-        lambda: process_utils.Spawn(['ping', '-w1', '-c1', ip],
-                                    call=True).returncode == 0,
-        timeout_secs=180, poll_interval=1)
+        lambda: process_utils.Spawn(['ping', '-w1', '-c1', ip], call=True).
+        returncode == 0, timeout_secs=180, poll_interval=1)
   except Exception:
     logging.exception('cannot get network connection...')
   else:
@@ -573,10 +578,9 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
           check_call=True, log=True, log_stderr_on_error=True)
 
   clobber_state_env = os.environ.copy()
-  clobber_state_env.update(ROOT_DEV=release_rootfs,
-                           ROOT_DISK=root_disk)
-  logging.debug('clobber-state: root_dev=%s, root_disk=%s',
-                release_rootfs, root_disk)
+  clobber_state_env.update(ROOT_DEV=release_rootfs, ROOT_DISK=root_disk)
+  logging.debug('clobber-state: root_dev=%s, root_disk=%s', release_rootfs,
+                root_disk)
 
   process_utils.Spawn(['clobber-state', wipe_args], env=clobber_state_env,
                       check_call=True, log=True, log_stderr_on_error=True)
@@ -623,13 +627,10 @@ def EnableReleasePartition(release_rootfs):
 def _InformShopfloor(shopfloor_url):
   if shopfloor_url:
     logging.debug('inform shopfloor %s', shopfloor_url)
-    proc = process_utils.Spawn(
-        [
-            os.path.join(CUTOFF_SCRIPT_DIR, 'inform_shopfloor.sh'),
-            shopfloor_url, 'factory_wipe'
-        ],
-        read_stdout=True,
-        read_stderr=True)
+    proc = process_utils.Spawn([
+        os.path.join(CUTOFF_SCRIPT_DIR, 'inform_shopfloor.sh'), shopfloor_url,
+        'factory_wipe'
+    ], read_stdout=True, read_stderr=True)
     logging.debug('stdout: %s', proc.stdout_data)
     logging.debug('stderr: %s', proc.stderr_data)
     if proc.returncode != 0:
@@ -642,8 +643,8 @@ def _Cutoff():
   process_utils.Spawn([cutoff_script], check_call=True)
 
 
-def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
-             root_disk, old_root, station_ip, station_port, finish_token,
+def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs, root_disk,
+             old_root, station_ip, station_port, finish_token,
              keep_developer_mode_flag, test_umount):
   Daemonize()
   logfile = '/tmp/wipe_init.log'
@@ -660,8 +661,7 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
 
   try:
     # Enable upstart log under /var/log/upstart.log for Tast.
-    process_utils.Spawn(['initctl', 'log-priority', 'info'],
-                        log=True,
+    process_utils.Spawn(['initctl', 'log-priority', 'info'], log=True,
                         log_stderr_on_error=True)
 
     _StopAllUpstartJobs(exclude_list=[
@@ -699,9 +699,10 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
       _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
                     keep_developer_mode_flag)
     except Exception:
-      process_utils.Spawn(
-          [os.path.join(CUTOFF_SCRIPT_DIR, 'display_wipe_message.sh'),
-           'wipe_failed'], call=True)
+      process_utils.Spawn([
+          os.path.join(CUTOFF_SCRIPT_DIR, 'display_wipe_message.sh'),
+          'wipe_failed'
+      ], call=True)
       raise
 
     EnableReleasePartition(release_rootfs)
