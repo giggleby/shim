@@ -49,6 +49,7 @@ class ProbeToolManagerTest(unittest.TestCase):
     self.assertCountEqual([f.name for f in resp.probe_function_definitions], [
         'audio_codec.audio_codec',
         'battery.generic_battery',
+        'camera.mipi_camera',
         'camera.usb_camera',
         'display_panel.edid',
         'storage.mmc_storage',
@@ -221,6 +222,85 @@ class ProbeToolManagerTest(unittest.TestCase):
                 "mmc_name": [ true, "str", "!eq AAAAAA" ],
                 "mmc_prv": [ true, "hex", "!eq 0x12" ]
               }
+            }
+          }
+        }''')
+
+  def testGenerateRawProbeStatement_WithConcatParams(self):
+    self.maxDiff = None
+    probe_info, comp_name = _LoadProbeInfoAndCompNameFromPayload('''
+        component_identity: {
+          qual_id: 1
+          readable_label: "PART_NO_1234"
+          component_id: 100
+        }
+        probe_info: {
+          probe_function_name: "camera.mipi_camera"
+          probe_parameters: { name: "module_vid" string_value: "TC" }
+          probe_parameters: { name: "module_pid" string_value: "0x1234" }
+          probe_parameters: { name: "sensor_vid" string_value: "OV" }
+          probe_parameters: { name: "sensor_pid" string_value: "0xabcd" }
+        }
+    ''')
+    probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
+        comp_name, probe_info)
+
+    probe_statement = self._probe_tool_manager.GenerateRawProbeStatement(
+        probe_data_source).output
+
+    self._AssertJSONStringEqual(
+        probe_statement, '''{
+          "camera": {
+            "AVL_1": {
+              "eval": { "mipi_camera": {} },
+              "expect": {
+                "mipi_module_id": [ true, "str", "!eq TC1234" ],
+                "mipi_sensor_id": [ true, "str", "!eq OVabcd" ]
+              }
+            }
+          }
+        }''')
+
+  def testGenerateRawProbeStatement_WithConcatParamsAndMultipleProbeValues(
+      self):
+    self.maxDiff = None
+    probe_info, comp_name = _LoadProbeInfoAndCompNameFromPayload('''
+        component_identity: {
+          qual_id: 1
+          readable_label: "PART_NO_1234"
+          component_id: 100
+        }
+        probe_info: {
+          probe_function_name: "camera.mipi_camera"
+          probe_parameters: { name: "module_vid" string_value: "TC" }
+          probe_parameters: { name: "module_vid" string_value: "ZZ" }
+          probe_parameters: { name: "module_pid" string_value: "0x1234" }
+          probe_parameters: { name: "sensor_vid" string_value: "OV" }
+          probe_parameters: { name: "sensor_pid" string_value: "0xabcd" }
+          probe_parameters: { name: "sensor_pid" string_value: "0x5678" }
+        }
+    ''')
+    probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
+        comp_name, probe_info)
+
+    probe_statement = self._probe_tool_manager.GenerateRawProbeStatement(
+        probe_data_source).output
+
+    self._AssertJSONStringEqual(
+        probe_statement, '''{
+          "camera": {
+            "AVL_1": {
+              "eval": { "mipi_camera": {} },
+              "expect": [
+                { "mipi_module_id": [ true, "str", "!eq TC1234" ],
+                  "mipi_sensor_id": [ true, "str", "!eq OVabcd" ] },
+                { "mipi_module_id": [ true, "str", "!eq TC1234" ],
+                  "mipi_sensor_id": [ true, "str", "!eq OV5678" ] },
+                { "mipi_module_id": [ true, "str", "!eq ZZ1234" ],
+                  "mipi_sensor_id": [ true, "str", "!eq OVabcd" ] },
+                { "mipi_module_id": [ true, "str", "!eq ZZ1234" ],
+                  "mipi_sensor_id": [ true, "str", "!eq OV5678" ] }
+              ]
             }
           }
         }''')

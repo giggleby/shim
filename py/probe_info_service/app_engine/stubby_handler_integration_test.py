@@ -28,6 +28,7 @@ class StubbyHandlerTest(unittest.TestCase):
         [f.name for f in resp.probe_schema.probe_function_definitions], [
             'audio_codec.audio_codec',
             'battery.generic_battery',
+            'camera.mipi_camera',
             'camera.usb_camera',
             'display_panel.edid',
             'storage.mmc_storage',

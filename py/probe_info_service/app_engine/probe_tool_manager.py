@@ -234,13 +234,16 @@ class _IProbeStatementParam(abc.ABC):
 
 
 class _SingleProbeStatementParam(_IProbeStatementParam):
-  """Holds a parameter mapping one probe info parameter to one probe statement
-  parameter for `_SingleProbeFuncConverter`.
+  """Holds a one-to-one parameter for `_SingleProbeFuncConverter`.
+
+  This can be used either to map one probe info parameter to one probe
+  statement parameter for `_SingleProbeFuncConverter`, or as a sub-parameter
+  for `_ConcatProbeStatementParam`.
   """
 
   def __init__(self, name: str, description: str,
                value_converter: _ParamValueConverter,
-               ps_gen_checker: Optional[Callable]):
+               ps_gen_checker: Optional[Callable] = None):
     self._name = name
     self._description = description
     self._value_converter = value_converter
@@ -286,6 +289,78 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
             ProbeParameterSuggestion(index=probe_parameter.index, hint=str(e)))
 
     return converted_values, suggestions
+
+
+class _ConcatProbeStatementParam(_IProbeStatementParam):
+  """Holds a many-to-one parameter for `_SingleProbeFuncConverter`.
+
+  The probe info parameter and probe statement parameter should be many-to-one.
+  This is initialized with a sequence of `_SingleProbeStatementParam`.
+  When generating expected values for the parameter, it first generates the
+  values of all its `_SingleProbeStatementParam`, and then concatenates the
+  values in the initialization order.
+  """
+
+  class _ConvertedValue(NamedTuple):
+    index: int
+    value: str
+
+  def __init__(self, name: str,
+               probe_info_params: Sequence[_SingleProbeStatementParam],
+               ps_gen_checker: Optional[Callable]):
+    self._name = name
+    self._probe_info_params = probe_info_params
+    self._ps_gen_checker = ps_gen_checker
+    self._is_informational = ps_gen_checker is None
+
+  @property
+  def probe_info_param_definitions(
+      self) -> Mapping[str, stubby_pb2.ProbeParameterDefinition]:
+    """See base class."""
+    definitions = collections.defaultdict()
+    for probe_info_param in self._probe_info_params:
+      definitions.update(probe_info_param.probe_info_param_definitions)
+
+    return definitions
+
+  @property
+  def probe_statement_param_name(self) -> Optional[str]:
+    """See base class."""
+    return None if self._is_informational else self._name
+
+  def ConvertValues(
+      self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
+  ) -> Tuple[List[Any], Sequence[ProbeParameterSuggestion]]:
+    """See base class."""
+    converted_values = collections.OrderedDict()
+    suggestions = []
+    for probe_info_param in self._probe_info_params:
+      param_name = next(iter(probe_info_param.probe_info_param_definitions))
+      converted_values[param_name] = []
+      for probe_parameter in probe_parameters[param_name]:
+        sub_values, sub_suggestions = probe_info_param.ConvertValues(
+            {param_name: [probe_parameter]})
+        suggestions.extend(sub_suggestions)
+
+        if sub_values:
+          converted_values[param_name].append(
+              self._ConvertedValue(probe_parameter.index, str(sub_values[0])))
+
+    concat_values = []
+    for values in itertools.product(*converted_values.values()):
+      try:
+        concat_value = ''.join(value.value for value in values)
+        if self._ps_gen_checker:
+          # Attempt to trigger the probe statement generator directly to see if
+          # it's convertible.
+          self._ps_gen_checker(concat_value)
+        concat_values.append(concat_value)
+      except (TypeError, ValueError) as e:
+        suggestions.extend(
+            ProbeParameterSuggestion(index=value.index, hint=str(e))
+            for value in values)
+
+    return concat_values, suggestions
 
 
 class _IProbeParamSpec(abc.ABC):
@@ -352,6 +427,28 @@ class _InformationalParam(_IProbeParamSpec):
     ps_gen_checker = None
     return _SingleProbeStatementParam(self._param_name, self._description,
                                       self._value_converter, ps_gen_checker)
+
+
+class _ConcatParam(_IProbeParamSpec):
+
+  def __init__(
+      self,
+      param_name: str,
+      probe_info_params: Sequence[_SingleProbeStatementParam],
+      description: Optional[str] = None,
+  ):
+    self._param_name = param_name
+    self._probe_info_params = probe_info_params
+    self._description = description
+
+  def BuildProbeStatementParam(
+      self, output_fields: Mapping[str,
+                                   probe_config_types.OutputFieldDefinition]
+  ) -> _IProbeStatementParam:
+    """See base class."""
+    output_field = output_fields[self._param_name]
+    return _ConcatProbeStatementParam(self._param_name, self._probe_info_params,
+                                      output_field.probe_statement_generator)
 
 
 class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
@@ -506,15 +603,21 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
     return expected_values_of_field, probe_param_errors
 
 
-def _RemoveHexPrefixAndNormalize(value: str) -> str:
+def _RemoveHexPrefixAndCapitalize(value: str) -> str:
   if not value.lower().startswith('0x'):
-    raise ValueError('Expect hex value to start with "0x".')
+    raise ValueError('Expect hex value to start with "0x" or "0X".')
   return value[2:].upper()
 
 
-def _NormalizeHexValueWithoutPrefix(value: str) -> str:
+def _RemoveHexPrefixAndLowerize(value: str) -> str:
+  if not value.lower().startswith('0x'):
+    raise ValueError('Expect hex value to start with "0x" or "0X".')
+  return value[2:].lower()
+
+
+def _CapitalizeHexValueWithoutPrefix(value: str) -> str:
   if value.lower().startswith('0x'):
-    raise ValueError('Expect hex value not to start with "0x".')
+    raise ValueError('Expect hex value not to start with "0x" or "0X".')
   return value.upper()
 
 
@@ -546,22 +649,45 @@ def _GetAllConverters() -> Sequence[_IComponentProbeStatementConverter]:
               _ProbeFunctionParam('model_name'),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+          'camera', 'mipi_camera', [
+              _ConcatParam('mipi_module_id', [
+                  _SingleProbeStatementParam('module_vid',
+                                             'The camera module vendor ID.',
+                                             _ParamValueConverter('string')),
+                  _SingleProbeStatementParam(
+                      'module_pid', 'The camera module product ID.',
+                      _ParamValueConverter('string',
+                                           _RemoveHexPrefixAndLowerize))
+              ]),
+              _ConcatParam('mipi_sensor_id', [
+                  _SingleProbeStatementParam('sensor_vid',
+                                             'The camera sensor vendor ID.',
+                                             _ParamValueConverter('string')),
+                  _SingleProbeStatementParam(
+                      'sensor_pid', 'The camera sensor product ID.',
+                      _ParamValueConverter(
+                          'string',
+                          _RemoveHexPrefixAndLowerize,
+                      ))
+              ])
+          ]),
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'camera', 'usb_camera', [
               _ProbeFunctionParam(
                   'usb_vendor_id', value_converter=_ParamValueConverter(
-                      'string', _NormalizeHexValueWithoutPrefix)),
+                      'string', _CapitalizeHexValueWithoutPrefix)),
               _ProbeFunctionParam(
                   'usb_product_id', value_converter=_ParamValueConverter(
-                      'string', _NormalizeHexValueWithoutPrefix)),
+                      'string', _CapitalizeHexValueWithoutPrefix)),
               _ProbeFunctionParam(
                   'usb_bcd_device', value_converter=_ParamValueConverter(
-                      'string', _NormalizeHexValueWithoutPrefix)),
+                      'string', _CapitalizeHexValueWithoutPrefix)),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'display_panel', 'edid', [
               _ProbeFunctionParam(
                   'product_id', value_converter=_ParamValueConverter(
-                      'string', _NormalizeHexValueWithoutPrefix)),
+                      'string', _CapitalizeHexValueWithoutPrefix)),
               _ProbeFunctionParam('vendor'),
               _InformationalParam('width', 'The width of display panel.',
                                   _ParamValueConverter('int')),
@@ -572,14 +698,14 @@ def _GetAllConverters() -> Sequence[_IComponentProbeStatementConverter]:
           'storage', 'mmc_storage', [
               _ProbeFunctionParam(
                   'mmc_manfid', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndNormalize)),
+                      'string', _RemoveHexPrefixAndCapitalize)),
               _ProbeFunctionParam(
                   'mmc_name', value_converter=_ParamValueConverter(
                       'string', lambda hex_with_prefix: bytes.fromhex(
                           hex_with_prefix[2:]).decode('ascii'))),
               _ProbeFunctionParam(
                   'mmc_prv', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndNormalize)),
+                      'string', _RemoveHexPrefixAndCapitalize)),
               _InformationalParam('size_in_gb', 'The storage size in GB.',
                                   _ParamValueConverter('int')),
           ]),
@@ -587,13 +713,13 @@ def _GetAllConverters() -> Sequence[_IComponentProbeStatementConverter]:
           'storage', 'nvme_storage', [
               _ProbeFunctionParam(
                   'pci_vendor', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndNormalize)),
+                      'string', _RemoveHexPrefixAndCapitalize)),
               _ProbeFunctionParam(
                   'pci_device', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndNormalize)),
+                      'string', _RemoveHexPrefixAndCapitalize)),
               _ProbeFunctionParam(
                   'pci_class', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndNormalize)),
+                      'string', _RemoveHexPrefixAndCapitalize)),
               _ProbeFunctionParam('nvme_model'),
               _InformationalParam('size_in_gb', 'The storage size in GB.',
                                   _ParamValueConverter('int')),
