@@ -60,7 +60,10 @@ check_js:
 	  $(JS_SOURCES)
 
 ap_config.json:
-	$(CHROMITE_PATH)/bin/cros ap dump-config -o ap_config.json
+	# TODO(b/283024460): Use futility to handle ap config.
+	$(CHROMITE_PATH)/bin/cros ap dump-config -o ap_config.json --board \
+		"draco drallion generic grunt hades hatch keeby mancomb octopus puff \
+		volteer brya brask"
 
 $(INSTALL_TARGET): ap_config.json
 	mkdir -p $(DEST_LIB_PATH)/py/$(dir $(@:install_%=%))
