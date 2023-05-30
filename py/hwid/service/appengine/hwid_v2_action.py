@@ -190,6 +190,10 @@ class HWIDV2Action(hwid_action.HWIDAction):
     raise hwid_action.InvalidHWIDError(
         f'Invalid HWIDv2 format: {hwid_string!r}')
 
+  def GetFeatureEnablementLabel(self, hwid_string: str) -> str:
+    """See base class."""
+    return 'not_branded:0'
+
 
 def _NormalizeString(string):
   """Normalizes a string to account for things like case."""
