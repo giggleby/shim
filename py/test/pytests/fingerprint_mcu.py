@@ -155,6 +155,10 @@ class FingerprintTest(test_case.TestCase):
            'then the operator must manually judge pass or fail.'), default=0),
       Arg('timeout_secs', int, 'The timeout of captures in seconds.',
           default=5),
+      Arg(
+          'ignore_waitevent_timeout_error', bool,
+          'Set to True to ignore cros_fp waitevent timeout error. More details '
+          'are described in FpmcuTryWaitEvent function.', default=False),
   ]
 
   # MKBP index for Fingerprint sensor event
@@ -181,10 +185,23 @@ class FingerprintTest(test_case.TestCase):
     self._fpmcu.FpmcuCommand('fpmode', 'reset')
 
   def FpmcuTryWaitEvent(self, *args, **kwargs):
+    """Waits for a cros_fp event to complete.
+
+    The function waits until `ectool --name=cros_fp fpmode capture ${mode}`
+    finishes or waits until the given timeout seconds. However, ectool API has
+    some problems such that the fpmode capture command might ends before
+    the waitevent is triggered. To avoid triggering the unintended timeout
+    error, one can choose to set `ignore_waitevent_timeout_error` to True.
+    """
     try:
       self._fpmcu.FpmcuCommand('waitevent', *args, **kwargs)
     except Exception as e:
-      logging.error('Wait event fail: %s', e)
+      wait_event_fail_msg = f'Wait event fail: {e}'
+      if ('Timeout waiting for MKBP event' in e.stderr and
+          self.args.ignore_waitevent_timeout_error):
+        logging.error(wait_event_fail_msg)
+      else:
+        raise type_utils.TestFailure(wait_event_fail_msg)
 
   def FpmcuGetFpframe(self, *args, **kwargs):
     # try fpframe command for at most (fpframe_retry_count + 1) times.
