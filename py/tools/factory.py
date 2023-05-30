@@ -226,7 +226,7 @@ class TestsCommand(Subcommand):
       test_object = goofy.test_list.LookupPath(path)
       if self.args.label and 'en-US' in test_object.label:
         return test_object.label['en-US']
-      return t['path']
+      return path
 
     def _ParsePathToCSV(path):
       path = path.split('.', 2)
