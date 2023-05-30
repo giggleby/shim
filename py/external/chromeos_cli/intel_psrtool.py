@@ -20,8 +20,8 @@ class IntelPSRTool:
     self._shell = shell.Shell(dut)
 
   def StartPSREventLog(self):
-    ret = self._shell(['intel-psrtool', '-a']).stdout
-    match = re.search(r'(ACTION_NOT_ALLOWED)', ret)
+    stdout = self._shell(['intel-psrtool', '-a']).stdout
+    match = re.search(r'ACTION_NOT_ALLOWED', stdout)
     if match:
       logging.warning(
           'Failed to start PSR event log. It has been started already')
@@ -37,13 +37,14 @@ class IntelPSRTool:
 
   def GetPSRStateAndAvailability(self):
     """Returns a PSRStatus with state and availability"""
-    ret = self._shell(['intel-psrtool', '-s']).stdout
-    match_state = re.search(r'state:\s*((NOT\s)?\w+)', ret)
+    stdout = self._shell(['intel-psrtool', '-s']).stdout
+    match_state = re.search(r'state:\s*((NOT\s)?\w+)', stdout)
     if not match_state:
-      raise RuntimeError(f'Failed to get PSR state from output: {ret}')
-    match_availability = re.search(r'availability:\s*(\w+)', ret)
+      raise RuntimeError(f'Failed to get PSR state from output: {stdout}')
+    match_availability = re.search(r'availability:\s*(\w+)', stdout)
     if not match_availability:
-      raise RuntimeError(f'Failed to get PSR availability from output: {ret}')
+      raise RuntimeError(
+          f'Failed to get PSR availability from output: {stdout}')
     return PSRStatus(match_state.group(1), match_availability.group(1))
 
   def DisplayPSRLog(self):
@@ -65,14 +66,16 @@ class IntelPSRTool:
 
   def VerifyOEMData(self, filename):
     """Verifies OEM Data saved in ME FW is identical to the config `filename`"""
-    self._shell(['intel-psrtool', '-k', filename])
+    ret = self._shell(['intel-psrtool', '-k', filename])
+    if not ret.success:
+      raise RuntimeError(ret.stderr)
 
   def GetManufacturingNVAR(self):
     """Returns Manufacturing(EOM) NVAR, which can be an integer 0 or 1 """
-    ret = self._shell(['intel-psrtool', '-m']).stdout
-    match = re.search(r'NVAR\svalue\s=\s*(\w+)', ret)
+    stdout = self._shell(['intel-psrtool', '-m']).stdout
+    match = re.search(r'NVAR\svalue\s=\s*(\w+)', stdout)
     if not match:
-      raise RuntimeError(f'Failed to get PSR EOM NVAR from output: {ret}')
+      raise RuntimeError(f'Failed to get PSR EOM NVAR from output: {stdout}')
     return int(match.group(1))
 
   def CloseManufacturing(self):
@@ -84,6 +87,3 @@ class IntelPSRTool:
 
   def ClearAndStopPSREventLog(self):
     self._shell(['intel-psrtool', '-x'])
-
-  def RemoveConfigFile(self, filename):
-    self._shell(['rm', filename])
