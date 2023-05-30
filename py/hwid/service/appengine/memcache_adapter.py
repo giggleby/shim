@@ -89,7 +89,8 @@ class MemcacheAdapter:
       return None
     try:
       return pickle.loads(serialized_data)
-    except pickle.UnpicklingError:
+    except (TypeError, pickle.UnpicklingError) as ex:
+      logging.debug('Memcache load fail (%r), treat it as cache expired.', ex)
       return None
 
   def DelByPattern(self, entry_key_pattern: str):
