@@ -14,12 +14,10 @@ class RuntimeProbeFunction(probe_function.ProbeFunction):
   call. See cros.factory.probe.runtime_probe.probe_config_definition for the
   possible values.
   """
-  CATEGORY_NAME = None
   FUNCTION_NAME = None
 
   def Probe(self):
-    if not self.CATEGORY_NAME or not self.FUNCTION_NAME:
+    if not self.FUNCTION_NAME:
       raise NotImplementedError
-    return runtime_probe_adapter.RunProbeFunction(self.CATEGORY_NAME,
-                                                  self.FUNCTION_NAME,
+    return runtime_probe_adapter.RunProbeFunction(self.FUNCTION_NAME,
                                                   self.args.ToDict())
