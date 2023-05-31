@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# Copyright 2023 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import unittest
+
+from cros.factory.hwid.service.appengine.data.converter import camera_converter
+from cros.factory.hwid.service.appengine.data.converter import converter_test_utils
+from cros.factory.hwid.v3 import contents_analyzer
+
+
+_PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
+
+
+class CameraConverterCollectionTest(unittest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._converter_collection = camera_converter.GetConverterCollection()
+
+  def testUsbWithPrefixFullLengthMatch(self):
+    comp_values = {
+        'usb_bcd_device': '0001',
+        'usb_product_id': '1234',
+        'usb_vendor_id': 'abcd',
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'usb_bcd_device': '0001',
+        'usb_product_id': '1234',
+        'usb_vendor_id': 'abcd',
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info)
+
+    self.assertEqual(result.alignment_status, _PVAlignmentStatus.ALIGNED)
+
+  def testUsbNoPrefixFullLengthMatch(self):
+    comp_values = {
+        'bcdDevice': '0001',
+        'idProduct': '1234',
+        'idVendor': 'abcd',
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'usb_bcd_device': '0001',
+        'usb_product_id': '1234',
+        'usb_vendor_id': 'abcd',
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info)
+
+    self.assertEqual(result.alignment_status, _PVAlignmentStatus.ALIGNED)
+
+  def testMipiWithPrefixFullLengthMatch(self):
+    comp_values = {
+        'mipi_module_id': 'TC12ab',
+        'mipi_sensor_id': 'OV34cd',
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'module_vid': 'TC',
+        'module_pid': '0x12AB',
+        'sensor_vid': 'OV',
+        'sensor_pid': '0x34CD',
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info)
+
+    self.assertEqual(result.alignment_status, _PVAlignmentStatus.ALIGNED)
+
+  def testMipiNoPrefixFullLengthMatch(self):
+    comp_values = {
+        'module_id': 'TC12ab',
+        'sensor_id': 'OV34cd',
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'module_vid': 'TC',
+        'module_pid': '0x12AB',
+        'sensor_vid': 'OV',
+        'sensor_pid': '0x34CD',
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info)
+
+    self.assertEqual(result.alignment_status, _PVAlignmentStatus.ALIGNED)
+
+  def testMipiFullLengthNotMatch(self):
+    comp_values = {
+        'mipi_module_id': 'TC1234',
+        'mipi_sensor_id': 'OVabcd',
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'module_vid': 'TC',
+        'module_pid': '0x1235',
+        'sensor_vid': 'OV',
+        'sensor_pid': '0xabcd',
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info)
+
+    self.assertEqual(result.alignment_status, _PVAlignmentStatus.NOT_ALIGNED)
+
+
+if __name__ == '__main__':
+  unittest.main()
