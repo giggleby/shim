@@ -65,18 +65,45 @@ def MakeMipiPIDMatchFactory(
 _USB_CAMERA_CONVERTERS: Sequence[converter.FieldNameConverter] = [
     converter.FieldNameConverter.FromFieldMap(
         'usb_no_prefix', {
-            _USBCameraAVLAttrs.BCD_DEVICE: _ConvertedValueSpec('bcdDevice'),
-            _USBCameraAVLAttrs.PRODUCT_ID: _ConvertedValueSpec('idProduct'),
-            _USBCameraAVLAttrs.VENDOR_ID: _ConvertedValueSpec('idVendor'),
+            _USBCameraAVLAttrs.BCD_DEVICE:
+                _ConvertedValueSpec(
+                    'bcdDevice',
+                    converter.MakeBothNormalizedFillWidthHexValueFactory(
+                        fill_width=4, source_has_prefix=False,
+                        target_has_prefix=False)),
+            _USBCameraAVLAttrs.PRODUCT_ID:
+                _ConvertedValueSpec(
+                    'idProduct',
+                    converter.MakeBothNormalizedFillWidthHexValueFactory(
+                        fill_width=4, source_has_prefix=False,
+                        target_has_prefix=False)),
+            _USBCameraAVLAttrs.VENDOR_ID:
+                _ConvertedValueSpec(
+                    'idVendor',
+                    converter.MakeBothNormalizedFillWidthHexValueFactory(
+                        fill_width=4, source_has_prefix=False,
+                        target_has_prefix=False)),
         }),
     converter.FieldNameConverter.FromFieldMap(
         'usb_with_prefix', {
             _USBCameraAVLAttrs.BCD_DEVICE:
-                _ConvertedValueSpec('usb_bcd_device'),
+                _ConvertedValueSpec(
+                    'usb_bcd_device',
+                    converter.MakeBothNormalizedFillWidthHexValueFactory(
+                        fill_width=4, source_has_prefix=False,
+                        target_has_prefix=False)),
             _USBCameraAVLAttrs.PRODUCT_ID:
-                _ConvertedValueSpec('usb_product_id'),
+                _ConvertedValueSpec(
+                    'usb_product_id',
+                    converter.MakeBothNormalizedFillWidthHexValueFactory(
+                        fill_width=4, source_has_prefix=False,
+                        target_has_prefix=False)),
             _USBCameraAVLAttrs.VENDOR_ID:
-                _ConvertedValueSpec('usb_vendor_id'),
+                _ConvertedValueSpec(
+                    'usb_vendor_id',
+                    converter.MakeBothNormalizedFillWidthHexValueFactory(
+                        fill_width=4, source_has_prefix=False,
+                        target_has_prefix=False)),
         }),
     converter.FieldNameConverter.FromFieldMap(
         'mipi_no_prefix', {

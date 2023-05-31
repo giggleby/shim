@@ -21,14 +21,14 @@ class CameraConverterCollectionTest(unittest.TestCase):
 
   def testUsbWithPrefixFullLengthMatch(self):
     comp_values = {
-        'usb_bcd_device': '0001',
-        'usb_product_id': '1234',
-        'usb_vendor_id': 'abcd',
+        'usb_bcd_device': '00a1',
+        'usb_product_id': '12ab',
+        'usb_vendor_id': '34cd',
     }
     probe_info = converter_test_utils.ProbeInfoFromMapping({
-        'usb_bcd_device': '0001',
-        'usb_product_id': '1234',
-        'usb_vendor_id': 'abcd',
+        'usb_bcd_device': '00A1',
+        'usb_product_id': '12AB',
+        'usb_vendor_id': '34CD',
     })
 
     result = self._converter_collection.Match(comp_values, probe_info)
@@ -37,14 +37,14 @@ class CameraConverterCollectionTest(unittest.TestCase):
 
   def testUsbNoPrefixFullLengthMatch(self):
     comp_values = {
-        'bcdDevice': '0001',
-        'idProduct': '1234',
-        'idVendor': 'abcd',
+        'bcdDevice': '00a1',
+        'idProduct': '12ab',
+        'idVendor': '34cd',
     }
     probe_info = converter_test_utils.ProbeInfoFromMapping({
-        'usb_bcd_device': '0001',
-        'usb_product_id': '1234',
-        'usb_vendor_id': 'abcd',
+        'usb_bcd_device': '00A1',
+        'usb_product_id': '12AB',
+        'usb_vendor_id': '34CD',
     })
 
     result = self._converter_collection.Match(comp_values, probe_info)
