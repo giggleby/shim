@@ -9,9 +9,19 @@ ENTITY_FILE="${ENTITY_FILE}"
 DATASTORE_PROJECT_ID="${DATASTORE_PROJECT_ID}"
 # shellcheck disable=SC2269
 DATASTORE_HOST="${DATASTORE_HOST}"
+# shellcheck disable=SC2269
+REDIS_DB_DIR="${REDIS_DB_DIR}"
+
+start_redis() {
+  local redis_args=()
+  if [ -d "${REDIS_DB_DIR}" ]; then
+    redis_args+=(--dir "${REDIS_DB_DIR}")
+  fi
+  redis-server "${redis_args[@]}"
+}
 
 setup_integration_test() {
-  redis-server &
+  start_redis &
   /usr/src/google-cloud-sdk/bin/gcloud beta emulators datastore \
     start --consistency=1 &
   bash
@@ -25,7 +35,7 @@ setup_local_server() {
     /usr/src/google-cloud-sdk/bin/gcloud auth application-default login
   fi
 
-  redis-server &
+  start_redis &
   /usr/src/google-cloud-sdk/bin/gcloud \
     beta emulators datastore start --consistency=1 &
 

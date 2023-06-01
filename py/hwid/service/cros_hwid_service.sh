@@ -33,6 +33,7 @@ PROTOC_VERSION="3.19.0"
 REDIS_RDB="${REDIS_RDB}"
 # shellcheck disable=SC2269
 DATASTORE="${DATASTORE}"
+HOST_REDIS_RDB_PATH=""
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
 . "${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/config.sh" || exit 1
@@ -201,6 +202,17 @@ ${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/configurations.yaml" \
   prepare_cros_regions
 }
 
+handle_rdb_path() {
+  if [ -f "${HOST_REDIS_RDB_PATH}" ]; then
+    read -r -p "Preserve Redis DB [y/N] " opt
+    if [[ "${opt}" =~ [yY] ]]; then
+      echo "Redis DB output path: ${HOST_REDIS_RDB_PATH}"
+    else
+      rm -f "${HOST_REDIS_RDB_PATH}"
+    fi
+  fi
+}
+
 do_deploy() {
   local deployment_type="$1"
   shift
@@ -237,11 +249,21 @@ do_deploy() {
 
       # Mount redis db in docker
       local redis_mount=()
+      local guest_redis_db_dir
+      local host_redis_db_dir
+      host_redis_db_dir="$(mktemp -d)"
+      HOST_REDIS_RDB_PATH="${host_redis_db_dir}/dump.rdb"
+      guest_redis_db_dir="/redis-data"
+      redis_mount+=(--volume "${host_redis_db_dir}:${guest_redis_db_dir}")
+      redis_mount+=(--env REDIS_DB_DIR="${guest_redis_db_dir}")
+
       if [ -f "${REDIS_RDB}" ]; then
-        redis_mount+=(--volume "${REDIS_RDB}:/dump.rdb")
+        echo "Use ${REDIS_RDB} as init Redis DB."
+        cp "${REDIS_RDB}" "${HOST_REDIS_RDB_PATH}"
       else
         echo "WARNING: redis DB not found or not provided. Will use an empty DB"
       fi
+      trap handle_rdb_path EXIT
 
       # Mount datastore db in docker
       local datastore_mount=()
