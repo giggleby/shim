@@ -90,7 +90,7 @@ class _APWriteProtectTarget(IWriteProtectTarget):
             'sure hardware write protection is enabled.')
 
   def GetStatus(self):
-    result = self._InvokeCommand('--wp-status --ignore-hw').stdout
+    result = self._InvokeCommand('--wp-status --ignore-hw').stdout.strip()
 
     if result == 'WP status: enabled':
       return True

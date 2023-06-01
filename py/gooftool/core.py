@@ -28,6 +28,7 @@ from cros.factory.gooftool import vpd_data
 from cros.factory.gooftool import wipe
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
+from cros.factory.probe.functions import flash_chip
 from cros.factory.test.l10n import regions
 from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
@@ -1102,6 +1103,21 @@ class Gooftool:
       if 'BoardID is set' in stdout:
         logging.warning('SN Bits cannot be set anymore.')
 
+  def VerifyWPSR(self):
+    """Verifies wpsr when write protect is enabled.
+
+    To avoid setting 0 0 accidentally. Example output from gsctool:
+    "expected values: 1: ff & 0f, 2: 00 & ff, 3: f0 & f0"
+    """
+    res = self._util.shell('gsctool -a -E').stdout
+    match = list(re.finditer(r'[1-9]: (?P<value>\w+) & (?P<mask>\w+)', res))
+    if not match:
+      raise Exception(f'Unexpected output from {res}')
+    if len(match) == 1 and int(match[0]['value']) == 0 and int(
+        match[0]['mask']) == 0:
+      raise Exception(
+          'Should set a non-zero wpsr when write protect is enabled.')
+
   def VerifyCBIEEPROMWPStatus(self, cbi_eeprom_wp_status):
     """Verifies CBI EEPROM write protection status."""
 
@@ -1109,7 +1125,7 @@ class Gooftool:
                                       cbi_eeprom_wp_status)
 
   def VerifyAltSetting(self):
-    """Verify the usb alt setting for RTL8852CE."""
+    """Verifies the usb alt setting for RTL8852CE."""
     bluetooth_utils.VerifyAltSetting()
 
   def GetBitmapLocales(self, image_file):
@@ -1803,14 +1819,46 @@ class Gooftool:
     self._CheckCall(cmd)
 
   def Ti50SetSWWPRegister(self, no_write_protect, wpsr):
-    if wpsr:
-      cmd = ['gsctool', '-a', '-E', wpsr]
-    elif no_write_protect:
-      cmd = ['gsctool', '-a', '-E', '0 0']
-    else:
-      # TODO(jasonchuang) Call flashrom command to get the values b/259013033.
-      raise NotImplementedError
-    self._CheckCall(cmd)
+    if not wpsr:
+      if no_write_protect:
+        wpsr = '0 0'
+      else:
+        (flash_name, wp_region_start,
+         wp_region_length) = self._CollectWPSRInfo()
+        res = self._CheckCall([
+            'ap_wpsr', f'--name={flash_name}', f'--start={wp_region_start}',
+            f'--length={wp_region_length}'
+        ]).stdout
+        logging.info('WPSR: %s', res)
+        match = re.search(r'SR Value\/Mask = (.+)', res)
+        if match:
+          wpsr = match[1]
+        else:
+          raise Error(f'Fail to parse the wpsr from ap_wpsr tool {res}')
+    self._CheckCall(['gsctool', '-a', '-E', wpsr])
+
+  def _CollectWPSRInfo(self):
+
+    def GetFlashName():
+      probe_result = flash_chip.FlashChipFunction.ProbeDevices('host')
+      flash_name = probe_result['name']
+
+      sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
+      if 'spi_flash_transform' in sku_config and flash_name in sku_config[
+          'spi_flash_transform']:
+        flash_name = sku_config['spi_flash_transform'][flash_name]
+      logging.info('Flash name: %s', flash_name)
+      return flash_name
+
+    result = self._CheckCall(['futility', 'flash', '--flash-info']).stdout
+
+    wp_conf = re.search(r'\(start = (?P<start>\w+), length = (?P<length>\w+)\)',
+                        result)
+    if not wp_conf:
+      raise Error(f'Fail to parse the wp region {result}')
+
+    return (GetFlashName(), wp_conf['start'], wp_conf['length'])
+
 
   def _CheckCall(self, cmd):
     proc = self._util.shell(cmd)
