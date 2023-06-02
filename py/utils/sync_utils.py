@@ -130,7 +130,8 @@ def WaitFor(condition: Callable[[],
 
 def QueueGet(q: 'queue.Queue[T]',
              timeout: Optional[float] = DEFAULT_TIMEOUT_SECS,
-             poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS) -> T:
+             poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS,
+             enable_logging: bool = False) -> T:
   """Get from a queue.Queue, possibly by polling.
 
   This is useful when a custom polling sleep function is set.
@@ -142,7 +143,8 @@ def QueueGet(q: 'queue.Queue[T]',
     return q.get(timeout=timeout)
 
   @RetryDecorator(timeout_sec=timeout, interval_sec=poll_interval_secs,
-                  exceptions_to_catch=[queue.Empty], reraise=True)
+                  exceptions_to_catch=[queue.Empty], reraise=True,
+                  enable_logging=enable_logging)
   def QueueGetNowait() -> T:
     return q.get_nowait()
 

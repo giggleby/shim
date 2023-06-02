@@ -137,6 +137,32 @@ class QueueGetTest(PollingTestBase):
         'bar',
         sync_utils.QueueGet(self._queue, timeout=.5, poll_interval_secs=0.2))
 
+  @mock.patch('logging.exception')
+  def testQueueGetSuccessByDefaultNoLogs(self, logging_mock: mock.MagicMock):
+    answer = 123
+
+    def Put():
+      self._queue.put(answer)
+
+    self._timeline.AddEvent(10, Put)
+    value = sync_utils.QueueGet(self._queue, timeout=None, poll_interval_secs=1)
+    logging_mock.assert_not_called()
+    self.assertEqual(value, answer)
+
+  @mock.patch('logging.exception')
+  def testQueueGetSuccessEnableLoggingShouldLog(self,
+                                                logging_mock: mock.MagicMock):
+    answer = 123
+
+    def Put():
+      self._queue.put(answer)
+
+    self._timeline.AddEvent(10, Put)
+    value = sync_utils.QueueGet(self._queue, timeout=None, poll_interval_secs=1,
+                                enable_logging=True)
+    logging_mock.assert_called()
+    self.assertEqual(value, answer)
+
 
 class RetryTest(PollingTestBase):
 
