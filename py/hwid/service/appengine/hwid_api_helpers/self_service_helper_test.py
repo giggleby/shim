@@ -349,32 +349,11 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
         self._GetConvertedDLMComponentDatabaseFromMock(),
         {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
 
-  def testBuild_WithInvalidDRAMComopnentName_ThenMatchNothing(self):
-    db = self._BuildHWIDDBForTest(
-        components={'dram': {
-            'dram_xyz': {
-                'part': 'xyzabc'
-            }
-        }})
-    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.device_feature_version = 1
-    extra_resource.dlm_components.add(cid=1, is_dram=True)
-
-    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
-    result = inst.Build()
-
-    self._AssertFeatureMatcherBuildResultSuccess(result, expect_warnings=[])
-    expected_converted_dlm_entry = self._CreateDLMComponentEntry(cid=1)
-    self.assertDictEqual(
-        self._GetConvertedDLMComponentDatabaseFromMock(),
-        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
-
-  def testBuild_WithSizedDRAM_Success(self):
+  def testBuild_WithDRAM_Success(self):
     db = self._BuildHWIDDBForTest(
         components={'dram': {
             'dram_1': {
                 'partnumber': 'PN',
-                'size': '4096'
             }
         }})
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
@@ -386,54 +365,10 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
 
     self._AssertFeatureMatcherBuildResultSuccess(result, expect_warnings=[])
     expected_converted_dlm_entry = self._CreateDLMComponentEntry(
-        cid=1,
-        virtual_dimm_property=features.VirtualDIMMProperty(size_in_mb=4096))
+        cid=1, virtual_dimm_property=features.VirtualDIMMProperty())
     self.assertDictEqual(
         self._GetConvertedDLMComponentDatabaseFromMock(),
         {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
-
-  def testBuild_WithNoSizeDRAM_SuccessWithWarnings(self):
-    db = self._BuildHWIDDBForTest(
-        components={'dram': {
-            'dram_1': {
-                'partnumber': 'PN12345'
-            }
-        }})
-    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.device_feature_version = 1
-    extra_resource.dlm_components.add(cid=1, is_dram=True)
-
-    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
-    result = inst.Build()
-
-    self._AssertFeatureMatcherBuildResultSuccess(
-        result,
-        expect_warnings=['Unable to get the virtual DIMM size from dram_1.'])
-    expected_converted_dlm_entry = self._CreateDLMComponentEntry(cid=1)
-    self.assertDictEqual(
-        self._GetConvertedDLMComponentDatabaseFromMock(),
-        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
-
-  def testBuild_WithAmbiguousSizeDRAM_FailWithError(self):
-    db = self._BuildHWIDDBForTest(components={
-        'dram': {
-            'dram_1#1': {
-                'size': '1024'
-            },
-            'dram_1#2': {
-                'size': '4096'
-            }
-        }
-    })
-    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.device_feature_version = 1
-    extra_resource.dlm_components.add(cid=1, is_dram=True)
-
-    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
-    result = inst.Build()
-
-    self._AssertFeatureMatcherBuildResultFailure(
-        result, expect_errors=['Failed to resolve DIMM size from HWID DB'])
 
   def testBuild_WithStorage_Success(self):
     db = self._BuildHWIDDBForTest(

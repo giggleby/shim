@@ -24,20 +24,22 @@ def _BuildDLMComponentEntry(
     display_panel_property: Optional[Mapping] = None,
     camera_property: Optional[Mapping] = None,
 ) -> features.DLMComponentEntry:
+
+  def _BuildIfNotNone(cls, kwargs):
+    if kwargs is None:
+      return None
+    return cls(**kwargs)
+
   return features.DLMComponentEntry(
       dlm_id=features.DLMComponentEntryID(cid, qid),
-      cpu_property=cpu_property and features.CPUProperty(**cpu_property),
-      virtual_dimm_property=(
-          virtual_dimm_property and
-          features.VirtualDIMMProperty(**virtual_dimm_property)),
-      storage_function_property=(
-          storage_function_property and
-          features.StorageFunctionProperty(**storage_function_property)),
-      display_panel_property=(
-          display_panel_property and
-          features.DisplayProperty(**display_panel_property)),
-      camera_property=(camera_property and
-                       features.CameraProperty(**camera_property)),
+      cpu_property=_BuildIfNotNone(features.CPUProperty, cpu_property),
+      virtual_dimm_property=_BuildIfNotNone(features.VirtualDIMMProperty,
+                                            virtual_dimm_property),
+      storage_function_property=_BuildIfNotNone(
+          features.StorageFunctionProperty, storage_function_property),
+      display_panel_property=_BuildIfNotNone(features.DisplayProperty,
+                                             display_panel_property),
+      camera_property=_BuildIfNotNone(features.CameraProperty, camera_property),
   )
 
 
@@ -49,8 +51,9 @@ def _BuildDLMComponentDatabase(
 
 
 def _BuildDatabaseForTest(
-    encoded_fields_section: str,
-    pattern_section: Optional[str] = None) -> db_module.Database:
+    encoded_fields_section: str, pattern_section: Optional[str] = None,
+    comp_values: Optional[Mapping[str, Mapping[str, str]]] = None
+) -> db_module.Database:
   """Builds a valid HWID DB instance from minimum hints.
 
   Args:
@@ -61,6 +64,7 @@ def _BuildDatabaseForTest(
   Returns:
     A HWID DB instance.
   """
+  comp_values = comp_values or {}
   if pattern_section is None:
     pattern_section = textwrap.dedent("""\
         pattern:
@@ -92,10 +96,12 @@ def _BuildDatabaseForTest(
       for comp_name in type_utils.MakeList(comp_name_or_comp_names):
         component_part['components'][comp_type]['items'].setdefault(
             comp_name, {
-                'status': 'supported',
-                'values': {
-                    'unused_key': f'unused_unique_value_{comp_name}'
-                }
+                'status':
+                    'supported',
+                'values':
+                    comp_values.get(
+                        comp_name,
+                        {'unused_key': f'unused_unique_value_{comp_name}'})
             })
   db_text = '\n'.join([
       textwrap.dedent("""\
@@ -539,10 +545,11 @@ class MemoryV1SpecTest(unittest.TestCase):
               not_dram_field:
                 0:
                   dram: dram_1
-        """))
+        """), comp_values={'dram_1': {
+            'size': '32768'
+        }})
     dlm_db = _BuildDLMComponentDatabase([
-        _BuildDLMComponentEntry(
-            1, virtual_dimm_property={'size_in_mb': 1024 * 32}),
+        _BuildDLMComponentEntry(1, virtual_dimm_property={}),
     ])
 
     actual = features.MemoryV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
@@ -558,8 +565,7 @@ class MemoryV1SpecTest(unittest.TestCase):
                   cpu: cpu_1
         """))
     dlm_db = _BuildDLMComponentDatabase([
-        _BuildDLMComponentEntry(
-            1, virtual_dimm_property={'size_in_mb': 1024 * 32}),
+        _BuildDLMComponentEntry(1, virtual_dimm_property={}),
     ])
 
     with self.assertRaises(features.HWIDDBNotSupportError):
@@ -576,12 +582,17 @@ class MemoryV1SpecTest(unittest.TestCase):
                   dram: [dram_1, dram_1]  # totall 8GB
                 2:
                   dram: [dram_1, dram_1, dram_2]  # totall 16GB
-        """))
+        """), comp_values={
+            'dram_1': {
+                'size': '4096'
+            },
+            'dram_2': {
+                'size': '8192'
+            },
+        })
     dlm_db = _BuildDLMComponentDatabase([
-        _BuildDLMComponentEntry(1,
-                                virtual_dimm_property={'size_in_mb': 1024 * 4}),
-        _BuildDLMComponentEntry(2,
-                                virtual_dimm_property={'size_in_mb': 1024 * 8}),
+        _BuildDLMComponentEntry(1, virtual_dimm_property={}),
+        _BuildDLMComponentEntry(2, virtual_dimm_property={}),
     ])
 
     actual = features.MemoryV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
@@ -597,17 +608,16 @@ class MemoryV1SpecTest(unittest.TestCase):
               dram_field:
                 0:
                   dram: [dram_1, dram_1, dram_unknown]
-        """))
+        """), comp_values={'dram_1': {
+            'size': '4096'
+        }})
     dlm_db = _BuildDLMComponentDatabase([
-        _BuildDLMComponentEntry(1,
-                                virtual_dimm_property={'size_in_mb': 1024 * 4}),
+        _BuildDLMComponentEntry(1, virtual_dimm_property={}),
     ])
 
     actual = features.MemoryV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
-    comparable_actual = {k: tuple(sorted(v))
-                         for k, v in actual.items()}
 
-    self.assertDictEqual(comparable_actual, {'dram_field': (0, )})
+    self.assertFalse(actual)
 
 
 class StorageV1SpecTest(unittest.TestCase):

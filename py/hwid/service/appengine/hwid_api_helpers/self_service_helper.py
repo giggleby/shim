@@ -450,29 +450,10 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
 
   def _GetVirtualDIMMProperty(
       self,
-      dlm_id: features.DLMComponentEntryID,
       dlm_component_info: hwid_api_messages_pb2.DlmComponentInfo,
   ) -> Optional[features.VirtualDIMMProperty]:
-    if not dlm_component_info.is_dram:
-      return None
-
-    sizes = set()
-    for db_comp_name, db_comp_info in self._EnumerateHWIDRelatedComponents(
-        self._HWID_DB_DRAM_COMPONENT_TYPE, dlm_id):
-      size_in_mb = self._GetIntegerProbeValueFromHWID(db_comp_info, 'size')
-      if not size_in_mb or size_in_mb <= 0:
-        self._warnings.append(
-            f'Unable to get the virtual DIMM size from {db_comp_name}.')
-        continue
-      sizes.add(size_in_mb)
-    if not sizes:
-      return None
-    if len(sizes) > 1:
-      # TODO(yhong): Consider ignoring "unsupported" or "duplicated" entries.
-      raise ValueError(
-          f'Failed to resolve DIMM size from HWID DB for {dlm_id}.')
-
-    return features.VirtualDIMMProperty(size_in_mb=sizes.pop())
+    return (features.VirtualDIMMProperty()
+            if dlm_component_info.is_dram else None)
 
   def _GuessHWIDDBStorageSizeInBytes(self, comp_info) -> Optional[int]:
     size_in_bytes = self._GetIntegerProbeValueFromHWID(comp_info, 'size')
@@ -596,7 +577,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
       dlm_component_db[dlm_id] = features.DLMComponentEntry(
           dlm_id, cpu_property=self._GetCPUProperty(dlm_component_info),
           virtual_dimm_property=self._GetVirtualDIMMProperty(
-              dlm_id, dlm_component_info),
+              dlm_component_info),
           storage_function_property=self._GetStorageFunctionProperty(
               dlm_id, dlm_component_info),
           display_panel_property=self._GetDisplayProperty(
@@ -634,6 +615,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
                 feature_version, legacy_brand_names,
                 hwid_requirement_candidates))
     except (ValueError, features.HWIDDBNotSupportError) as ex:
+      logging.exception('Failed to build feature matcher payload.')
       return FeatureMatcherBuildResult(
           has_warnings=False, commit_message=(
               f'ERROR: Failed to generate feature matcher payload: {ex}'),

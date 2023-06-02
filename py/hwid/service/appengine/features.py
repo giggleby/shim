@@ -52,10 +52,16 @@ class CPUProperty(NamedTuple):
 class VirtualDIMMProperty(NamedTuple):
   """Holds virtual DIMM properties related to versioned features.
 
-  Attributes:
-    size_in_mb: The DIMM size in MB.
+  This record class currently contains nothing because in the currently
+  supported version (feature version 1), the satisfied encoded value for DRMA
+  in HWID is solely deduced from the size value from the HWID DB.
   """
-  size_in_mb: int
+
+  def __bool__(self) -> bool:
+    # Always return `True` so that one can check if a component has DIMM
+    # functionality by `bool(component.virtual_dimm_property)` just like
+    # the check for other functionalities.
+    return True
 
 
 class StorageFunctionProperty(NamedTuple):
@@ -600,15 +606,36 @@ class MemoryV1Spec(HWIDSpec):
     self._name_pattern = npa_module.NamePatternAdapter().GetNamePattern(
         self._DRAM_COMPONENT_TYPE)
 
-  def _GetVirtualDIMMSizeInMB(self, hwid_component_name: str,
-                              dlm_db: DLMComponentDatabase) -> int:
+  def _GetVirtualDIMMSizeInMBIfValid(
+      self, hwid_component_name: str, db: db_module.Database,
+      dlm_db: DLMComponentDatabase) -> Optional[int]:
+    """Gets the DIMM size of the given component name, or `None` if invalid.
+
+    A component is considered invalid if it's not registered as an DRAM
+    component on DLM, or if its `"size"` property in the HWID DB is not
+    a string of a valid, positive integers.
+
+    Args:
+      hwid_component_name: The component name in HWID to query.
+      db: The HWID DB to lookup.
+      dlm_db: The DLM DB to lookup.
+
+    Returns:
+      The virtual DIMM size in MB, or `None` if the component is considered
+      invalid.
+    """
     name_info = self._name_pattern.Matches(hwid_component_name)
     if not name_info:
-      return 0
+      return None
     dlm_id = DLMComponentEntryID(name_info.cid, name_info.qid or None)
     if dlm_id not in dlm_db or not dlm_db[dlm_id].virtual_dimm_property:
-      return 0
-    return dlm_db[dlm_id].virtual_dimm_property.size_in_mb
+      return None
+    comp_info = db.GetComponents(self._DRAM_COMPONENT_TYPE)[hwid_component_name]
+    try:
+      size_in_mb = int(comp_info.values['size'])
+    except (KeyError, ValueError):
+      return None
+    return size_in_mb if size_in_mb > 0 else None
 
   def GetName(self) -> str:
     return 'MemoryV1'
@@ -627,10 +654,13 @@ class MemoryV1Spec(HWIDSpec):
           self._DRAM_COMPONENT_TYPE not in component_combo):
         raise HWIDDBNotSupportError(
             f'Unexpected components in {self._DRAM_FIELD_NAME} in HWID DB.')
-      total_memory_size = sum(
-          self._GetVirtualDIMMSizeInMB(comp_name, dlm_db)
-          for comp_name in component_combo[self._DRAM_COMPONENT_TYPE])
-      if total_memory_size >= self._MIN_MEMORY_SIZE_IN_MB:
+      dimm_sizes = [
+          self._GetVirtualDIMMSizeInMBIfValid(comp_name, db, dlm_db)
+          for comp_name in component_combo[self._DRAM_COMPONENT_TYPE]
+      ]
+      if any(dimm_size is None for dimm_size in dimm_sizes):
+        continue
+      if sum(dimm_sizes) >= self._MIN_MEMORY_SIZE_IN_MB:
         compliant_encoded_values.append(encoded_value)
 
     return ({
