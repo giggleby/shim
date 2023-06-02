@@ -14,6 +14,8 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils.type_utils import Obj
 
+from cros.factory.external.py_lib import dbus
+
 
 try:
   sys.path.append('/usr/local/lib/flimflam/test')
@@ -115,7 +117,9 @@ class NetworkDevices:
     """
     def _ProcessDevice(device):
       properties = device.GetProperties()
-      get_prop = lambda p: flimflam.convert_dbus_value(properties[p])
+      # The properties we're querying are all dbus.String type and currently
+      # the prop key names are all ascii encoded so it's safe to cast directly.
+      get_prop = lambda p: str(properties[p])
       result = Obj(
           devtype=get_prop('Type'),
           path=f"/sys/class/net/{get_prop('Interface')}/device")
@@ -126,14 +130,6 @@ class NetworkDevices:
         ] if f'Cellular.{key}' in properties)
       return result
 
-    def _ParseDbusArray(dbus_array):
-      if not dbus_array:
-        return []
-      # convert_dbus_value transform the dbus array into a string.
-      # E.g. dbus.Array([dbus.String('cellular'), dbus.String('wifi')])
-      # will transform into '[\n    cellular\n    wifi\n]'
-      dbus_value = flimflam.convert_dbus_value(dbus_array)
-      return [element.strip() for element in dbus_value.split('\n')[1:-1]]
 
     def _HasCellular():
       """Detect whether a DUT has cellular or not via flimflam API.
@@ -155,8 +151,8 @@ class NetworkDevices:
       # array type.
       available_tech = properties.get('AvailableTechnologies', None)
       uninitialize_tech = properties.get('UninitializedTechnologies', None)
-      if ('cellular' in _ParseDbusArray(available_tech) or
-          'cellular' in _ParseDbusArray(uninitialize_tech)):
+      if (dbus.String('cellular') in available_tech or
+          dbus.String('cellular') in uninitialize_tech):
         logging.info('DUT has cellular. Might take some time to probe it...')
         return True
       logging.info('DUT does not have cellular.')
