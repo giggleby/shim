@@ -11,3 +11,4 @@ Werkzeug==2.2.3
 pydantic==1.10.7
 jsonrpclib==0.2.1
 jsonschema==4.17.3
+flask-cors==3.0.10
