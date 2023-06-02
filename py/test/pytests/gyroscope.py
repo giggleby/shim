@@ -41,6 +41,7 @@ To run a test on base gyroscope::
 """
 
 import collections
+import enum
 import logging
 
 from cros.factory.device import device_utils
@@ -61,22 +62,19 @@ class Gyroscope(test_case.TestCase):
       Arg('gyro_id', int,
           'Gyroscope ID.  Will read a default ID via ectool if not set.',
           default=None),
-      Arg('freq', int,
+      Arg(
+          'freq', int,
           'Gyroscope sampling frequency in mHz.  Will apply the minimal '
-          'frequency from ectool info if not set.',
-          default=None),
+          'frequency from ectool info if not set.', default=None),
       Arg('timeout_secs', int,
-          'Timeout in seconds for gyro to return expected value.',
-          default=30),
-      Arg('setup_time_secs', int,
-          'Seconds to wait before starting the test.',
+          'Timeout in seconds for gyro to return expected value.', default=30),
+      Arg('setup_time_secs', int, 'Seconds to wait before starting the test.',
           default=2),
-      Arg('autostart', bool, 'Auto start this test.',
-          default=False),
-      Arg('setup_sensor', bool, 'Setup gyro sensor via ectool',
-          default=True),
-      Arg('location', str, 'Gyro is located in "base" or "lid".',
-          default='base')]
+      Arg('autostart', bool, 'Auto start this test.', default=False),
+      Arg('setup_sensor', bool, 'Setup gyro sensor via ectool', default=True),
+      Arg('location', enum.Enum('location', ['base', 'lid']),
+          'Gyro is located in "base" or "lid".', default='base')
+  ]
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()

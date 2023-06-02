@@ -52,6 +52,8 @@ You can also change the limits of each axis to loose the criteria::
 
 """
 
+import enum
+
 from cros.factory.device import accelerometer
 from cros.factory.device import device_utils
 from cros.factory.test.i18n import _
@@ -70,23 +72,23 @@ DEFAULT_LIMITS = {
 
 class AccelerometersTest(test_case.TestCase):
   ARGS = [
-      Arg('autostart', bool,
+      Arg(
+          'autostart', bool,
           'If this is false, this test will not start until operators press '
           'space', default=True),
-      Arg('limits', dict,
+      Arg(
+          'limits', dict,
           'A dictionary of expected range for x, y, z values.  For example, '
           '{"x": [-0.5, 0.5], "y": [-0.5, 0.5], "z": [8.8, 10.8]}',
           default=None),
-      Arg('sample_rate_hz', int,
-          'The sample rate in Hz to get raw data from '
+      Arg('sample_rate_hz', int, 'The sample rate in Hz to get raw data from '
           'accelerometers.', default=20),
-      Arg('capture_count', int,
-          'How many times to capture the raw data to '
+      Arg(
+          'capture_count', int, 'How many times to capture the raw data to '
           'calculate the average value.', default=100),
-      Arg('setup_time_secs', int,
-          'How many seconds to wait before starting '
+      Arg('setup_time_secs', int, 'How many seconds to wait before starting '
           'to calibration.', default=2),
-      Arg('location', str,
+      Arg('location', enum.Enum('location', ['base', 'lid']),
           'The location for the accelerometer', default='base'),
   ]
 

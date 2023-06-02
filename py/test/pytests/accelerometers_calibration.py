@@ -108,8 +108,8 @@ class AccelerometersCalibration(test_case.TestCase):
           'the digital output of sensors under 0 and 1G.'),
       Arg('autostart', bool, 'Starts the test automatically without prompting.',
           default=False),
-      Arg('location', str, 'The location for the accelerometer',
-          default='base'),
+      Arg('location', enum.Enum('location', ['base', 'lid']),
+          'The location for the accelerometer', default='base'),
       Arg(
           'variance_threshold', float, 'The variance of capture data can not be'
           'larger than the threshold.', default=5.0),
