@@ -6,7 +6,6 @@ import abc
 import datetime
 import io
 import logging
-import math
 import os.path
 import re
 import textwrap
@@ -464,8 +463,11 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
       return sectors * 512
     return None
 
-  def _GetOrderOfMagnitudeOf2(self, value: int) -> int:
-    return math.ceil(math.log2(value))
+  def _RoundUpToPowerOf2Or0(self, value: int) -> int:
+    if value <= 0:
+      return 0
+    order_of_magnitude = (value - 1).bit_length()  # same as `ceil(log2(value))`
+    return 1 << order_of_magnitude  # same as `2 ** order_of_magnitude`
 
   def _GetStorageFunctionProperty(
       self,
@@ -479,9 +481,6 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
     if dlm_storage_size_in_gb < 0:
       raise ValueError(
           f'Invalid storage (ID={dlm_id}) size: {dlm_storage_size_in_gb}.')
-    is_data_from_dlm = dlm_storage_size_in_gb > 0
-
-    hwid_storage_size_in_gb_candidates = set()
 
     for comp_type in self._HWID_DB_STORAGE_COMPONENT_TYPES:
       for db_comp_name, db_comp_info in self._EnumerateHWIDRelatedComponents(
@@ -491,25 +490,17 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
         if hwid_storage_size_in_bytes is None:
           continue
         hwid_storage_size_in_gb = hwid_storage_size_in_bytes // (1024**3)
-        if hwid_storage_size_in_gb <= 0:
+        if hwid_storage_size_in_gb < 0:
           self._warnings.append(f'The HWID component {db_comp_name} has '
                                 'suspicious storage size info.')
-        hwid_storage_size_in_gb_candidates.add(
-            2**self._GetOrderOfMagnitudeOf2(hwid_storage_size_in_gb))
-        if is_data_from_dlm:
-          if (self._GetOrderOfMagnitudeOf2(hwid_storage_size_in_gb) !=
-              self._GetOrderOfMagnitudeOf2(dlm_storage_size_in_gb)):
-            self._warnings.append(
-                f'The estimated storage size ({hwid_storage_size_in_gb}) '
-                f'from HWID component {db_comp_name} is different than the DLM '
-                f'provided one: {dlm_storage_size_in_gb}.')
+        if (self._RoundUpToPowerOf2Or0(hwid_storage_size_in_gb) !=
+            self._RoundUpToPowerOf2Or0(dlm_storage_size_in_gb)):
+          self._warnings.append(
+              f'The estimated storage size ({hwid_storage_size_in_gb}) '
+              f'from HWID component {db_comp_name} is different than the DLM '
+              f'provided one: {dlm_storage_size_in_gb}.')
 
-    if is_data_from_dlm:
-      return features.StorageFunctionProperty(size_in_gb=dlm_storage_size_in_gb)
-    if len(hwid_storage_size_in_gb_candidates) != 1:
-      raise ValueError('Unable to discover the storage size from HWID DB.')
-    return features.StorageFunctionProperty(
-        size_in_gb=hwid_storage_size_in_gb_candidates.pop())
+    return features.StorageFunctionProperty(size_in_gb=dlm_storage_size_in_gb)
 
   def _GetDisplayProperty(
       self,
