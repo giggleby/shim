@@ -27,6 +27,8 @@ DB_COMP_AFTER_INCOMPATIBLE_CHANGE_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_incompatible_change.yaml')
 DB_COMP_MODIFY_FROM_FACTORY_BUNDLE_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_modify_from_factory_bundle.yaml')
+DB_ADD_COMP_CLS_PVT_PATH = os.path.join(
+    _TEST_DATA_PATH, 'test_database_db_add_comp_cls_pvt.yaml')
 
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _HWIDCompAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
@@ -75,6 +77,20 @@ class ContentsAnalyzerTest(unittest.TestCase):
         "'display_panel_123_456') and values often causes compatibility "
         'issues. Is this change proposal mistakenly based on a legacy HWID '
         'bundle?')
+    self.assertIn(expect_error, report.errors)
+
+  def test_ValidateChange_AddComponentClassFieldInPVTPattern(self):
+    prev_db_contents = file_utils.ReadFile(DB_COMP_BEFORE_PATH)
+    curr_db_contents = file_utils.ReadFile(DB_ADD_COMP_CLS_PVT_PATH)
+
+    inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
+                                              prev_db_contents)
+    report = inst.ValidateChange()
+    expect_error = contents_analyzer.Error(
+        contents_analyzer.ErrorCode.COMPATIBLE_ERROR,
+        "New component class field(s)({'new_comp_cls_field'}) should not be "
+        'appended in the existing pattern(#0) except in early phases. Please '
+        'create a new pattern instead.')
     self.assertIn(expect_error, report.errors)
 
   def test_ValidateFirmwareComponents_ModifyFromFactoryBundle(self):

@@ -11,7 +11,7 @@ board: CHROMEBOOK
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: 0de00e8df5f0067110aa5f63ca6ea733a9492332
+checksum: e8a5f542c4c46f9be6fa102ecf5f25ad72e50628
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -27,11 +27,14 @@ pattern:
     encoding_scheme: base8192
     fields:
     - display_panel_field: 1
+    - new_comp_cls_field: 1
 
 encoded_fields:
   display_panel_field:
     0: { display_panel: display_panel_0 }
     1: { display_panel: display_panel_1 }
+  new_comp_cls_field:
+    0: { new_comp_cls: new_comp_cls_0 }
 
 components:
   display_panel:
@@ -59,6 +62,11 @@ components:
         - uuid1
         status: unqualified
         values: null
+  new_comp_cls:
+    items:
+      new_comp_cls_0:
+        values:
+          the_attributes: AAA
 
 rules:
 - name: device_info.set_image_id

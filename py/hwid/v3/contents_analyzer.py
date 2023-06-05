@@ -282,10 +282,13 @@ class ContentsAnalyzer:
               'pattern.'))
       return False
 
-    # Make sure all the encoded fields in the existing patterns are not changed.
+    visited_patterns = set()
     for image_id in self._prev_db.instance.image_ids:
       old_bit_mapping = self._prev_db.instance.GetBitMapping(image_id=image_id)
       new_bit_mapping = self._curr_db.instance.GetBitMapping(image_id=image_id)
+
+      # Make sure all the encoded fields in the existing patterns are not
+      # changed.
       for index, (element_old, element_new) in enumerate(
           zip(old_bit_mapping, new_bit_mapping)):
         if element_new != element_old:
@@ -296,6 +299,25 @@ class ContentsAnalyzer:
                   f'field={element_old[0]}). If you are trying to append new '
                   'bit(s), be sure to create a new bit pattern field instead '
                   'of simply incrementing the last field.'))
+
+      # Make sure no new component field is added to existing pattern after
+      # PVT.
+      pattern_id = self._curr_db.instance.GetPattern(image_id).idx
+      image_name = self._curr_db.instance.GetImageName(image_id)
+      if (pattern_id not in visited_patterns and
+          re.fullmatch(r'(PVT|MP).*', image_name, flags=re.IGNORECASE)):
+        visited_patterns.add(pattern_id)
+        old_field_set = set(mapping.field for mapping in old_bit_mapping)
+        new_field_set = set(mapping.field for mapping in new_bit_mapping)
+        added_fields = new_field_set - old_field_set
+        if added_fields:
+          report.errors.append(
+              Error(
+                  ErrorCode.COMPATIBLE_ERROR,
+                  f'New component class field(s)({added_fields}) should not be '
+                  f'appended in the existing pattern(#{pattern_id}) except in '
+                  'early phases. Please create a new pattern instead.'))
+
 
     old_reg_field_legacy_info = self._prev_db.instance.region_field_legacy_info
     new_reg_field_legacy_info = self._curr_db.instance.region_field_legacy_info
