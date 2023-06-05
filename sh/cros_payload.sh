@@ -1142,13 +1142,15 @@ install_payload() {
   register_tmp_object "${tmp_file}"
 
   if [ "${mode}" = "partition" ]; then
-    local output_size
-    output_size="$(blockdev --getsz "${output}")"
-    # Skip copying to output if its size is 1, which usually means it is only
+    local size_in_byte block_size
+    size_in_byte="$(blockdev --getsize64 "${output}")"
+    block_size="$(blockdev --getpbsz "${output}")"
+    block_num=$((size_in_byte / block_size))
+    # Skip copying to output if block_num is 1, which usually means it is only
     # a placeholder.
-    if [ "${output_size}" = 1 ]; then
+    if [ "${block_num}" = 1 ]; then
       info "Skip installing from ${payload} to ${output} " \
-           "since ${output}'s block size is 1."
+           "since ${output}'s block number is only 1."
     else
       info "Installing from ${payload} to ${output} ..."
       # bs is fixed on 1048576 because many dd implementations do not support
