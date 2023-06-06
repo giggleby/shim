@@ -11,7 +11,7 @@ from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
-from cros.factory.hwid.service.appengine.data import verification_payload_data
+from cros.factory.hwid.service.appengine.data import payload_data
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -67,7 +67,8 @@ class _Config:
         conf['bucket'])
     ndb_connector = ndbc_module.NDBConnector()
     self.vp_data_manager = (
-        verification_payload_data.VerificationPayloadDataManager(ndb_connector))
+        payload_data.PayloadDataManager(ndb_connector,
+                                        payload_data.PayloadType.VERIFICATION))
     self.decoder_data_manager = decoder_data.DecoderDataManager(ndb_connector)
     self.hwid_db_data_manager = hwid_db_data.HWIDDBDataManager(
         ndb_connector, self.hwid_filesystem)

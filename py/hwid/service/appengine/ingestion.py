@@ -9,7 +9,7 @@ import logging
 import os
 import os.path
 import textwrap
-from typing import Collection, Mapping, Set, Union
+from typing import Collection, Mapping, Optional, Set, Union
 
 import urllib3
 
@@ -17,7 +17,7 @@ from cros.factory.hwid.service.appengine import api_connector
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.data import config_data as config_data_module
 from cros.factory.hwid.service.appengine.data import decoder_data as decoder_data_module
-from cros.factory.hwid.service.appengine.data import verification_payload_data as vp_data_module
+from cros.factory.hwid.service.appengine.data import payload_data
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action_manager as hwid_action_manager_module
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -44,13 +44,28 @@ _HWIDIngestionProtoRPCShardBase = protorpc_utils.CreateProtoRPCServiceShardBase(
     ingestion_pb2.DESCRIPTOR.services_by_name['HwidIngestion'])
 
 
+def _GetHWIDMainCommitIfChanged(
+    hwid_repo_manager: hwid_repo.HWIDRepoManager,
+    payload_data_manager: payload_data.PayloadDataManager,
+    force_update: bool) -> Optional[str]:
+
+  hwid_main_commit = hwid_repo_manager.GetMainCommitID()
+  latest_commit = payload_data_manager.GetLatestHWIDMainCommit()
+
+  if latest_commit == hwid_main_commit and not force_update:
+    logging.debug('The HWID main commit %s is already processed, skipped',
+                  hwid_main_commit)
+    return None
+  return hwid_main_commit
+
+
 class VerificationPayloadManager:
   """A class which manages the status of verification payloads."""
 
   def __init__(
       self, config_data: config_data_module.Config,
       hwid_action_manager: hwid_action_manager_module.HWIDActionManager,
-      vp_data_manager: vp_data_module.VerificationPayloadDataManager,
+      vp_data_manager: payload_data.PayloadDataManager,
       decoder_data_manager: decoder_data_module.DecoderDataManager,
       hwid_repo_manager: hwid_repo.HWIDRepoManager):
 
@@ -60,8 +75,7 @@ class VerificationPayloadManager:
     self._decoder_data_manager = decoder_data_manager
     self._hwid_repo_manager = hwid_repo_manager
 
-  def Sync(self, hwid_commit_id: str, force_push: bool, force_update: bool,
-           limit_models: Set[str]):
+  def Sync(self, force_push: bool, force_update: bool, limit_models: Set[str]):
     """Updates generated payloads to private overlays.
 
     This method will handle the payload creation request as follows:
@@ -79,14 +93,18 @@ class VerificationPayloadManager:
     generated.
 
     Args:
-      hwid_commit_id: Commit ID of HWID DB repo
       force_push: True to always push to git repo.
       force_update: True for always getting payload_hash_mapping for testing
         purpose.
       limit_models: A set of models requiring payload generation, empty if
         unlimited.  A model will be ignored if it is not vpg-enabled.
     """
-    payload_hash_mapping = self._UpdatePayloads(hwid_commit_id, force_push,
+    hwid_main_commit = _GetHWIDMainCommitIfChanged(
+        self._hwid_repo_manager, self._vp_data_manager, force_update)
+    if not hwid_main_commit:
+      return {}
+    self._vp_data_manager.SetLatestHWIDMainCommit(hwid_main_commit)
+    payload_hash_mapping = self._UpdatePayloads(hwid_main_commit, force_push,
                                                 force_update, limit_models)
     for board, payload_hash in payload_hash_mapping.items():
       self._vp_data_manager.SetLatestPayloadHash(board, payload_hash)
@@ -411,14 +429,10 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
     if self._config_data.env == 'dev':
       return ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env')
 
-    force_update = do_limit
-    hwid_main_commit = self._GetMainCommitIfChanged(force_update)
-    if hwid_main_commit:
-      self.vp_data_manager.SetLatestHWIDMainCommit(hwid_main_commit)
-
     response = ingestion_pb2.IngestHwidDbResponse()
-    vp_payload_hash = self.vp_manager.Sync(hwid_main_commit, force_push,
-                                           force_update, limit_models)
+    force_update = do_limit
+    vp_payload_hash = self.vp_manager.Sync(force_push, force_update,
+                                           limit_models)
     if force_update:
       response.payload_hash.update(vp_payload_hash)
     logging.info('Ingestion complete.')
@@ -465,21 +479,3 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
           detail='Missing all_devices.json file during refresh.') from None
 
     return ingestion_pb2.IngestDevicesVariantsResponse()
-
-  def _GetMainCommitIfChanged(self, force_update):
-    """Get main commit of repo if it differs from cached commit on datastore.
-
-    Args:
-      force_update: True for always returning commit id for testing purpose.
-    Returns:
-      latest commit id if it differs from cached commit id, None if not
-    """
-
-    hwid_main_commit = self.hwid_repo_manager.GetMainCommitID()
-    latest_commit = self.vp_data_manager.GetLatestHWIDMainCommit()
-
-    if latest_commit == hwid_main_commit and not force_update:
-      logging.debug('The HWID main commit %s is already processed, skipped',
-                    hwid_main_commit)
-      return None
-    return hwid_main_commit
