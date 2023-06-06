@@ -291,12 +291,11 @@ main() {
       local i=0
       echo "Press ${CONTINUE_KEY} in sequence to cutoff."
       while [ "${i}" -lt ${#CONTINUE_KEY} ]; do
-        read -r -N 1 input
+        read -rsn1 input
         if [ "${input}" = "${CONTINUE_KEY:${i}:1}" ]; then
             i=$((i+1))
         else
             i=0
-            echo "Invalid input, press ${CONTINUE_KEY} in sequence to cutoff."
         fi
       done
     fi
