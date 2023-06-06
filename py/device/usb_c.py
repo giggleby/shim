@@ -232,7 +232,29 @@ class USBTypeC(device_types.DeviceComponent):
         raise self.Error(f'Unable to parse USB PD Mux from: {response}')
       if int(match.group(1)) == port:
         return dict(map(MatchToPair, re_key_value.finditer(line)))
-    raise self.Error(f'Unable to find port {int(port)} from: {response}')
+    raise self.Error(f'Unable to find port {port} from: {response}')
+
+  def GetActivePorts(self, mux_info, log=None):
+    """Gets active port(s) where the mux info value is 1.
+
+    Args:
+      mux_info: one of MUX_INFO_BOOLEAN_VALUES.
+    Returns:
+      A list with integer(s) indicating active port(s).
+    """
+    response = self._device.CheckOutput(
+        ['ectool'] + self.ECTOOL_PD_ARGS + ['usbpdmuxinfo'], log=log)
+    re_port = re.compile(r'Port (\d+): ')
+    re_dp = re.compile(f'{mux_info}'
+                       r'=(\d+)')
+    ret = []
+    for line in response.splitlines():
+      match = re_dp.search(line)
+      if not match:
+        raise self.Error(f'Unable to parse USB PD Mux from: {response}')
+      if int(match.group(1)) == 1:
+        ret.append(int(re_port.match(line).group(1)))
+    return ret
 
   def VerifyPDStatus(self, spec):
     """Verify PD status with spec.

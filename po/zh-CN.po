@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-07-03 16:56+CST\n"
+"PO-Revision-Date: 2023-07-04 11:59+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -2084,6 +2084,14 @@ msgstr "正在执行系统指令..."
 #: ../py/test/pytests/external_display.py
 msgid "{display_label} Audio"
 msgstr " {display_label} 音讯"
+
+#: ../py/test/pytests/external_display.py
+msgid "Connect external display and wait until it becomes primary."
+msgstr "请接上外接显示屏并等待其成为主要显示屏。"
+
+#: ../py/test/pytests/external_display.py
+msgid "Please connect to one external display only."
+msgstr "请仅连接一个外接显示器"
 
 #: ../py/test/pytests/external_display.py
 msgid "Do you see video on {display}?"

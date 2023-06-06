@@ -11,9 +11,10 @@ Verify the external display is functional.
 The test is defined by a list ``[display_label, display_id,
 audio_info, usbpd_spec]``. Each item represents an external port:
 
-- ``display_label``: I18n display name seen by operator, e.g. ``_('VGA')``.
-- ``display_id``: (str) ID used to identify display in xrandr or modeprint,
-  e.g. VGA1.
+- ``display_label``: I18n display name. e.g. ``_('DisplayPort)`` or
+  ``_('HDMI External Display')``.
+- ``display_id``: (str) ID used to identify target display path.
+  e.g. DP-1, HDMI-A-1.
 - ``audio_info``: A list of ``[audio_card, audio_device, init_actions]``,
   or None:
 
@@ -38,7 +39,8 @@ This test can be manual or automated depends on whether ``bft_fixture``
 is specified. The test loops through all items in ``display_info`` and:
 
 1. Plug an external monitor to the port specified in dargs.
-2. (Optional) If ``usbpd_spec`` is specified, verify usbpd status automatically.
+2. If ``usbpd_spec`` is specified or ``display_label`` is ``Type-C``, verify
+   usbpd status automatically.
 3. Main display will automatically switch to the external one.
 4. Press the number or HW buttons shown on the display to verify display works.
 5. (Optional) If ``audio_info`` is specified, the speaker will play a random
@@ -53,21 +55,21 @@ Dependency
 
 Examples
 --------
-To manual checking external display, add this in test list::
+To manually check external display, add this in test list::
 
   {
     "pytest_name": "external_display",
     "args": {
       "display_info": [
         {
-          "display_label": "i18n! Left HDMI External Display",
+          "display_label": "i18n! HDMI External Display",
           "display_id": "HDMI-A-1"
         }
       ]
     }
   }
 
-To manual checking external display at USB Port 0 with CC1 or CC2, add this in
+To manually check external display at USB Port 0 with CC1 or CC2, add this in
 test list::
 
   {
@@ -75,7 +77,7 @@ test list::
     "args": {
       "display_info": [
         {
-          "display_label": "TypeCLeft USB3 External Display",
+          "display_label": "DisplayPort",
           "display_id": "DP-1",
           "usbpd_spec": 0
         }
@@ -83,19 +85,36 @@ test list::
     }
   }
 
-To manual checking external display at USB Port 0 CC1, add this in test list::
+To manually check external display at USB Port 0 CC1, add this in test list::
 
   {
     "pytest_name": "external_display",
     "args": {
       "display_info": [
         {
-          "display_label": "TypeCLeft USB3 CC1 External Display",
+          "display_label": "DisplayPort",
           "display_id": "DP-1",
           "usbpd_spec": {
             "port": 0,
             "polarity": 1
           }
+        }
+      ]
+    }
+  }
+
+To manually check two external display USB ports and automatically detect
+display_id and usbpd_spec, add this in test list::
+
+  {
+    "pytest_name": "external_display",
+    "args": {
+      "display_info": [
+        {
+          "display_label": "Type-C"
+        },
+        {
+          "display_label": "Type-C"
         }
       ]
     }
@@ -120,6 +139,7 @@ import logging
 import os
 import queue
 import random
+import re
 from typing import Any, Dict, List, Optional
 
 from cros.factory.device import device_types
@@ -143,6 +163,11 @@ from cros.factory.utils import type_utils
 _CONNECTION_CHECK_PERIOD_SECS = 1
 _DEFAULT_DRM_GLOB_PATH = '/sys/class/drm/card?'
 
+TYPE_FROM_LABEL = {
+    'HDMI External Display': 'HDMI',
+    'DisplayPort': 'DP',
+    'Type-C': 'DP'
+}
 
 ExtDisplayTaskArg = collections.namedtuple('ExtDisplayTaskArg', [
     'display_label', 'display_id', 'audio_card', 'audio_device', 'init_actions',
@@ -200,7 +225,7 @@ _DISPLAY_INFO_SCHEMA_V2 = schema.JSONSchemaDict(
             'usbpd_spec': usb_c.USB_PD_SPEC_SCHEMA.schema
         },
         'additionalProperties': False,
-        'required': ['display_label', 'display_id']
+        'required': ['display_label']
     })
 _DISPLAY_INFO_SCHEMA = schema.JSONSchemaDict('display_info schema', {
     'anyOf': [
@@ -322,8 +347,9 @@ class ExtDisplayTest(test_case.TestCase):
           "xrandr/modeprint ID for ChromeBook's main display."),
       Arg('display_info', list,
           ('A list of tuples (display_label, display_id, audio_info, '
-           'usbpd_spec) represents an external port to test.'),
-          schema=_DISPLAY_INFO_LIST_SCHEMA),
+           'usbpd_spec) represents an external port to test. display_id and '
+           'usbpd_spec can be detected automatically if display_label is in '
+           'TYPE_FROM_LABEL.'), schema=_DISPLAY_INFO_LIST_SCHEMA),
       Arg('bft_fixture', dict, bft_fixture.TEST_ARG_HELP, default=None),
       Arg('connect_only', bool,
           ('Just detect ext display connection. This is for a hack that DUT '
@@ -401,27 +427,28 @@ class ExtDisplayTest(test_case.TestCase):
 
     self._target_display_info = None
 
-    # Setup tasks
+  def runTest(self):
+    visited = []
     for info in self.args.display_info:
       args = self.ParseDisplayInfo(info)
+      if args in visited:
+        self.FailTask('This port has been tested already.')
+      visited.append(args)
 
-      self.AddTask(self.Reset)
-
+      self.Reset()
       if self.do_connect:
-        self.AddTask(self.WaitConnect, args)
-
+        self.WaitConnect(args)
       if self.do_output:
-        self.AddTask(self.CheckVideo, args)
+        self.CheckVideo(args)
         if args.audio_card:
-          self.AddTask(self.SetupAudio, args)
-          audio_label = _(
-              '{display_label} Audio', display_label=args.display_label)
-          self.AddTask(
-              audio.TestAudioDigitPlayback, self.ui, self._dut, audio_label,
-              card=args.audio_card, device=args.audio_device)
-
+          self.SetupAudio(args)
+          audio_label = _('{display_label} Audio',
+                          display_label=args.display_label)
+          audio.TestAudioDigitPlayback(self.ui, self._dut, audio_label,
+                                       card=args.audio_card,
+                                       device=args.audio_device)
       if self.do_disconnect:
-        self.AddTask(self.WaitDisconnect, args)
+        self.WaitDisconnect(args)
 
   def Reset(self):
     """Resets status between different displays."""
@@ -446,15 +473,41 @@ class ExtDisplayTest(test_case.TestCase):
       audio_card = self._dut.audio.GetCardIndexByName(audio_info[0])
       audio_device = audio_info[1]
       init_actions = audio_info[2]
+    #TODO(jimmysun) Provide more specific instructions on which port to connect
+    self.ui.SetState(
+        _('Connect external display and wait until it becomes '
+          'primary.'))
 
     usbpd_spec = None
+    display_label = info['display_label']
+    display_type = TYPE_FROM_LABEL.get(display_label)
+
+    if 'display_id' not in info:
+      self.assertIn(
+          display_label, TYPE_FROM_LABEL, 'display_id is not specified. It can '
+          f'be auto detected only if display_label is in {TYPE_FROM_LABEL}.')
+      info['display_id'] = sync_utils.WaitFor(
+          lambda: self._FetchDisplayID(display_type), self.args.timeout_secs,
+          _CONNECTION_CHECK_PERIOD_SECS)
     if 'usbpd_spec' in info:
       usbpd_spec = usb_c.MigrateUSBPDSpec(info['usbpd_spec'])
+    elif display_label == 'Type-C' and not usbpd_spec:
+      port = sync_utils.WaitFor(self._GetSingleActiveDPPort,
+                                self.args.timeout_secs,
+                                _CONNECTION_CHECK_PERIOD_SECS)
+      usbpd_spec = usb_c.MigrateUSBPDSpec(port[0])
 
-    return ExtDisplayTaskArg(display_label=info['display_label'],
+    return ExtDisplayTaskArg(display_label=display_label,
                              display_id=info['display_id'],
                              audio_card=audio_card, audio_device=audio_device,
                              init_actions=init_actions, usbpd_spec=usbpd_spec)
+
+  def _GetSingleActiveDPPort(self):
+    ports = self._dut.usb_c.GetActivePorts('DP')
+    if len(ports) > 1:
+      self.ui.SetState(_('Please connect to one external display only.'))
+      return False
+    return ports
 
   def CheckVideo(self, args):
     self.ui.BindStandardFailKeys()
@@ -683,6 +736,18 @@ class ExtDisplayTest(test_case.TestCase):
                    target_display_info.status)
       logging.info('Parsing %r outputs %r', target_display_info.edid_path,
                    target_display_info.edid)
+
+  def _FetchDisplayID(self, display_type):
+    candidates = self._dut.Glob(f'{_DEFAULT_DRM_GLOB_PATH}-{display_type}*')
+    for candidate in candidates:
+      display_info = SysfsDisplayInfo(self._dut, candidate)
+      if display_info.status == 'connected':
+        match = re.search(fr'({display_type}[-\w]+)', display_info.sysfs_path)
+        if not match:
+          raise RuntimeError(
+              f'Unable to parse display id from {display_info.sysfs_path}')
+        return match.group(1)
+    return None
 
   def _IsDisplayConnected(self, args: ExtDisplayTaskArg,
                           display_info: Optional[List[Dict[str, Any]]] = None):
