@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 """Holds data models of blocklist of kernel name of audio codec components."""
 
+import abc
 import datetime
 import logging
 from typing import Sequence
@@ -26,12 +27,65 @@ class AudioCodecBlocklist(ndb.Model):
   time_removed = ndb.DateTimeProperty()
 
 
+class _SkipAVLChecker(abc.ABC):
+  """A class checking if a component should be skipped at AVL validation."""
+
+  @abc.abstractmethod
+  def ShouldSkip(self, comp_info: database.ComponentInfo) -> bool:
+    """Returns whether this component should skip AVL validations.
+
+    Args:
+      comp_info: A database.ComponentInfo instance.
+
+    Raises:
+      AVLMetadataError when querying to datastore fails.
+    """
+
+
+class _AudioChecker(_SkipAVLChecker):
+
+  def __init__(self, ndb_connector: ndbc_module.NDBConnector):
+    self._ndb_connector = ndb_connector
+
+  def ShouldSkip(self, comp_info: database.ComponentInfo) -> bool:
+    """See base class."""
+
+    if comp_info.value_is_none:
+      return False
+
+    kernel_name = comp_info.values.get('name')
+    if kernel_name is None or not isinstance(kernel_name, str):
+      return False
+    try:
+      with self._ndb_connector.CreateClientContextWithGlobalCache():
+        return bool(
+            AudioCodecBlocklist.query(
+                AudioCodecBlocklist.kernel_name == kernel_name,
+                AudioCodecBlocklist.removed == False  # pylint: disable=singleton-comparison
+            ).get())
+    except Exception as e:
+      raise AVLMetadataError(
+          'Failed to fetch audio codec blocklist from datastore.') from e
+
+
+class _AlwaysSkipChecker(_SkipAVLChecker):
+  """Always skips AVL check."""
+
+  def ShouldSkip(self, comp_info: database.ComponentInfo) -> bool:
+    """See base class."""
+    return True
+
+
 class AVLMetadataManager:
 
   def __init__(self, ndb_connector: ndbc_module.NDBConnector,
                avl_metadata_setting: config_data.AVLMetadataSetting):
     self._ndb_connector = ndb_connector
     self._avl_metadata_setting = avl_metadata_setting
+    self._checkers = {
+        'audio_codec': _AudioChecker(self._ndb_connector),
+        'sku': _AlwaysSkipChecker(),
+    }
 
   @property
   def avl_metadata_setting(self):
@@ -90,22 +144,11 @@ class AVLMetadataManager:
     Raises:
       AVLMetadataError when querying to datastore fails.
     """
-    if comp_cls != 'audio_codec' or comp_info.value_is_none:
+    checker = self._checkers.get(comp_cls)
+    if not checker:
       return False
 
-    kernel_name = comp_info.values.get('name')
-    if kernel_name is None or not isinstance(kernel_name, str):
-      return False
-    try:
-      with self._ndb_connector.CreateClientContextWithGlobalCache():
-        return bool(
-            AudioCodecBlocklist.query(
-                AudioCodecBlocklist.kernel_name == kernel_name,
-                AudioCodecBlocklist.removed == False  # pylint: disable=singleton-comparison
-            ).get())
-    except Exception as e:
-      raise AVLMetadataError(
-          'Failed to fetch audio codec blocklist from datastore.') from e
+    return checker.ShouldSkip(comp_info)
 
   def CleanAllForTest(self):
     with self._ndb_connector.CreateClientContext():

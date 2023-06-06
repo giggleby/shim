@@ -84,6 +84,11 @@ class AVLMetadataManagerTest(unittest.TestCase):
     self.assertTrue(self._manager.SkipAVLCheck('audio_codec', comp2))
     self.assertFalse(self._manager.SkipAVLCheck('audio_codec', comp3))
 
+  def testSkipAVLCheck_AlwaysSkipForSKUComps(self):
+    comp = database.ComponentInfo({'unused_key': 'unused_value'}, 'supported')
+
+    self.assertTrue(self._manager.SkipAVLCheck('sku', comp))
+
   def testSkipAVLCheck_SkipNonStr(self):
     self._manager.UpdateAudioCodecBlocklist([
         'kernel_name1',
