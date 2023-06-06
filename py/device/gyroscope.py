@@ -12,7 +12,7 @@ from cros.factory.device import sensor_utils
 from cros.factory.utils import type_utils
 
 
-_RADIAN_TO_DEGREE = 180 / math.pi
+RADIAN_TO_DEGREE = 180 / math.pi
 
 
 class MotionSensorException(Exception):
@@ -43,7 +43,7 @@ class GyroscopeController(sensor_utils.BasicSensorController):
   @type_utils.ClassProperty
   def raw_to_sys_weight(self):
     """Maps rad/s to dps."""
-    return 1024 * _RADIAN_TO_DEGREE
+    return 1024 * RADIAN_TO_DEGREE
 
   def __init__(self, board, name, location, gyro_id, freq):
     super().__init__(board, name, location,
