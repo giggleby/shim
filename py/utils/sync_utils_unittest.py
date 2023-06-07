@@ -163,6 +163,26 @@ class QueueGetTest(PollingTestBase):
     logging_mock.assert_called()
     self.assertEqual(value, answer)
 
+  @mock.patch(sync_utils.__name__ + '.GetPollingSleepFunction')
+  def testQueueGetPassThroughTimeout(self, get_polling_mock: mock.MagicMock):
+    # pylint: disable=protected-access
+    get_polling_mock.side_effect = (
+        lambda: sync_utils._DEFAULT_POLLING_SLEEP_FUNCTION)
+    answer = 123
+
+    def Get(timeout, **unused_kwargs):
+      if timeout is not None:
+        self.assertLessEqual(
+            timeout, threading.TIMEOUT_MAX,
+            'sleep duration must be smaller than threading.TIMEOUT_MAX.')
+      return answer
+
+    local_queue = mock.Mock()
+    local_queue.get = Get
+
+    value = sync_utils.QueueGet(local_queue, timeout=None)
+    self.assertEqual(value, answer)
+
 
 class RetryTest(PollingTestBase):
 

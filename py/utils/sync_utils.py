@@ -136,11 +136,11 @@ def QueueGet(q: 'queue.Queue[T]',
 
   This is useful when a custom polling sleep function is set.
   """
-  if not timeout:
-    timeout = math.inf
-
   if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
     return q.get(timeout=timeout)
+
+  if not timeout:
+    timeout = math.inf
 
   @RetryDecorator(timeout_sec=timeout, interval_sec=poll_interval_secs,
                   exceptions_to_catch=[queue.Empty], reraise=True,
