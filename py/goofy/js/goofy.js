@@ -17,7 +17,6 @@ goog.require('goog.crypt');
 goog.require('goog.crypt.Sha1');
 goog.require('goog.date.DateTime');
 goog.require('goog.debug.FancyWindow');
-goog.require('goog.debug.Logger');
 goog.require('goog.dom');
 goog.require('goog.dom.iframe');
 goog.require('goog.dom.safe');
@@ -28,6 +27,7 @@ goog.require('goog.html.SafeHtml');
 goog.require('goog.html.SafeStyle');
 goog.require('goog.i18n.DateTimeFormat');
 goog.require('goog.i18n.NumberFormat');  // Used by status_monitor.js
+goog.require('goog.log.Logger');
 goog.require('goog.math');
 goog.require('goog.net.WebSocket');
 goog.require('goog.net.XhrIo');
@@ -54,7 +54,7 @@ goog.require('goog.ui.decorate');  // Used by default_test_ui.js
 goog.require('goog.ui.tree.TreeControl');
 
 /**
- * @type {?goog.debug.Logger}
+ * @type {?goog.log.Logger}
  * @const
  */
 cros.factory.logger = goog.log.getLogger('cros.factory');
@@ -1362,7 +1362,8 @@ cros.factory.Goofy = class {
    * @return {!cros.factory.Invocation} the invocation.
    */
   createInvocation(path, invocationUuid) {
-    cros.factory.logger.info(
+    goog.log.info(
+        cros.factory.logger,
         `Creating UI for test ${path} (invocation ${invocationUuid})`);
     const invocation = new cros.factory.Invocation(this, path, invocationUuid);
     this.invocations.set(invocationUuid, invocation);
@@ -2786,7 +2787,8 @@ cros.factory.Goofy = class {
    *     value of the GetTestList RPC call).
    */
   async setTestList(testList) {
-    cros.factory.logger.info(
+    goog.log.info(
+        cros.factory.logger,
         `Received test list: ${goog.debug.expose(testList)}`);
     document.getElementById('goofy-loading').style.display = 'none';
 
@@ -3185,7 +3187,8 @@ cros.factory.Goofy = class {
     }
     const /** {error: ?{message: string}, result: ?Object} */ json =
         await response.json();
-    cros.factory.logger.info(
+    goog.log.info(
+        cros.factory.logger,
         `RPC response for ${method}: ${JSON.stringify(json)}`);
     if (json.error) {
       throw new Error(json.error.message);
@@ -3442,7 +3445,8 @@ cros.factory.Goofy = class {
         const message = /** @type {{invocation: string}} */ (untypedMessage);
         // We send destroy_test event only in the top-level invocation from
         // Goofy backend.
-        cros.factory.logger.info(
+        goog.log.info(
+            cros.factory.logger,
             `Received destroy_test event for top-level invocation ${
                 message.invocation}`);
         const invocation = this.invocations.get(message.invocation);

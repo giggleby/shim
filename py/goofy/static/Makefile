@@ -6,8 +6,8 @@ OUTPUT_DIR = .
 OUTPUT_JS = $(OUTPUT_DIR)/js/goofy.js
 OUTPUT_CSS = $(OUTPUT_DIR)/css/closure.css
 
-BUILD_DEPS = ../../../build_deps
 CLOSURE_LIB_DIR = /opt/closure-library
+CLOSURE_COMPILER = ../../../devtools/mk/closure-compiler-host.sh
 
 JS_SOURCES = \
     device_manager.js \
@@ -39,13 +39,6 @@ CSS_SOURCES = \
 
 CSS_SOURCE_PATHS = $(addprefix $(CLOSURE_LIB_DIR)/closure/,$(CSS_SOURCES))
 
-CLOSURE_BUILD = \
-    python3 $(CLOSURE_LIB_DIR)/closure/bin/build/closurebuilder.py \
-    --root $(CLOSURE_LIB_DIR) \
-    --root ../js \
-    -n cros.factory.Goofy \
-    -n cros.factory.Plugin
-
 .PHONY: all clean check_deps check_js
 
 all: $(OUTPUT_JS) $(OUTPUT_CSS)
@@ -61,17 +54,23 @@ check_deps:
 	  $(info ***   sudo emerge closure-library) \
 	  $(info ***) \
 	  $(error Terminating))
+	$(if $(shell $(CLOSURE_COMPILER) --help),,\
+	  $(info *** CLOSURE_COMPILER=$(CLOSURE_COMPILER) does not exist.) \
+	  $(info *** To install it, run this in chroot:) \
+	  $(info ***) \
+	  $(info ***   sudo emerge closure-compiler-bin) \
+	  $(info ***) \
+	  $(error Terminating))
 
 check_js: | check_deps
-	# For now, we just use the compiler to check the correctness of our code, and
-	# we actually deploy the version that is the concatenation of all the
-	# dependencies (--output_mode=script).
-	closure-compiler \
+	# py/goofy/js/goofy_js_unittest.py parses $(OUTPUT_CHECK_JS) and supresses
+	# some warnings. TODO(cyueh): figure out how to set --warnings_allowlist_file.
+	$(CLOSURE_COMPILER) \
 	  --warning_level=VERBOSE \
 	  --jscomp_warning=lintChecks \
-	  --hide_warnings_for=/opt/closure-library \
+	  --hide_warnings_for=$(CLOSURE_LIB_DIR) \
 	  --language_in ECMASCRIPT_NEXT \
-	  --dependency_mode=STRICT \
+	  --dependency_mode=PRUNE \
 	  --entry_point cros.factory.Goofy \
 	  --entry_point cros.factory.Plugin \
 	  --externs ../js/externs.js \
@@ -81,10 +80,19 @@ check_js: | check_deps
 
 $(OUTPUT_JS): $(JS_SOURCE_PATHS) | check_deps
 	mkdir -p "$(shell dirname "$@")"
-	# TODO(pihsun): Change this to closure-compiler --compilation_level=BUNDLE
-	# when there's newer closure-compiler-bin, and merge with the command of
-	# check_js.
-	$(CLOSURE_BUILD) --output_mode=script --output_file=$@
+	$(CLOSURE_COMPILER) \
+	  --warning_level=VERBOSE \
+	  --jscomp_warning=lintChecks \
+	  --js_output_file $@\
+	  --hide_warnings_for=$(CLOSURE_LIB_DIR) \
+	  --language_in ECMASCRIPT_NEXT \
+	  --dependency_mode=PRUNE \
+	  --entry_point cros.factory.Goofy \
+	  --entry_point cros.factory.Plugin \
+	  --externs ../js/externs.js \
+	  --compilation_level=BUNDLE \
+	  '$(CLOSURE_LIB_DIR)/**.js' \
+	  $(JS_SOURCE_PATHS)
 
 $(OUTPUT_CSS): $(CSS_SOURCE_PATHS) Makefile | check_deps
 	mkdir -p "$(shell dirname "$@")"

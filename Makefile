@@ -106,10 +106,11 @@ WEBGL_AQUARIUM_URI ?= \
   gs://chromeos-localmirror/distfiles/webgl-aquarium-20221212.tar.zst
 WEBGL_AQUARIUM_DIR ?= $(BUILD_DIR)/dist/webgl_aquarium_static
 # Following versions must match dev-libs/closure-library/*.ebuild.
-CLOSURE_LIB_GITREV ?= 7744b75c637054ed38b14901d091ec3196b2ef9b
+CLOSURE_LIB_GITREV ?= 26b34f2241fece8df8d7424a275b0e0ce571303b
 CLOSURE_LIB_URL ?= \
-  gs://chromeos-localmirror/distfiles/closure-library-201702.tar.gz
+  gs://chromeos-localmirror/distfiles/closure-library-20211107.tar.gz
 CLOSURE_LIB_DIR ?= $(BUILD_DIR)/dist/closure-library-$(CLOSURE_LIB_GITREV)
+CLOSURE_COMPILER ?= $(MK_DIR)/closure-compiler-host.sh
 
 LINT_BLOCKLIST=$(shell cat $(MK_DIR)/pylint.blocklist | grep -v '^\#')
 LINT_FILES=$(shell find py go po devtools -name '*.py' -type f | sort)
@@ -152,6 +153,7 @@ clean:
 # Currently the only programs using Closure is in Goofy.
 closure: $(CLOSURE_LIB_DIR)
 	$(MAKE) -C $(CLOSURE_DIR) OUTPUT_DIR=$(CLOSURE_OUTPUT_DIR) \
+	  CLOSURE_COMPILER=$(realpath $(CLOSURE_COMPILER)) \
 	  CLOSURE_LIB_DIR=$(realpath $(CLOSURE_LIB_DIR))
 
 # Regenerates the reg code proto.

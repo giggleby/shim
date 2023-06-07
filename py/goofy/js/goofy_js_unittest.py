@@ -20,9 +20,21 @@ SCRIPT_DIR = os.path.dirname(__file__)
 # The type of DESCRIPTION_ALLOW_LIST is Tuple[re.Pattern]. It's defined after
 # python3.8.
 DESCRIPTION_ALLOW_LIST = ()
+KEY_ALLOW_LIST = (
+    'JSC_DEPRECATED_PROP_REASON',
+    'JSC_INEXISTENT_PROPERTY',
+    'JSC_INTERFACE_CONSTRUCTOR_SHOULD_NOT_TAKE_ARGS',
+    'JSC_MISSING_CONST_PROPERTY',
+    'JSC_MISSING_NULLABILITY_MODIFIER_JSDOC',
+    'JSC_POSSIBLE_INEXISTENT_PROPERTY',
+    'JSC_REDUNDANT_NULLABILITY_MODIFIER_JSDOC',
+    'JSC_TYPE_MISMATCH',
+    'JSC_USE_OF_GOOG_PROVIDE',
+    'JSC_VAR',
+)
 _closure_error_pattern = re.compile(
     r'(?P<source>[^:]*):(?:(?P<line>.*):)?(?:(?P<column>.*):)? '
-    r'(?P<level>.*) - (?P<description>.*)')
+    r'(?P<level>.*) -(?: \[(?P<key>.*)\])? (?P<description>.*)')
 
 
 def FormatWarning(warning: Dict[str, Any]):
@@ -41,7 +53,13 @@ def FormatWarning(warning: Dict[str, Any]):
 
   level = warning['level']
   description = warning['description']
-  output_list.append(f' {level} - {description}\n')
+  output_list.append(f' {level} -')
+
+  key = warning['key']
+  if key is not None:
+    output_list.append(f' [{key}]')
+
+  output_list.append(f' {description}\n')
   return ''.join(output_list)
 
 
@@ -53,7 +71,7 @@ def ParseClosureWarnings(stderr: str) -> List[Dict[str, Any]]:
   """Parses the stderr from closure-compiler.
 
   Output examples:
-    1. `goofy.js:1: WARNING - Bad type annotation. Unknown type bool`
+    1. `goofy.js:1:2: WARNING - [JSC_UNRECOGNIZED_TYPE_ERROR] Bad type`
 
   Args:
     stderr: The stderr from closure-compiler.
@@ -87,6 +105,10 @@ class GoofyJSTest(unittest.TestCase):
       if (description and any(
           pattern.fullmatch(description)
           for pattern in DESCRIPTION_ALLOW_LIST)):
+        filtered_warnings.append(warning)
+        continue
+      key = warning.get('key')
+      if key and key in KEY_ALLOW_LIST:
         filtered_warnings.append(warning)
         continue
 
