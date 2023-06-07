@@ -14,7 +14,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 from cros.factory.utils.type_utils import Obj
 
-from cros.factory.external.py_lib import dbus
+from cros.factory.external import dbus
 
 
 try:
