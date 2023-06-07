@@ -106,6 +106,8 @@ def GetContext():
 
 def GetLogger():
   """API to get the RuleLogger object."""
+  if not hasattr(_context, 'logger'):
+    _context.logger = RuleLogger()
   return _context.logger
 
 
