@@ -7,8 +7,9 @@ handlers:
 - url: /_ah/stubby/.*
   script: rpc.stubby.app
 
-manual_scaling:
-  instances: 1
+instance_class: B1
+basic_scaling:
+  max_instances: 1
 
 # Google App Engine limits application deployments to 10,000 uploaded files per
 # version. The skip_files section allows us to skip virtual environment files
