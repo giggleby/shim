@@ -16,6 +16,7 @@ class PayloadType(str, enum.Enum):
 
   UNKNOWN = ''
   VERIFICATION = 'verification'
+  HWID_SELECTION = 'hwid_selection'
 
   def __str__(self):
     return self.value

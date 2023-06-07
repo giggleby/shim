@@ -4,6 +4,7 @@
 """Handler for ingestion."""
 
 import collections
+import hashlib
 import json
 import logging
 import os
@@ -18,6 +19,7 @@ from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.data import config_data as config_data_module
 from cros.factory.hwid.service.appengine.data import decoder_data as decoder_data_module
 from cros.factory.hwid.service.appengine.data import payload_data
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action_manager as hwid_action_manager_module
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -27,6 +29,7 @@ from cros.factory.hwid.service.appengine import verification_payload_generator a
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+from cros.factory.utils import json_utils
 
 
 GOLDENEYE_MEMCACHE_NAMESPACE = 'SourceGoldenEye'
@@ -57,6 +60,218 @@ def _GetHWIDMainCommitIfChanged(
                   hwid_main_commit)
     return None
   return hwid_main_commit
+
+
+def _TryCreateCL(dryrun_upload: bool, abandon_cl: bool,
+                 setting: config_data_module.CLSetting, author: str,
+                 reviewers: Collection[str], ccs: Collection[str],
+                 files: Mapping[str, Union[str,
+                                           bytes]], commit_msg: str) -> None:
+  """Tries to create a CL if possible.
+
+  Use git_util to create CL in repo for generated payloads.  If something goes
+  wrong, email to the hw-checker group.
+
+  Args:
+    dryrun_upload: Do everything except actually upload the CL.
+    abandon_cl: Abandon created CL after uploading.
+    setting: The setting to the repo.
+    author: The CL author.
+    reviewers: The additional reviewers.
+    ccs: The additional CC reviewers.
+    files: A path-content mapping of payload files.
+    commit_msg: Commit message of the CL.
+  """
+
+  git_url = f'{setting.repo_host}/{setting.project}'
+  branch = setting.branch or git_util.GetCurrentBranch(
+      setting.review_host, setting.project, git_util.GetGerritAuthCookie())
+  git_files = [(os.path.join(setting.prefix,
+                             filepath), git_util.NORMAL_FILE_MODE, filecontent)
+               for filepath, filecontent in files.items()]
+
+  if dryrun_upload:
+    # file_info = (file_path, mode, content)
+    file_paths = '\n'.join('  ' + file_info[0] for file_info in git_files)
+    dryrun_upload_info = textwrap.dedent(f"""\
+        Dryrun upload to {setting.project}
+        git_url: {git_url}
+        branch: {branch}
+        author: {author}
+        reviewers: {reviewers}
+        ccs: {ccs}
+        commit msg:
+        {commit_msg}
+        update file paths:
+        {file_paths}
+    """)
+    logging.debug(dryrun_upload_info)
+  else:
+    auth_cookie = git_util.GetGerritAuthCookie()
+    try:
+      change_id, _ = git_util.CreateCL(git_url, auth_cookie, branch, git_files,
+                                       author, author, commit_msg, reviewers,
+                                       ccs)
+      if abandon_cl:  # Abandon the test CL to prevent confusion
+        try:
+          git_util.AbandonCL(setting.review_host, auth_cookie, change_id)
+        except (git_util.GitUtilException, urllib3.exceptions.HTTPError) as ex:
+          logging.error('Cannot abandon CL for %r: %r', change_id, str(ex))
+    except git_util.GitUtilNoModificationException:
+      logging.debug('No modification is made, skipped')
+    except git_util.GitUtilException as ex:
+      logging.error('CL is not created: %r', str(ex))
+      raise PayloadGenerationException('CL is not created') from ex
+
+
+class HWIDSelectionPayloadManager:
+  """A class which manages the status of HWID feature matching payloads."""
+
+  def __init__(
+      self, hwid_repo_manager: hwid_repo.HWIDRepoManager,
+      hwid_action_manager: hwid_action_manager_module.HWIDActionManager,
+      hsp_data_manager: payload_data.PayloadDataManager):
+    self._hwid_repo_manager = hwid_repo_manager
+    self._hwid_action_manager = hwid_action_manager
+    self._hsp_data_manager = hsp_data_manager
+
+  def Sync(self, force_update: bool, dryrun_upload: bool, abandon_cl: bool,
+           limit_models: Collection[str]) -> Mapping[str, str]:
+    """Updates generated payloads to private overlays.
+
+    This method will handle the payload creation request as follows:
+
+      1. Check if the main commit of HWID DB is the same as cached one on
+         Datastore and exit if they match.
+      2. Generate a dict of board->payload_hash.
+      3. Check if the cached payload hashes of boards in Datastore and generated
+         ones match.
+      4. Create a CL for each board if the generated payload hash differs from
+         cached one.
+
+    To prevent duplicate error notification or unnecessary check next time, this
+    method will store the commit hash and payload hash in Datastore once
+    generated.
+
+    Args:
+      force_update: Always getting payload_hash_mapping for testing purpose.
+      dryrun_upload: Do everything except actually upload the CL.
+      abandon_cl: Abandon created CL after uploading.
+      limit_models: A set of models requiring payload generation, empty if
+        unlimited.  A model will be ignored if it is not vpg-enabled.
+    """
+
+    hwid_main_commit = _GetHWIDMainCommitIfChanged(
+        self._hwid_repo_manager, self._hsp_data_manager, force_update)
+    if not hwid_main_commit:
+      return {}
+    self._hsp_data_manager.SetLatestHWIDMainCommit(hwid_main_commit)
+    boards_payloads = self._GeneratePayloads(limit_models)
+    payload_hash_mapping = {}
+    service_account_name, unused_token = git_util.GetGerritCredentials()
+    author = f'chromeoshwid <{service_account_name}>'
+    reviewers = self._hsp_data_manager.GetCLReviewers()
+    ccs = self._hsp_data_manager.GetCLCCs()
+    commit_msg = textwrap.dedent(f"""\
+        feature-management-bsp: update payload from hwid
+
+        From chromeos/chromeos-hwid: {hwid_main_commit}
+    """)
+    for board, payloads in boards_payloads.items():
+      setting = config_data_module.CreateHWIDSelectionPayloadSettings(board)
+      if self._ShouldUpdatePayload(board, payloads, force_update):
+        new_files = payloads.generated_file_contents
+        _TryCreateCL(dryrun_upload, abandon_cl, setting, author, reviewers, ccs,
+                     new_files, commit_msg)
+        payload_hash_mapping[board] = payloads.payload_hash
+        self._hsp_data_manager.SetLatestPayloadHash(board,
+                                                    payloads.payload_hash)
+
+    return payload_hash_mapping
+
+  @classmethod
+  def _JsonHash(cls, data) -> str:
+    """Calculates the SHA1 hash value of given data."""
+    data_json = json_utils.DumpStr(data, sort_keys=True)
+    data_hash = hashlib.sha1(data_json.encode('utf-8')).hexdigest()
+    return data_hash
+
+  def _GetPayloadDBLists(self, limit_models: Collection[str]):
+    """Get payload DBs with given models and group by their boards.
+
+    Args:
+      limit_models: A set of models requiring payload generation, empty if
+        unlimited.
+
+    Returns:
+      A dict in form of {board: list of database instances}
+    """
+
+    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
+    db_lists = collections.defaultdict(list)
+    models = (
+        limit_models
+        if limit_models else set(live_hwid_repo.hwid_db_metadata_of_name))
+    for model_name in models:
+      try:
+        hwid_action = self._hwid_action_manager.GetHWIDAction(model_name)
+        db_metadata = live_hwid_repo.GetHWIDDBMetadataByName(model_name)
+      except (KeyError, ValueError, RuntimeError) as ex:
+        logging.error('Cannot get data for %r: %r', model_name, ex)
+        continue
+      db_lists[db_metadata.board_name].append(hwid_action)
+    return db_lists
+
+  def _GeneratePayloads(
+      self, limit_models: Set[str]
+  ) -> Mapping[str, feature_matching.HWIDSelectionPayloadResult]:
+    """Generates payloads with given models.
+    Args:
+      limit_models: A set of models requiring payload generation, empty if
+        unlimited.
+    Returns:
+      A dict in form of {board: HWID selection payload}
+    """
+
+    results = {}
+    for board, hwid_actions in self._GetPayloadDBLists(limit_models).items():
+      payloads = {}
+      for hwid_action in hwid_actions:
+        payload = hwid_action.GetFeatureMatcher().GenerateLegacyPayload()
+        if payload:
+          db = hwid_action.GetDBV3()
+          model_name = db.project.lower()
+          pathname = (f'feature-management/{model_name}/'
+                      'device_selection.textproto')
+          payloads[pathname] = payload
+      if payloads:
+        results[board] = feature_matching.HWIDSelectionPayloadResult(
+            payloads, self._JsonHash(payloads))
+    return results
+
+  def _ShouldUpdatePayload(self, board: str,
+                           result: feature_matching.HWIDSelectionPayloadResult,
+                           force_update: bool) -> bool:
+    """Gets payload hash if it differs from cached hash on datastore.
+
+    Args:
+      board: Board name.
+      result: Instance of `HWIDSelectionPayloadResult`.
+      force_update: True for always returning payload hash for testing purpose.
+
+    Returns:
+      A boolean which indicates if updating verification payload is needed.
+    """
+
+    if force_update:
+      logging.info('Forcing an update as hash %s', result.payload_hash)
+      return True
+
+    latest_hash = self._hsp_data_manager.GetLatestPayloadHash(board)
+    if latest_hash == result.payload_hash:
+      logging.debug('Payload is not changed as %s, skipped', latest_hash)
+      return False
+    return True
 
 
 class VerificationPayloadManager:
@@ -365,6 +580,7 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
     self._config_data = config_data
     self.hwid_action_manager = config.hwid_action_manager
     self.vp_data_manager = config.vp_data_manager
+    self.hsp_data_manager = config.hsp_data_manager
     self.hwid_db_data_manager = config.hwid_db_data_manager
     self.decoder_data_manager = config.decoder_data_manager
     self.hwid_repo_manager = config.hwid_repo_manager
@@ -372,6 +588,9 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
     self.vp_manager = VerificationPayloadManager(
         config_data, self.hwid_action_manager, self.vp_data_manager,
         self.decoder_data_manager, self.hwid_repo_manager)
+    self.hsp_manager = HWIDSelectionPayloadManager(
+        self.hwid_repo_manager, self.hwid_action_manager, self.hsp_data_manager)
+
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -394,6 +613,7 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
     limit_boards = set(request.limit_boards)
     do_limit = bool(limit_models) or bool(limit_boards)
     force_push = request.force_push
+    dryrun_upload = self._config_data.dryrun_upload and not force_push
 
     live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo()
     try:
@@ -431,10 +651,15 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
 
     response = ingestion_pb2.IngestHwidDbResponse()
     force_update = do_limit
+    abandon_cl = self._config_data.env != 'prod'
     vp_payload_hash = self.vp_manager.Sync(force_push, force_update,
                                            limit_models)
+    hsp_payload_hash = self.hsp_manager.Sync(force_update, dryrun_upload,
+                                             abandon_cl, limit_models)
     if force_update:
+      # Reply payload hash (e2e test only).
       response.payload_hash.update(vp_payload_hash)
+      response.hwid_selection_payload_hash.update(hsp_payload_hash)
     logging.info('Ingestion complete.')
     return response
 

@@ -118,3 +118,7 @@ class HWIDV3Action(hwid_action.HWIDAction):
     enablement_status = _FEATURE_ENABLEMENT_TYPE_TO_LABEL[
         match_result.enablement_status]
     return f'{enablement_status}:{match_result.feature_version}'
+
+  def GetFeatureMatcher(self) -> feature_matching.HWIDFeatureMatcher:
+    """See base class."""
+    return self._preproc_data.feature_matcher

@@ -97,6 +97,22 @@ def CreateVerificationPayloadSettings(board) -> CLSetting:
                    branch=None)
 
 
+def CreateHWIDSelectionPayloadSettings(board: str) -> CLSetting:
+  """Create a repo setting of HWID selection payload for specific board.
+
+  Args:
+    board: The board name
+
+  Returns:
+    A CLSetting instance with corresponding settings.
+  """
+  return CLSetting(review_host=hwid_repo.INTERNAL_REPO_REVIEW_URL,
+                   repo_host=hwid_repo.INTERNAL_REPO_URL,
+                   project=f'chromeos/overlays/overlay-{board.lower()}-private',
+                   prefix='chromeos-base/feature-management-bsp/files/',
+                   branch=None)
+
+
 class Config:
   """Config for AppEngine environment.
 

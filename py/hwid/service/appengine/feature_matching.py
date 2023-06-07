@@ -6,7 +6,7 @@ import abc
 import enum
 import functools
 import hashlib
-from typing import Mapping, NamedTuple
+from typing import Collection, Mapping, NamedTuple, Union
 
 from google.protobuf import text_format
 import hwid_feature_requirement_pb2  # pylint: disable=import-error
@@ -76,6 +76,18 @@ class FeatureEnablementType(enum.Enum):
   ENABLED_BY_WAIVER = enum.auto()
 
 
+class HWIDSelectionPayloadResult(NamedTuple):
+  """Handles generated HWID selection payload.
+
+  Attributes:
+    generated_file_contents: A string-to-string dictionary which represents the
+        files that should be committed into the bsp package.
+    payload_hash: Hash of the payload.
+  """
+  generated_file_contents: Mapping[str, Union[str, bytes]]
+  payload_hash: str
+
+
 class DeviceFeatureInfo(NamedTuple):
   """Records a device's feature version and its enablement status."""
   feature_version: int
@@ -89,7 +101,10 @@ class HWIDFeatureMatcher(abc.ABC):
   def GenerateHWIDFeatureRequirementPayload(self) -> str:
     """Generates the HWID feature requirement payload for factories."""
 
-  # TODO(b/273967719): Provide the interface to generate runtime payload.
+  @abc.abstractmethod
+  def GenerateLegacyPayload(self) -> str:
+    """Generates the HWID feature requirement payload for feature management.
+    """
 
   @abc.abstractmethod
   def Match(self, hwid_string: str) -> DeviceFeatureInfo:
@@ -166,6 +181,10 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
   def GenerateHWIDFeatureRequirementPayload(self) -> str:
     """See base class."""
     return self._hwid_feature_requirement_payload
+
+  def GenerateLegacyPayload(self) -> str:
+    """See base class."""
+    return ''
 
   def _BuildFeatureManagementFlagChecker(
       self, target_field: _FeatureManagementFlagField

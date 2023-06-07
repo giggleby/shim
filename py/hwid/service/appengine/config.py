@@ -66,6 +66,9 @@ class _Config:
     self.hwid_filesystem = cloudstorage_adapter.CloudStorageAdapter(
         conf['bucket'])
     ndb_connector = ndbc_module.NDBConnector()
+    self.hsp_data_manager = (
+        payload_data.PayloadDataManager(
+            ndb_connector, payload_data.PayloadType.HWID_SELECTION))
     self.vp_data_manager = (
         payload_data.PayloadDataManager(ndb_connector,
                                         payload_data.PayloadType.VERIFICATION))

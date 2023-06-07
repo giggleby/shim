@@ -27,6 +27,8 @@ def _CreateMockConfig(fake_modules: test_utils.FakeModuleCollection):
   mock_config.hwid_action_manager = fake_modules.fake_hwid_action_manager
   mock_config.vp_data_manager = mock.create_autospec(
       payload_data.PayloadDataManager, instance=True)
+  mock_config.hsp_data_manager = mock.create_autospec(
+      payload_data.PayloadDataManager, instance=True)
   mock_config.hwid_db_data_manager = mock.create_autospec(
       hwid_db_data.HWIDDBDataManager, instance=True)
   mock_config.decoder_data_manager = fake_modules.fake_decoder_data_manager

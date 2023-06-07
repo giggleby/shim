@@ -10,6 +10,7 @@ from typing import Collection, Dict, List, Mapping, NamedTuple, Optional, Set
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
@@ -462,3 +463,8 @@ class HWIDAction:
     raise NotSupportedError(
         '`GetFeatureEnablementLabel` is not supported in HWID '
         f'v{self.HWID_VERSION}')
+
+  def GetFeatureMatcher(self) -> feature_matching.HWIDFeatureMatcher:
+    """Gets the feature matcher of the current project."""
+    raise NotSupportedError(
+        '`GetFeatureMatcher` is not supported in HWID v{self.HWID_VERSION}')
