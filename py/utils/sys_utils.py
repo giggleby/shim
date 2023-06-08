@@ -542,23 +542,15 @@ def InChroot():
   return 'CROS_WORKON_SRCROOT' in os.environ
 
 
-def IsContainerized():
-  """Returns True if currently in a container.
-
-  Based on how Moby probes container environment but with some revision:
-  https://github.com/moby/moby/blob/b248de7e332b6e67b08a8981f68060e6ae629ccf/pkg/parsers/operatingsystem/operatingsystem_linux.go
+def IsInCrosFactoryServerContainer():
+  """Returns True if currently in a cros factory server container.
 
   Returns:
     A bool.
   """
-  try:
-    lines = file_utils.ReadFile('/proc/1/cgroup').splitlines()
-  except Exception:
-    logging.debug('Probably not inside Docker.')
-    return False
-  return any(
-      line and line.split(':', 2)[2] not in ['/', '/init.scope']
-      for line in lines)
+  # The cros/factory_server container created by setup/Dockerfile sets this
+  # environment variable.
+  return os.environ.get('IN_CROS_FACTORY_SERVER_CONTAINER') == '1'
 
 
 def GetRunningFactoryPythonArchivePath():

@@ -131,3 +131,4 @@ ENV DOCKER_IMAGE_GITHASH="${docker_image_githash}"
 ENV DOCKER_IMAGE_ISLOCAL="${docker_image_islocal}"
 ENV DOCKER_IMAGE_TIMESTAMP="${docker_image_timestamp}"
 ENV RESOURCE_CROS_DOCKER_URL="${resource_cros_docker_url}"
+ENV IN_CROS_FACTORY_SERVER_CONTAINER=1

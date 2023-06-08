@@ -181,7 +181,7 @@ class UmpireEnv:
   @type_utils.LazyProperty
   def docker_host_ip(self):
     try:
-      if sys_utils.IsContainerized():
+      if sys_utils.IsInCrosFactoryServerContainer():
         # Docker host should be the default router.
         # 'ip route' prints default routing in first line: 'default via <IP>'
         return process_utils.CheckOutput(['ip', 'route']).split()[2]
