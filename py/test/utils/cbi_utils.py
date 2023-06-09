@@ -30,6 +30,7 @@ class CbiException(Exception):
 #     5: MODEL_ID
 #     6: FW_CONFIG
 #     7: PCB_SUPPLIER
+#     8: SSFC
 #   <value/string> is an integer or a string to be set.
 #   <size> is the size of the data in byte. It should be zero for
 #     string types.
@@ -44,7 +45,7 @@ class CbiDataName(str, enum.Enum):
   MODEL_ID = 'MODEL_ID'
   FW_CONFIG = 'FW_CONFIG'
   PCB_SUPPLIER = 'PCB_SUPPLIER'
-
+  SSFC = 'SSFC'
   def __str__(self):
     return self.name
 
@@ -67,7 +68,9 @@ CbiDataDict = {
     CbiDataName.OEM_NAME: CbiDataAttr(4, str, 0),
     CbiDataName.MODEL_ID: CbiDataAttr(5, int, 1),
     CbiDataName.FW_CONFIG: CbiDataAttr(6, int, 4),
-    CbiDataName.PCB_SUPPLIER: CbiDataAttr(7, int, 1)
+    CbiDataName.PCB_SUPPLIER: CbiDataAttr(7, int, 1),
+    CbiDataName.SSFC: CbiDataAttr(8, int, 2)
+
 }
 # The error messages of ectool change from time to time.
 AllowedWpErrorMessages = [
