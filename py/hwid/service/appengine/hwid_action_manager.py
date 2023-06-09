@@ -67,7 +67,6 @@ class IInstanceFactory(abc.ABC):
           the given HWID DB.
       ProjectNotSupportedError: If the HWID DB version is not supported.
     """
-    raise NotImplementedError
 
   @abc.abstractmethod
   def CreateHWIDAction(self, hwid_data: _HWIDDBData) -> hwid_action.HWIDAction:
@@ -84,7 +83,6 @@ class IInstanceFactory(abc.ABC):
     Raises:
       ProjectUnavailableError: If the HWID DB version is not supported.
     """
-    raise NotImplementedError
 
 
 class InstanceFactoryImpl(IInstanceFactory):
