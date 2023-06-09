@@ -30,6 +30,13 @@ _DEFAULT_INTERVAL = 10
 _DEFAULT_BATCH_SIZE = 20
 _ALLOWED_PHASE = ['PVT', 'DVT', 'EVT', 'MP', 'RMA', 'PROTO']
 
+FEATURE_ENABLEMENT_TYPE_MAP = {
+    'not_branded': 0,
+    'hard_branded': 1,
+    'soft_branded_legacy': 2,
+    'soft_branded_waiver': 3,
+}
+
 
 class OutputDecodeHwid(plugin_base.OutputPlugin):
 
@@ -99,6 +106,9 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
       if bom['phase'].startswith(phase) or bom['phase'].endswith(phase):
         event['phase'] = phase
     event['components'] = bom['components']
+    x_labels = bom['featureManagementStatus'].split(':')
+    event['featureEnablementType'] = FEATURE_ENABLEMENT_TYPE_MAP[x_labels[0]]
+    event['xVersion'] = int(x_labels[1])
     event['__hwid__'] = True
     return event
 
