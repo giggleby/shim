@@ -137,8 +137,8 @@ class ChromeOSCamera(camera.Camera):
     """Get the camera device with the given USB vendor and device id.
 
     Args:
-      vid: The USB vendor id of the external video device to open.
-      pid: The USB product id of the external video device to open.
+      vid: The USB vendor id of the video device to open.
+      pid: The USB product id of the video device to open.
 
     Returns:
       Camera device object that implements
@@ -147,14 +147,11 @@ class ChromeOSCamera(camera.Camera):
     camera_paths = camera_utils.GetValidCameraPaths(self._device)
     match_index = -1
     for path, index in camera_paths:
-      dev_removable = self._device.ReadFile(
-          os.path.join(path, 'device', '..', 'removable')).strip()
       dev_vid = self._device.ReadFile(
           os.path.join(path, 'device', '..', 'idVendor')).strip()
       dev_pid = self._device.ReadFile(
           os.path.join(path, 'device', '..', 'idProduct')).strip()
-      if (dev_removable != 'fixed' and vid.lower() == dev_vid and
-          pid.lower() == dev_pid):
+      if (vid.lower() == dev_vid and pid.lower() == dev_pid):
         if match_index != -1:
           raise camera_utils.CameraError(
               f'Found multiple cameras with VID:PID {vid}:{pid}')
