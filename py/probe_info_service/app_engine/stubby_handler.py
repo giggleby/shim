@@ -6,6 +6,7 @@ import functools
 from typing import Callable, NamedTuple, Optional, Tuple
 
 from cros.factory.probe_info_service.app_engine import models
+from cros.factory.probe_info_service.app_engine import probe_info_analytics
 from cros.factory.probe_info_service.app_engine import probe_tool_manager
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.probe_info_service.app_engine import ps_storages
@@ -22,7 +23,7 @@ def GetProbeDataSourceComponentName(component_identity):
 def _DeriveSortableValueFromProbeParameter(probe_parameter):
   value_type = probe_parameter.WhichOneof('value')
   if value_type is None:
-    return (probe_parameter.name,)
+    return (probe_parameter.name, )
   probe_parameter_value = getattr(probe_parameter, value_type)
   # The value of `value_type` determines the type of `probe_parameter_value`.
   # And since the tuple comparison compares the elements from the begin,
@@ -40,7 +41,7 @@ class _ProbeDataSourceLookupResult(NamedTuple):
   # `stubby_pb2.ProbeMetadata.ProbeStatementType`.  However that type is not
   # a valid annotation, so here it uses `int` instead.
   source_type: int
-  probe_data_source: probe_tool_manager.ProbeDataSource
+  probe_data_source: probe_info_analytics.IProbeDataSource
   is_tested: bool
   preview_generator: Callable[[], str]
 
@@ -56,7 +57,8 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
       '(no preview available due to the invalid data from AVL)')
 
   def __init__(self):
-    self._probe_tool_manager = probe_tool_manager.ProbeToolManager()
+    self._pi_analyzer: probe_info_analytics.ProbeInfoAnalyzer = (
+        probe_tool_manager.ProbeToolManager())
     self._ps_storage_connector = ps_storages.GetProbeStatementStorageConnector()
     self._avl_probe_entry_mngr = models.AVLProbeEntryManager()
 
@@ -64,15 +66,15 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
   def GetProbeSchema(self, request):
     del request  # unused
     response = stubby_pb2.GetProbeSchemaResponse()
-    response.probe_schema.CopyFrom(self._probe_tool_manager.GetProbeSchema())
+    response.probe_schema.CopyFrom(self._pi_analyzer.GetProbeSchema())
     return response
 
   @protorpc_utils.ProtoRPCServiceMethod
   def ValidateProbeInfo(self, request: stubby_pb2.ValidateProbeInfoRequest):
     response = stubby_pb2.ValidateProbeInfoResponse()
 
-    parsed_result = self._probe_tool_manager.ValidateProbeInfo(
-        request.probe_info, not request.is_qual)
+    parsed_result = self._pi_analyzer.ValidateProbeInfo(request.probe_info,
+                                                        not request.is_qual)
     response.probe_info_parsed_result.CopyFrom(parsed_result)
     return response
 
@@ -84,7 +86,7 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     self._UpdateCompProbeInfo(request.qual_probe_info)
     lookup_result = self._LookupProbeDataSource(
         request.qual_probe_info.component_identity)
-    gen_result = self._probe_tool_manager.GenerateProbeBundlePayload(
+    gen_result = self._pi_analyzer.GenerateProbeBundlePayload(
         [lookup_result.probe_data_source])
 
     response.probe_info_parsed_result.CopyFrom(
@@ -109,9 +111,9 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     lookup_result = self._LookupProbeDataSource(component_identity)
 
     try:
-      result = self._probe_tool_manager.AnalyzeQualProbeTestResultPayload(
+      result = self._pi_analyzer.AnalyzeQualProbeTestResultPayload(
           lookup_result.probe_data_source, request.test_result_payload)
-    except probe_tool_manager.PayloadInvalidError as e:
+    except probe_info_analytics.PayloadInvalidError as e:
       response.is_uploaded_payload_valid = False
       response.uploaded_payload_error_msg = str(e)
       return response
@@ -159,7 +161,7 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
       lookup_results.append(
           self._LookupProbeDataSource(comp_probe_info.component_identity))
 
-    gen_result = self._probe_tool_manager.GenerateProbeBundlePayload(
+    gen_result = self._pi_analyzer.GenerateProbeBundlePayload(
         [r.probe_data_source for r in lookup_results])
 
     for lookup_result, pi_parsed_result in zip(
@@ -189,9 +191,9 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
 
     try:
       analyzed_result = (
-          self._probe_tool_manager.AnalyzeDeviceProbeResultPayload(
+          self._pi_analyzer.AnalyzeDeviceProbeResultPayload(
               probe_data_sources, request.probe_result_payload))
-    except probe_tool_manager.PayloadInvalidError as e:
+    except probe_info_analytics.PayloadInvalidError as e:
       response.upload_status = response.PAYLOAD_INVALID_ERROR
       response.error_msg = str(e)
       return response
@@ -242,12 +244,12 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
 
     # Try to generate a default overridden probe statement from the given
     # probe info.
-    data_source = self._probe_tool_manager.CreateProbeDataSource(
+    data_source = self._pi_analyzer.CreateProbeDataSource(
         GetProbeDataSourceComponentName(comp_identity), probe_info)
     unused_pi_parsed_result, ps = (
-        self._probe_tool_manager.DumpProbeDataSource(data_source))
+        self._pi_analyzer.DumpProbeDataSource(data_source))
     if ps is None:
-      ps = self._probe_tool_manager.GenerateDummyProbeStatement(data_source)
+      ps = self._pi_analyzer.GenerateDummyProbeStatement(data_source)
 
     result_msg = self._ps_storage_connector.SetProbeStatementOverridden(
         comp_identity.qual_id, comp_identity.device_id, ps)
@@ -308,7 +310,7 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
   def _UpdateCompProbeInfo(
       self, comp_probe_info: stubby_pb2.ComponentProbeInfo
   ) -> Tuple[models.AVLProbeEntry, stubby_pb2.ProbeInfoParsedResult]:
-    parsed_result = self._probe_tool_manager.ValidateProbeInfo(
+    parsed_result = self._pi_analyzer.ValidateProbeInfo(
         comp_probe_info.probe_info,
         not comp_probe_info.component_identity.qual_id)
     InplaceNormalizeProbeInfo(comp_probe_info.probe_info)
@@ -339,9 +341,8 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     return response
 
   def _GeneratePreviewForProbeDataSourceFromAVL(
-      self, probe_data_source: probe_tool_manager.ProbeDataSource) -> str:
-    gen_result = self._probe_tool_manager.GenerateRawProbeStatement(
-        probe_data_source)
+      self, probe_data_source: probe_info_analytics.IProbeDataSource) -> str:
+    gen_result = self._pi_analyzer.GenerateRawProbeStatement(probe_data_source)
     return (gen_result.output or
             self.MSG_NO_PROBE_STATEMENT_PREVIEW_INVALID_AVL_DATA)
 
@@ -384,7 +385,7 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     entry = self._avl_probe_entry_mngr.GetAVLProbeEntry(
         component_identity.component_id, component_identity.qual_id)
     if entry:
-      probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
+      probe_data_source = self._pi_analyzer.CreateProbeDataSource(
           component_name, entry.probe_info)
       preview_generator = functools.partial(
           self._GeneratePreviewForProbeDataSourceFromAVL, probe_data_source)
@@ -406,9 +407,9 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     source_type = (
         stubby_pb2.ProbeMetadata.DEVICE_OVERRIDDEN
         if device_id else stubby_pb2.ProbeMetadata.QUAL_OVERRIDDEN)
-    probe_info = probe_tool_manager.RawProbeStatementConverter.BuildProbeInfo(
+    probe_info = self._pi_analyzer.LoadProbeInfo(
         overridden_data.probe_statement)
-    probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
+    probe_data_source = self._pi_analyzer.CreateProbeDataSource(
         component_name, probe_info)
     return _ProbeDataSourceLookupResult(source_type, probe_data_source,
                                         overridden_data.is_tested,

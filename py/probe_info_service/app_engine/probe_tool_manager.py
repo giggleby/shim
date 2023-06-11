@@ -8,6 +8,7 @@ import hashlib
 import itertools
 import os
 import re
+import typing
 from typing import Any, Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple
 
 from google.protobuf import text_format
@@ -16,7 +17,7 @@ from cros.factory.probe.runtime_probe import probe_config_definition
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.probe_info_service.app_engine import bundle_builder
 from cros.factory.probe_info_service.app_engine import client_payload_pb2  # pylint: disable=no-name-in-module
-from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
+from cros.factory.probe_info_service.app_engine import probe_info_analytics
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
@@ -25,13 +26,22 @@ from cros.factory.utils import type_utils
 _RESOURCE_PATH = os.path.join(
     os.path.realpath(os.path.dirname(__file__)), 'resources')
 
-ProbeSchema = stubby_pb2.ProbeSchema
-ProbeFunctionDefinition = stubby_pb2.ProbeFunctionDefinition
-ProbeParameterValueType = stubby_pb2.ProbeParameterDefinition.ValueType
-ProbeInfo = stubby_pb2.ProbeInfo
-ProbeInfoParsedResult = stubby_pb2.ProbeInfoParsedResult
-ProbeParameterSuggestion = stubby_pb2.ProbeParameterSuggestion
-ProbeInfoTestResult = stubby_pb2.ProbeInfoTestResult
+ProbeSchema = probe_info_analytics.ProbeSchema
+ProbeFunctionDefinition = probe_info_analytics.ProbeFunctionDefinition
+ProbeParameterDefinition = probe_info_analytics.ProbeParameterDefinition
+ProbeParameterValueType = probe_info_analytics.ProbeParameterValueType
+ProbeInfo = probe_info_analytics.ProbeInfo
+ProbeParameter = probe_info_analytics.ProbeParameter
+ProbeInfoParsedResult = probe_info_analytics.ProbeInfoParsedResult
+ProbeParameterSuggestion = probe_info_analytics.ProbeParameterSuggestion
+ProbeInfoTestResult = probe_info_analytics.ProbeInfoTestResult
+DeviceProbeResultAnalyzedResult = (
+    probe_info_analytics.DeviceProbeResultAnalyzedResult)
+ProbeInfoArtifact = probe_info_analytics.ProbeInfoArtifact
+MultiProbeInfoArtifact = probe_info_analytics.MultiProbeInfoArtifact
+NamedFile = probe_info_analytics.NamedFile
+IProbeDataSource = probe_info_analytics.IProbeDataSource
+PayloadInvalidError = probe_info_analytics.PayloadInvalidError
 
 
 class _IncompatibleError(Exception):
@@ -51,8 +61,8 @@ class _IComponentProbeStatementConverter(abc.ABC):
 
   @abc.abstractmethod
   def ParseProbeParams(
-      self, probe_params: Sequence[stubby_pb2.ProbeParameter],
-      allow_missing_params: bool, comp_name_for_probe_statement=None
+      self, probe_params: Sequence[ProbeParameter], allow_missing_params: bool,
+      comp_name_for_probe_statement=None
   ) -> Tuple[ProbeInfoParsedResult,
              Optional[probe_config_types.ComponentProbeStatement]]:
     """Walk through the given probe parameters.
@@ -75,7 +85,7 @@ class _IComponentProbeStatementConverter(abc.ABC):
     """
 
 
-class RawProbeStatementConverter(_IComponentProbeStatementConverter):
+class _RawProbeStatementConverter(_IComponentProbeStatementConverter):
   """A converter that is simply a wrapper of raw probe statement string."""
 
   _CONVERTER_NAME = 'raw_probe_statement'
@@ -98,8 +108,8 @@ class RawProbeStatementConverter(_IComponentProbeStatementConverter):
     return ret
 
   def ParseProbeParams(
-      self, probe_params: Sequence[stubby_pb2.ProbeParameter],
-      allow_missing_params: bool, comp_name_for_probe_statement=None
+      self, probe_params: Sequence[ProbeParameter], allow_missing_params: bool,
+      comp_name_for_probe_statement=None
   ) -> Tuple[ProbeInfoParsedResult,
              Optional[probe_config_types.ComponentProbeStatement]]:
     """See base class."""
@@ -135,7 +145,7 @@ class RawProbeStatementConverter(_IComponentProbeStatementConverter):
 
   @classmethod
   def BuildProbeInfo(cls, probe_statement: str) -> ProbeInfo:
-    probe_info = stubby_pb2.ProbeInfo(probe_function_name=cls._CONVERTER_NAME)
+    probe_info = ProbeInfo(probe_function_name=cls._CONVERTER_NAME)
     probe_info.probe_parameters.add(name=cls._PARAMETER_NAME,
                                     string_value=probe_statement)
     return probe_info
@@ -189,7 +199,7 @@ class _ParamValueConverter:
 
 class _ProbeParamInput(NamedTuple):
   index: int
-  raw_value: stubby_pb2.ProbeParameter
+  raw_value: ProbeParameter
 
 
 class _IProbeStatementParam(abc.ABC):
@@ -202,7 +212,7 @@ class _IProbeStatementParam(abc.ABC):
   @property
   @abc.abstractmethod
   def probe_info_param_definitions(
-      self) -> Mapping[str, stubby_pb2.ProbeParameterDefinition]:
+      self) -> Mapping[str, ProbeParameterDefinition]:
     """All related probe info parameter definitions."""
 
   @property
@@ -252,9 +262,9 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
 
   @property
   def probe_info_param_definitions(
-      self) -> Mapping[str, stubby_pb2.ProbeParameterDefinition]:
+      self) -> Mapping[str, ProbeParameterDefinition]:
     """See base class."""
-    definition = stubby_pb2.ProbeParameterDefinition(
+    definition = ProbeParameterDefinition(
         name=self._name, description=self._description,
         value_type=self._value_converter.value_type)
     return {
@@ -315,7 +325,7 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
 
   @property
   def probe_info_param_definitions(
-      self) -> Mapping[str, stubby_pb2.ProbeParameterDefinition]:
+      self) -> Mapping[str, ProbeParameterDefinition]:
     """See base class."""
     definitions = collections.defaultdict()
     for probe_info_param in self._probe_info_params:
@@ -503,8 +513,8 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
     return ret
 
   def ParseProbeParams(
-      self, probe_params: Sequence[stubby_pb2.ProbeParameter],
-      allow_missing_params: bool, comp_name_for_probe_statement=None
+      self, probe_params: Sequence[ProbeParameter], allow_missing_params: bool,
+      comp_name_for_probe_statement=None
   ) -> Tuple[ProbeInfoParsedResult,
              Optional[probe_config_types.ComponentProbeStatement]]:
     """See base class."""
@@ -732,15 +742,11 @@ def _GetAllConverters() -> Sequence[_IComponentProbeStatementConverter]:
                                   _ParamValueConverter('int')),
           ]),
       _BuildCPUProbeStatementConverter(),
-      RawProbeStatementConverter(),
+      _RawProbeStatementConverter(),
   ]
 
 
-class PayloadInvalidError(Exception):
-  """Exception class raised when the given payload is invalid."""
-
-
-class ProbeDataSource:
+class _ProbeDataSourceImpl(IProbeDataSource):
   """A record class for a source of probe statement and its metadata.
 
   Instances of this class are the source for generating the final probe bundle.
@@ -777,40 +783,6 @@ class ProbeDataSource:
     return hash_engine.hexdigest()
 
 
-class ProbeInfoArtifact(NamedTuple):
-  """A placeholder for any artifact generated from probe info(s).
-
-  Many tasks performed by this module involve parsing the given `ProbeInfo`
-  instance(s) to get any kind of output.  The probe info might not necessary be
-  valid, the module need to return a structured summary for the parsed result
-  all the time.  This class provides a placeholder for those methods.
-
-  Properties:
-    probe_info_parsed_result: (optional) an instance of `ProbeInfoParsedResult`
-        if the source is a single `ProbeInfo` instance.
-    probe_info_parsed_results: (optional) a list of instances of
-        `ProbeInfoParsedResult` corresponds to the source of array of
-        `ProbeInfo` instances.
-    output: `None` or any kind of the output.
-  """
-  probe_info_parsed_result: ProbeInfoParsedResult
-  output: Any
-
-  @property
-  def probe_info_parsed_results(self) -> List[ProbeInfoParsedResult]:
-    # Since the input is always either one `ProbeInfo` or multiple `ProbeInfo`,
-    # `self.probe_info_parsed_result` and `self.probe_info_parsed_results` are
-    # mutually exclusively meaningful.  Therefore, we re-use the same
-    # placeholder.
-    return self.probe_info_parsed_result
-
-
-class NamedFile(NamedTuple):
-  """A placeholder represents a named file."""
-  name: str
-  content: bytes
-
-
 @type_utils.CachedGetter
 def _GetClientPayloadPb2Content():
   return file_utils.ReadFile(client_payload_pb2.__file__, encoding=None)
@@ -828,13 +800,7 @@ class _ProbedOutcomePreprocessConclusion(NamedTuple):
   probed_components: Optional[List[str]]
 
 
-class DeviceProbeResultAnalyzedResult(NamedTuple):
-  """Placeholder for the analyzed result of a device probe result."""
-  intrivial_error_msg: Optional[str]
-  probe_info_test_results: Optional[List[ProbeInfoTestResult]]
-
-
-class ProbeToolManager:
+class ProbeToolManager(probe_info_analytics.IProbeInfoAnalyzer):
   """Provides functionalities related to the probe tool."""
 
   def __init__(self):
@@ -842,10 +808,7 @@ class ProbeToolManager:
                         for c in _GetAllConverters()}
 
   def GetProbeSchema(self) -> ProbeSchema:
-    """
-    Returns:
-      An instance of `ProbeSchema`.
-    """
+    """See base class."""
     ret = ProbeSchema()
     for converter in self._converters.values():
       ret.probe_function_definitions.append(converter.GenerateDefinition())
@@ -853,17 +816,7 @@ class ProbeToolManager:
 
   def ValidateProbeInfo(self, probe_info: ProbeInfo,
                         allow_missing_params: bool) -> ProbeInfoParsedResult:
-    """Validate the given probe info.
-
-    Args:
-      probe_info: An instance of `ProbeInfo` to be validated.
-      allow_missing_params: Whether missing some probe parameters is allowed
-          or not.
-
-    Returns:
-        An instance of `ProbeInfoParsedResult` which records detailed
-        validation result.
-    """
+    """See base class."""
     probe_info_parsed_result, converter = self._LookupProbeConverter(
         probe_info.probe_function_name)
     if converter:
@@ -871,14 +824,16 @@ class ProbeToolManager:
           probe_info.probe_parameters, allow_missing_params)
     return probe_info_parsed_result
 
-  def CreateProbeDataSource(self, component_name,
-                            probe_info) -> ProbeDataSource:
-    """Creates the probe data source from the given probe_info."""
-    return ProbeDataSource(component_name, probe_info)
+  def CreateProbeDataSource(self, component_name: str,
+                            probe_info: ProbeInfo) -> IProbeDataSource:
+    """See base class."""
+    return _ProbeDataSourceImpl(component_name, probe_info)
 
-  def DumpProbeDataSource(self, probe_data_source) -> ProbeInfoArtifact:
-    """Dump the probe data source to a loadable probe statement string."""
-    result = self._ConvertProbeDataSourceToProbeStatement(probe_data_source)
+  def DumpProbeDataSource(
+      self, probe_data_source: IProbeDataSource) -> ProbeInfoArtifact[str]:
+    """See base class."""
+    result = self._ConvertProbeDataSourceToProbeStatement(
+        typing.cast(_ProbeDataSourceImpl, probe_data_source))
     if result.output is None:
       return result
 
@@ -888,11 +843,10 @@ class ProbeToolManager:
                              builder.DumpToString())
 
   def GenerateDummyProbeStatement(
-      self, reference_probe_data_source: ProbeDataSource) -> str:
-    """Generate a dummy loadable probe statement string.
-
-    This is a backup-plan in case `DumpProbeDataSource` fails.
-    """
+      self, reference_probe_data_source: IProbeDataSource) -> str:
+    """See base class."""
+    reference_probe_data_source = typing.cast(_ProbeDataSourceImpl,
+                                              reference_probe_data_source)
     return json_utils.DumpStr({
         '<unknown_component_category>': {
             reference_probe_data_source.component_name: {
@@ -905,30 +859,20 @@ class ProbeToolManager:
     })
 
   def GenerateRawProbeStatement(
-      self, probe_data_source: ProbeDataSource) -> ProbeInfoArtifact:
-    """Generate raw probe statement string for the given probe data source.
-
-    Args:
-      probe_data_source: The source for the probe statement.
-
-    Returns:
-      An instance of `ProbeInfoArtifact`, which `output` property is a string
-      of the probe statement or `None` if failed.
-    """
+      self, probe_data_source: IProbeDataSource) -> ProbeInfoArtifact[str]:
+    """See base class."""
     return self.DumpProbeDataSource(probe_data_source)
 
+  def LoadProbeInfo(self, probe_statement: str) -> ProbeInfo:
+    """See base class."""
+    return _RawProbeStatementConverter.BuildProbeInfo(probe_statement)
+
   def GenerateProbeBundlePayload(
-      self, probe_data_sources: List[ProbeDataSource]) -> ProbeInfoArtifact:
-    """Generates the payload for testing the given probe infos.
-
-    Args:
-      probe_data_source: The source of the test bundle.
-
-    Returns:
-      An instance of `ProbeInfoArtifact`, which `output` property is an instance
-      of `NamedFile`, which represents the result payload for the user to
-      download.
-    """
+      self, probe_data_sources: Sequence[IProbeDataSource]
+  ) -> MultiProbeInfoArtifact[NamedFile]:
+    """See base class."""
+    probe_data_sources = typing.cast(Sequence[_ProbeDataSourceImpl],
+                                     probe_data_sources)
     probe_info_parsed_results = []
     probe_statements = []
     for probe_data_source in probe_data_sources:
@@ -938,7 +882,7 @@ class ProbeToolManager:
       probe_info_parsed_results.append(pi_parsed_result)
 
     if any(ps is None for ps in probe_statements):
-      return ProbeInfoArtifact(probe_info_parsed_results, None)
+      return MultiProbeInfoArtifact(probe_info_parsed_results, None)
 
     builder = bundle_builder.BundleBuilder()
     builder.AddRegularFile(
@@ -969,23 +913,13 @@ class ProbeToolManager:
     #     expected user scenario.
     result_file = NamedFile('probe_bundle' + builder.FILE_NAME_EXT,
                             builder.Build())
-    return ProbeInfoArtifact(probe_info_parsed_results, result_file)
+    return MultiProbeInfoArtifact(probe_info_parsed_results, result_file)
 
   def AnalyzeQualProbeTestResultPayload(
-      self, probe_data_source: ProbeDataSource,
+      self, probe_data_source: IProbeDataSource,
       probe_result_payload: bytes) -> ProbeInfoTestResult:
-    """Analyzes the given probe result payload for a qualification.
-
-    Args:
-      probe_data_source: The original source for the probe statement.
-      probe_result_payload: A byte string of the payload to be analyzed.
-
-    Returns:
-      An instance of `ProbeInfoTestResult`.
-
-    Raises:
-      `PayloadInvalidError` if the given input is invalid.
-    """
+    """See base class."""
+    probe_data_source = typing.cast(_ProbeDataSourceImpl, probe_data_source)
     preproc_conclusion = self._PreprocessProbeResultPayload(
         probe_result_payload)
 
@@ -1015,20 +949,11 @@ class ProbeToolManager:
                                intrivial_error_msg='No component is found.')
 
   def AnalyzeDeviceProbeResultPayload(
-      self, probe_data_sources: List[ProbeDataSource],
+      self, probe_data_sources: Sequence[IProbeDataSource],
       probe_result_payload: bytes) -> DeviceProbeResultAnalyzedResult:
-    """Analyzes the given probe result payload from a specific device.
-
-    Args:
-      probe_data_sources: The original sources for the probe statements.
-      probed_result_payload: A byte string of the payload to be analyzed.
-
-    Returns:
-      List of `ProbeInfoTestResult` for each probe data sources.
-
-    Raises:
-      `PayloadInvalidError` if the given input is invalid.
-    """
+    """See base class."""
+    probe_data_sources = typing.cast(Sequence[_ProbeDataSourceImpl],
+                                     probe_data_sources)
     preproc_conclusion = self._PreprocessProbeResultPayload(
         probe_result_payload)
     pds_of_comp_name = {pds.component_name: pds
@@ -1091,7 +1016,7 @@ class ProbeToolManager:
     return parsed_result, converter
 
   def _ConvertProbeDataSourceToProbeStatement(
-      self, probe_data_source: ProbeDataSource) -> ProbeInfoArtifact:
+      self, probe_data_source: _ProbeDataSourceImpl) -> ProbeInfoArtifact[str]:
     probe_info_parsed_result, converter = self._LookupProbeConverter(
         probe_data_source.probe_info.probe_function_name)
     if converter:
@@ -1102,7 +1027,8 @@ class ProbeToolManager:
       ps = None
     return ProbeInfoArtifact(probe_info_parsed_result, ps)
 
-  def _PreprocessProbeResultPayload(self, probe_result_payload):
+  def _PreprocessProbeResultPayload(
+      self, probe_result_payload: bytes) -> _ProbedOutcomePreprocessConclusion:
     try:
       probed_outcome = client_payload_pb2.ProbedOutcome()
       text_format.Parse(probe_result_payload, probed_outcome)
