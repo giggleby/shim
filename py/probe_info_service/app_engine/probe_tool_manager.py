@@ -851,9 +851,8 @@ class ProbeToolManager:
       ret.probe_function_definitions.append(converter.GenerateDefinition())
     return ret
 
-  def ValidateProbeInfo(
-      self, probe_info: ProbeInfo,
-      allow_missing_params: bool) -> Tuple[ProbeInfo, ProbeInfoParsedResult]:
+  def ValidateProbeInfo(self, probe_info: ProbeInfo,
+                        allow_missing_params: bool) -> ProbeInfoParsedResult:
     """Validate the given probe info.
 
     Args:
@@ -862,18 +861,15 @@ class ProbeToolManager:
           or not.
 
     Returns:
-      A pair of the following values:
-        1. The `ProbeInfo` instance with probe parameter value formats being
-           standardized.
-        2. An instance of `ProbeInfoParsedResult` which records detailed
-           validation result.
+        An instance of `ProbeInfoParsedResult` which records detailed
+        validation result.
     """
     probe_info_parsed_result, converter = self._LookupProbeConverter(
         probe_info.probe_function_name)
     if converter:
       probe_info_parsed_result, unused_ps = converter.ParseProbeParams(
           probe_info.probe_parameters, allow_missing_params)
-    return probe_info, probe_info_parsed_result
+    return probe_info_parsed_result
 
   def CreateProbeDataSource(self, component_name,
                             probe_info) -> ProbeDataSource:

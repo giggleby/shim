@@ -116,7 +116,6 @@ class StubbyHandlerTest(unittest.TestCase):
     mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
     comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
     mock_probe_tool_manager.ValidateProbeInfo.return_value = (
-        comp_probe_info.probe_info,
         stubby_pb2.ProbeInfoParsedResult(
             result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
     req = stubby_pb2.UpdateComponentProbeInfoRequest(
@@ -137,7 +136,6 @@ class StubbyHandlerTest(unittest.TestCase):
     req = stubby_pb2.UpdateComponentProbeInfoRequest(
         component_probe_infos=[comp_probe_info])
     mock_probe_tool_manager.ValidateProbeInfo.return_value = (
-        comp_probe_info.probe_info,
         stubby_pb2.ProbeInfoParsedResult(
             result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
 

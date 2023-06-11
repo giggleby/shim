@@ -58,16 +58,15 @@ class AdminServiceServerStub(AdminServiceProtoRPCBase):
       self,
       comp_probe_info: stubby_pb2.ComponentProbeInfo,
   ) -> stubby_pb2.ProbeInfoParsedResult:
-    converted_probe_info, parsed_result = (
-        self._probe_tool_manager.ValidateProbeInfo(
-            comp_probe_info.probe_info,
-            not comp_probe_info.component_identity.qual_id))
-    stubby_handler.InplaceNormalizeProbeInfo(converted_probe_info)
+    parsed_result = self._probe_tool_manager.ValidateProbeInfo(
+        comp_probe_info.probe_info,
+        not comp_probe_info.component_identity.qual_id)
+    stubby_handler.InplaceNormalizeProbeInfo(comp_probe_info.probe_info)
     need_save, entry = self._avl_probe_entry_mngr.GetOrCreateAVLProbeEntry(
         comp_probe_info.component_identity.component_id,
         comp_probe_info.component_identity.qual_id)
-    if entry.probe_info != converted_probe_info:
-      entry.probe_info = converted_probe_info
+    if entry.probe_info != comp_probe_info.probe_info:
+      entry.probe_info = comp_probe_info.probe_info
       need_save = True
     if need_save:
       self._avl_probe_entry_mngr.SaveAVLProbeEntry(entry)

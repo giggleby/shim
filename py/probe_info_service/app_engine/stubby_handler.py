@@ -71,9 +71,8 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
   def ValidateProbeInfo(self, request: stubby_pb2.ValidateProbeInfoRequest):
     response = stubby_pb2.ValidateProbeInfoResponse()
 
-    unused_converted_probe_info, parsed_result = (
-        self._probe_tool_manager.ValidateProbeInfo(request.probe_info,
-                                                   not request.is_qual))
+    parsed_result = self._probe_tool_manager.ValidateProbeInfo(
+        request.probe_info, not request.is_qual)
     response.probe_info_parsed_result.CopyFrom(parsed_result)
     return response
 
@@ -309,16 +308,15 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
   def _UpdateCompProbeInfo(
       self, comp_probe_info: stubby_pb2.ComponentProbeInfo
   ) -> Tuple[models.AVLProbeEntry, stubby_pb2.ProbeInfoParsedResult]:
-    converted_probe_info, parsed_result = (
-        self._probe_tool_manager.ValidateProbeInfo(
-            comp_probe_info.probe_info,
-            not comp_probe_info.component_identity.qual_id))
-    InplaceNormalizeProbeInfo(converted_probe_info)
+    parsed_result = self._probe_tool_manager.ValidateProbeInfo(
+        comp_probe_info.probe_info,
+        not comp_probe_info.component_identity.qual_id)
+    InplaceNormalizeProbeInfo(comp_probe_info.probe_info)
     need_save, entry = self._avl_probe_entry_mngr.GetOrCreateAVLProbeEntry(
         comp_probe_info.component_identity.component_id,
         comp_probe_info.component_identity.qual_id)
-    if entry.probe_info != converted_probe_info:
-      entry.probe_info = converted_probe_info
+    if entry.probe_info != comp_probe_info.probe_info:
+      entry.probe_info = comp_probe_info.probe_info
       entry.is_valid = (
           parsed_result.result_type == _ProbeInfoParsedResult.ResultType.PASSED)
       entry.is_tested = False
