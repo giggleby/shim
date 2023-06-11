@@ -9,7 +9,7 @@ from google.protobuf import text_format
 import yaml
 
 # pylint: disable=no-name-in-module
-from cros.factory.probe_info_service.app_engine import client_payload_pb2
+from cros.factory.probe_info_service.app_engine.probe_tools import client_payload_pb2
 from cros.factory.probe_info_service.app_engine import stubby_pb2
 # pylint: enable=no-name-in-module
 from cros.factory.utils import file_utils

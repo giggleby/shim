@@ -6,6 +6,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.probe_info_service.app_engine import models
+from cros.factory.probe_info_service.app_engine import probe_tool_utils
 from cros.factory.probe_info_service.app_engine import ps_storages
 from cros.factory.probe_info_service.app_engine import stubby_handler
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
@@ -109,13 +110,12 @@ class StubbyHandlerTest(unittest.TestCase):
                 is_tested=False, is_proved_ready_for_overridden=False))
     ])
 
-  @mock.patch('cros.factory.probe_info_service.app_engine'
-              '.probe_tool_manager.ProbeToolManager')
+  @mock.patch.object(probe_tool_utils, 'CreateProbeInfoAnalyzer')
   def testUpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsNotZero(
-      self, mock_probe_tool_manager_class):
-    mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
+      self, mock_factory_func):
+    mock_pi_analyzer = mock_factory_func.return_value
     comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
-    mock_probe_tool_manager.ValidateProbeInfo.return_value = (
+    mock_pi_analyzer.ValidateProbeInfo.return_value = (
         stubby_pb2.ProbeInfoParsedResult(
             result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
     req = stubby_pb2.UpdateComponentProbeInfoRequest(
@@ -123,25 +123,24 @@ class StubbyHandlerTest(unittest.TestCase):
 
     stubby_handler.ProbeInfoService().UpdateComponentProbeInfo(req)
 
-    mock_probe_tool_manager.ValidateProbeInfo.assert_called_once_with(
+    mock_pi_analyzer.ValidateProbeInfo.assert_called_once_with(
         comp_probe_info.probe_info, False)
 
-  @mock.patch('cros.factory.probe_info_service.app_engine'
-              '.probe_tool_manager.ProbeToolManager')
+  @mock.patch.object(probe_tool_utils, 'CreateProbeInfoAnalyzer')
   def testUpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsZero(
-      self, mock_probe_tool_manager_class):
-    mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
+      self, mock_factory_func):
+    mock_pi_analyzer = mock_factory_func.return_value
     comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
     comp_probe_info.component_identity.qual_id = 0
     req = stubby_pb2.UpdateComponentProbeInfoRequest(
         component_probe_infos=[comp_probe_info])
-    mock_probe_tool_manager.ValidateProbeInfo.return_value = (
+    mock_pi_analyzer.ValidateProbeInfo.return_value = (
         stubby_pb2.ProbeInfoParsedResult(
             result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
 
     stubby_handler.ProbeInfoService().UpdateComponentProbeInfo(req)
 
-    mock_probe_tool_manager.ValidateProbeInfo.assert_called_once_with(
+    mock_pi_analyzer.ValidateProbeInfo.assert_called_once_with(
         comp_probe_info.probe_info, True)
 
   def testStatefulAPIs_Scenario1(self):

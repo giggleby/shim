@@ -32,7 +32,7 @@ PACK_DEST_DIR :=
 
 PROTO_SRC_FILES = \
 	app_engine/admin.proto \
-	app_engine/client_payload.proto \
+	app_engine/probe_tools/client_payload.proto \
 	app_engine/stubby.proto
 PROTO_PYGEN_FILES = $(patsubst \
 	%.proto,$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)/%_pb2.py, \

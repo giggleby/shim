@@ -5,8 +5,7 @@
 from cros.factory.probe_info_service.app_engine import admin_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import migration_utils
 from cros.factory.probe_info_service.app_engine import models
-from cros.factory.probe_info_service.app_engine import probe_info_analytics
-from cros.factory.probe_info_service.app_engine import probe_tool_manager
+from cros.factory.probe_info_service.app_engine import probe_tool_utils
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.probe_info_service.app_engine import stubby_handler
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
@@ -27,8 +26,7 @@ class AdminServiceServerStub(AdminServiceProtoRPCBase):
     super().__init__(*args, **kwargs)
     self._migration_manager = migration_utils.MigrationManager()
 
-    self._pi_analyzer: probe_info_analytics.IProbeInfoAnalyzer = (
-        probe_tool_manager.ProbeToolManager())
+    self._pi_analyzer = probe_tool_utils.CreateProbeInfoAnalyzer()
     self._avl_probe_entry_mngr = models.AVLProbeEntryManager()
 
   @protorpc_utils.ProtoRPCServiceMethod

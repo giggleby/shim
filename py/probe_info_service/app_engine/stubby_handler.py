@@ -7,7 +7,7 @@ from typing import Callable, NamedTuple, Optional, Tuple
 
 from cros.factory.probe_info_service.app_engine import models
 from cros.factory.probe_info_service.app_engine import probe_info_analytics
-from cros.factory.probe_info_service.app_engine import probe_tool_manager
+from cros.factory.probe_info_service.app_engine import probe_tool_utils
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.probe_info_service.app_engine import ps_storages
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
@@ -57,8 +57,7 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
       '(no preview available due to the invalid data from AVL)')
 
   def __init__(self):
-    self._pi_analyzer: probe_info_analytics.ProbeInfoAnalyzer = (
-        probe_tool_manager.ProbeToolManager())
+    self._pi_analyzer = probe_tool_utils.CreateProbeInfoAnalyzer()
     self._ps_storage_connector = ps_storages.GetProbeStatementStorageConnector()
     self._avl_probe_entry_mngr = models.AVLProbeEntryManager()
 

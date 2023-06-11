@@ -7,7 +7,7 @@
 
 syntax = "proto3";
 
-package cros.factory.probe_info_service.app_engine.client_payload_pb2;
+package cros.factory.probe_info_service.app_engine.probe_tools.client_payload_pb2;
 
 
 // Additional metadata of a single probe statement.
