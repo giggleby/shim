@@ -316,12 +316,6 @@ _is_reference_board_cmd_arg = CmdArg(
 _fast_cmd_arg = CmdArg('--fast', action='store_true',
                        help='use non-secure but faster wipe method.')
 
-_wpsr_cmd_arg = CmdArg(
-    '--wpsr', type=str, default="", help='The format should be '
-    '"<sr_value1> <sr_mask1> <sr_value2> <sr_mask2> ...", '
-    'e.g. "0x0f 0x0f 0x00 0xf0". The value will be deduced automatically'
-    ' if not provided.')
-
 _skip_feature_tiering_steps_cmd_arg = CmdArg(
     '--skip_feature_tiering_steps', action='store_true', default=False,
     help='Skip feature flag provisions for legacy project on features.')
@@ -588,7 +582,6 @@ def GenerateStableDeviceSecret(options):
     'cr50_write_flash_info',
     _enable_zero_touch_cmd_arg,  # this
     _no_write_protect_cmd_arg,  # this
-    _wpsr_cmd_arg,  # this
     _factory_process_cmd_arg,  # this
     _skip_feature_tiering_steps_cmd_arg,  # this
     *GetGooftool.__args__)
@@ -598,7 +591,7 @@ def Cr50WriteFlashInfo(options):
       enable_zero_touch=options.enable_zero_touch,
       factory_process=options.factory_process,
       skip_feature_tiering_steps=options.skip_feature_tiering_steps,
-      no_write_protect=options.no_write_protect, wpsr=options.wpsr)
+      no_write_protect=options.no_write_protect)
   event_log.Log('cr50_write_flash_info')
 
 
@@ -1238,13 +1231,11 @@ def GetLogicalBlockSize(options):
 @Command(
     'ti50_set_spi_data',
     _no_write_protect_cmd_arg,  # this
-    _wpsr_cmd_arg,  # this
     *GetGooftool.__args__)
 def Ti50SetSPIData(options):
   """Gets the logical block size of the primary device on DUT."""
   GetGooftool(options).Ti50SetAddressingMode()
-  GetGooftool(options).Ti50SetSWWPRegister(options.no_write_protect,
-                                           options.wpsr)
+  GetGooftool(options).Ti50SetSWWPRegister(options.no_write_protect)
 
 
 def main():

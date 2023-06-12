@@ -201,11 +201,6 @@ class Finalize(test_case.TestCase):
       Arg('is_reference_board', bool, 'Is reference board or not. If yes, skip '
           'the check for rlz code', default=False),
       Arg('project', str, 'Project name of the HWID.', default=None),
-      Arg(
-          'wpsr', str, 'The format should be '
-          '"<sr_value1> <sr_mask1> <sr_value2> <sr_mask2> ...", '
-          'e.g. "0x0f 0x0f 0x00 0xf0". The value will be deduced automatically'
-          ' if not provided.', default=''),
       Arg('skip_feature_tiering_steps', bool,
           'Set as True to skip feature flag provisions for legacy projects.',
           default=False)
@@ -398,8 +393,6 @@ class Finalize(test_case.TestCase):
       command += ' --enable_zero_touch'
     if self.args.is_reference_board:
       command += ' --is_reference_board'
-    if self.args.wpsr:
-      command += f' --wpsr "{self.args.wpsr}"'
     if self.args.project:
       phase.AssertStartingAtPhase(
           phase.PVT, self.args.project is None,

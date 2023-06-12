@@ -17,7 +17,6 @@
       "secure_wipe": true,
       "is_reference_board": false,
       "project": null,
-      "wpsr": "",
       "skip_feature_tiering_steps": false
     }
   },
@@ -64,7 +63,6 @@
         "cbi_eeprom_wp_status": "eval! 'Locked' if constants.grt.cbi_eeprom_wp_status != 'Absent' and options.phase == 'PVT' else constants.grt.cbi_eeprom_wp_status",
         "is_reference_board": "eval! constants.grt.is_reference_board",
         "project": "eval! constants.grt.project",
-        "wpsr": "eval! constants.grt.wpsr",
         "skip_feature_tiering_steps": "eval! constants.grt.skip_feature_tiering_steps"
       }
     },
