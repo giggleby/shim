@@ -15,15 +15,15 @@ class FeatureManagementFlagsFunctionTest(unittest.TestCase):
 
   def setUp(self):
     self._func = feature_management_flags.FeatureManagementFlagsFunction()
-    patcher = mock.patch('cros.factory.probe.functions.feature_management_flags'
-                         '.FeatureManagementFlagsFunction.IsBoardIDSet')
-    self._mock_board_id_set = patcher.start()
-    self.addCleanup(self._mock_board_id_set.stop)
+    patcher = mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool'
+                         '.IsGSCFeatureManagementFlagsLocked')
+    self._mock_gsc_flags_locked = patcher.start()
+    self.addCleanup(self._mock_gsc_flags_locked.stop)
 
   @mock.patch('cros.factory.external.chromeos_cli.gsctool'
               '.GSCTool.GetFeatureManagementFlags')
   def testCr50BoardIDAlreadySet(self, mock_gsc_get_flags):
-    self._mock_board_id_set.return_value = True
+    self._mock_gsc_flags_locked.return_value = True
     testdata = {
         'GSC chassis_branded, hw_compliance_version=1': (
             FeatureManagementFlags(True, 1),
@@ -57,7 +57,7 @@ class FeatureManagementFlagsFunctionTest(unittest.TestCase):
 
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
   def testCr50BoardIDNotSet(self, mock_get_device_data):
-    self._mock_board_id_set.return_value = False
+    self._mock_gsc_flags_locked.return_value = False
     testdata = {
         'Device data unset': (
             (None, None),
