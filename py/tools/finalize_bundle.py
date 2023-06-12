@@ -935,8 +935,14 @@ class FinalizeBundle:
             if (row['model_name'] not in firmware_sign_ids[model] or
                 row['key_id'] in firmware_keys):
               continue
+            rootkey_path = os.path.join(temp_dir, 'keyset',
+                                        f"rootkey.{row['model_name']}")
+            if not os.path.exists(rootkey_path):
+              # Skip rootkey if the firmware image is unsigned.
+              rootkey_path = None
             firmware_keys[row['key_id']] = chromeos_firmware.GetFirmwareKeys(
-                os.path.join(temp_dir, row['firmware_image']))
+                os.path.join(temp_dir, row['firmware_image']),
+                rootkey_path=rootkey_path)
         record['firmware_keys'] = [{
             'key_id': key_id,
             **fw_key

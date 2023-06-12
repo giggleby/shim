@@ -39,26 +39,31 @@ class FPReferenceFirmwareError(Exception):
   pass
 
 
-def _FwKeyHash(fw_file_path, key_name):
-  """Hash specified GBB key, extracted by vbutil_key."""
+def _ExtractKeyHash(key_path):
+  """Extract hash from the given rootkey/recoverykey by vbutil_key."""
   known_hashes = {
       'b11d74edd286c144e1135b49e7f0bc20cf041f10': 'devkeys/rootkey',
       'c14bd720b70d97394257e3e826bd8f43de48d4ed': 'devkeys/recovery',
   }
+  key_info = process_utils.CheckOutput(
+      f'futility vbutil_key --unpack {key_path}', shell=True)
+  sha1sum = re.findall(r'Key sha1sum:[\s]+([\w]+)', key_info)
+  if len(sha1sum) != 1:
+    logging.error('Failed calling vbutil_key for firmware key hash.')
+    return None
+  sha1 = sha1sum[0]
+  if sha1 in known_hashes:
+    sha1 += '#' + known_hashes[sha1]
+  return 'kv3#' + sha1
+
+
+def _FwKeyHash(fw_file_path, key_name):
+  """Hash specified GBB key, extracted by vbutil_key."""
   with tempfile.NamedTemporaryFile(prefix=f'gbb_{key_name}_') as f:
     process_utils.CheckOutput(
         f'futility gbb -g --{key_name}={f.name} {fw_file_path}', shell=True,
         log=True)
-    key_info = process_utils.CheckOutput(
-        f'futility vbutil_key --unpack {f.name}', shell=True)
-    sha1sum = re.findall(r'Key sha1sum:[\s]+([\w]+)', key_info)
-    if len(sha1sum) != 1:
-      logging.error('Failed calling vbutil_key for firmware key hash.')
-      return None
-    sha1 = sha1sum[0]
-    if sha1 in known_hashes:
-      sha1 += '#' + known_hashes[sha1]
-    return 'kv3#' + sha1
+    return _ExtractKeyHash(f.name)
 
 
 def _AddFirmwareIdTag(image, id_name='RO_FRID'):
@@ -166,10 +171,13 @@ def CalculateFirmwareHashes(fw_file_path):
   return None
 
 
-def GetFirmwareKeys(fw_file_path):
+def GetFirmwareKeys(fw_file_path, rootkey_path=None):
   return {
-      'key_recovery': _FwKeyHash(fw_file_path, 'recoverykey'),
-      'key_root': _FwKeyHash(fw_file_path, 'rootkey')
+      'key_recovery':
+          _FwKeyHash(fw_file_path, 'recoverykey'),
+      'key_root':
+          _ExtractKeyHash(rootkey_path) if rootkey_path else _FwKeyHash(
+              fw_file_path, 'rootkey')
   }
 
 
