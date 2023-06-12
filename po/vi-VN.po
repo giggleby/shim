@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-05-29 13:27+CST\n"
+"PO-Revision-Date: 2023-06-12 15:12+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3848,6 +3848,14 @@ msgstr "Máy tính bảng gia tốc xoay-bo mạch chủ"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Tablet Rotation Lid-Accel"
 msgstr "Máy đo tốc độ quay đầu"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Ti50 AP RO Verification (PVT)"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Ti50 AP RO Verification (pre-PVT)"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Ti50 AP RO Verification"

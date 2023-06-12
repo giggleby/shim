@@ -10,6 +10,8 @@ with AP RO verification on Ti50.
 It helps to carefully verify AP RO verification on Ti50 in the factory flow,
 and make sure the verification can pass with any google signed FW,
 which prevent from ti50 bricking the shipped device.
+Before leaving the factory mode, the WPSR can be written for multiple times,
+and the WPSR written in this test will be overwritten in finalize.
 
 Test Procedure
 --------------
@@ -57,8 +59,8 @@ class Ti50APROVerficationTest(test_case.TestCase):
           default=False),
       Arg('two_stages', bool,
           'Whether the factory_process is "TWOSTAGES" or not.', default=False),
-      Arg('wpsr', str,
-          'Write Protect Status Register (WPSR) values and masks.'),
+      Arg('wpsr', str, 'Write Protect Status Register (WPSR) values and masks.',
+          default=''),
   ]
 
   def setUp(self):
