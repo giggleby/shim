@@ -1636,14 +1636,12 @@ class Gooftool:
 
   def Cr50WriteFlashInfo(
       self, enable_zero_touch=False, factory_process=FactoryProcessEnum.FULL,
-      no_write_protect=True, wpsr='', skip_feature_tiering_steps=False):
-    """Write full device info into cr50 flash.
+      no_write_protect=True, skip_feature_tiering_steps=False):
+    """Write full device info into GSC flash.
 
     Args:
       enable_zero_touch: Will set SN-bits in cr50 if not in RMA center.
       factory_process: The process that a device/MLB is produced or assembled.
-      wpsr: We might need to set sr_values and sr_masks manually for enabling
-          AP RO verification on Ti50 before b/259013033 is solved.
       skip_feature_tiering_steps: Skip provisioning feature flags if True.
     """
 
@@ -1656,9 +1654,8 @@ class Gooftool:
 
     gsc = gsc_utils.GSCUtils()
     if gsc.IsTi50():
-      if no_write_protect or wpsr:
-        self.Ti50SetAddressingMode()
-        self.Ti50SetSWWPRegister(no_write_protect, wpsr)
+      self.Ti50SetAddressingMode()
+      self.Ti50SetSWWPRegister(no_write_protect)
     else:
       self._Cr50SetROHashForShipping()
 
@@ -1883,23 +1880,21 @@ class Gooftool:
       cmd = ['gsctool', '-a', '-C', '4byte']
     self._CheckCall(cmd)
 
-  def Ti50SetSWWPRegister(self, no_write_protect, wpsr):
-    if not wpsr:
-      if no_write_protect:
-        wpsr = '0 0'
+  def Ti50SetSWWPRegister(self, no_write_protect):
+    if no_write_protect:
+      wpsr = '0 0'
+    else:
+      (flash_name, wp_region_start, wp_region_length) = self._CollectWPSRInfo()
+      res = self._CheckCall([
+          'ap_wpsr', f'--name={flash_name}', f'--start={wp_region_start}',
+          f'--length={wp_region_length}'
+      ]).stdout
+      logging.info('WPSR: %s', res)
+      match = re.search(r'SR Value\/Mask = (.+)', res)
+      if match:
+        wpsr = match[1]
       else:
-        (flash_name, wp_region_start,
-         wp_region_length) = self._CollectWPSRInfo()
-        res = self._CheckCall([
-            'ap_wpsr', f'--name={flash_name}', f'--start={wp_region_start}',
-            f'--length={wp_region_length}'
-        ]).stdout
-        logging.info('WPSR: %s', res)
-        match = re.search(r'SR Value\/Mask = (.+)', res)
-        if match:
-          wpsr = match[1]
-        else:
-          raise Error(f'Fail to parse the wpsr from ap_wpsr tool {res}')
+        raise Error(f'Fail to parse the wpsr from ap_wpsr tool {res}')
     self._CheckCall(['gsctool', '-a', '-E', wpsr])
 
   def _CollectWPSRInfo(self):

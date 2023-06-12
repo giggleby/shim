@@ -62,8 +62,6 @@ class Ti50APROVerficationTest(test_case.TestCase):
           default=False),
       Arg('two_stages', bool,
           'Whether the factory_process is "TWOSTAGES" or not.', default=False),
-      Arg('wpsr', str, 'Write Protect Status Register (WPSR) values and masks.',
-          default=''),
   ]
 
   def setUp(self):
@@ -111,7 +109,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
         session.console.info('Set Addressing mode and WPSR.')
         self.gooftool.Ti50SetAddressingMode()
         self.gooftool.Ti50SetSWWPRegister(
-            no_write_protect=(not self.args.enable_swwp), wpsr=self.args.wpsr)
+            no_write_protect=(not self.args.enable_swwp))
 
         # Reboot GSC.
         self.goofy.SaveDataForNextBoot()
