@@ -484,7 +484,7 @@ class RPCDUTTest(UmpireDockerTestCase):
     report_files = glob.glob(report_pattern)
     self.assertEqual(1, len(report_files))
     report_file = report_files[0]
-    with tarfile.open(report_file, 'r:xz') as tar_file:
+    with tarfile.open(report_file, 'r:xz', ignore_zeros=True) as tar_file:
       self.assertEqual(tar_file.getnames(), file_list + ['metadata.json'])
       for tarinfo in tar_file.getmembers():
         if tarinfo.name == 'metadata.json':

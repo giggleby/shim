@@ -306,18 +306,16 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
      Returns:
       The new report blob
     """
+    metadata_buffer = io.BytesIO()
     output = io.BytesIO()
-    fileobj = io.BytesIO(self._UnwrapBlob(report_blob))
-    with tarfile.open(fileobj=output, mode='w:xz') as tar:
-      with tarfile.open(fileobj=fileobj) as input_file:
-        for tarinfo in input_file.getmembers():
-          content = input_file.extractfile(tarinfo)
-          tar.addfile(tarinfo, fileobj=content)
-      with file_utils.TempDirectory() as temp_dir:
-        metadata_file = 'metadata.json'
-        metadata_path = os.path.join(temp_dir, metadata_file)
-        self._CreateMetadataFile(metadata_path)
+    with file_utils.TempDirectory() as temp_dir:
+      metadata_file = 'metadata.json'
+      metadata_path = os.path.join(temp_dir, metadata_file)
+      self._CreateMetadataFile(metadata_path)
+      with tarfile.open(fileobj=metadata_buffer, mode='w:xz') as tar:
         tar.add(metadata_path, arcname=metadata_file)
+    output.write(self._UnwrapBlob(report_blob))  # Append factory_report.rpx.xz
+    output.write(metadata_buffer.getbuffer())  # Append metadata.json
     return output.getvalue()
 
   def _SaveUpload(self, upload_type, file_name, content, mode='wb'):
@@ -397,9 +395,11 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
     file_name = (f"{stage or 'Unknown'}{opt_name}-{serial}-"
                  f"{time.strftime('%Y%m%dT%H%M%SZ', self._Now())}.rpt.xz")
     # Add a metadata.json file to factory report
-    new_report_blob = self.AddMetadataToReportBlob(report_blob)
-    d = threads.deferToThread(
-        lambda: self._SaveUpload('report', file_name, new_report_blob))
+    def _SaveUploadReport():
+      new_report_blob = self.AddMetadataToReportBlob(report_blob)
+      return self._SaveUpload('report', file_name, new_report_blob)
+
+    d = threads.deferToThread(_SaveUploadReport)
     d.addCallback(self._ReturnTrue)
     return d
 
