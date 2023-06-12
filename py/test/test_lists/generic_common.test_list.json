@@ -1398,14 +1398,29 @@
       "pytest_name": "thermal_slope"
     },
     "Ti50APROVerification": {
-      "pytest_name": "ti50_ap_ro_verification",
+      "inherit": "TestGroup",
       "label": "Ti50 AP RO Verification",
-      "allow_reboot": true,
-      "args": {
-        "enable_swwp": "eval! constants.phase == 'PVT'",
-        "two_stages": "eval! constants.factory_process == 'TWOSTAGES'",
-        "wpsr": "eval! constants.grt.wpsr"
-      }
+      "subtests": [
+        {
+          "pytest_name": "ti50_ap_ro_verification",
+          "label": "Ti50 AP RO Verification (PVT)",
+          "allow_reboot": true,
+          "args": {
+            "enable_swwp": true,
+            "two_stages": "eval! constants.factory_process == 'TWOSTAGES'"
+          }
+        },
+        {
+          "pytest_name": "ti50_ap_ro_verification",
+          "label": "Ti50 AP RO Verification (pre-PVT)",
+          "run_if": "constants.phase != 'PVT'",
+          "allow_reboot": true,
+          "args": {
+            "enable_swwp": false,
+            "two_stages": "eval! constants.factory_process == 'TWOSTAGES'"
+          }
+        }
+      ]
     },
     "Touchpad": {
       "pytest_name": "touchpad"
