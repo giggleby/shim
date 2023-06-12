@@ -6,6 +6,7 @@ import enum
 import re
 
 from cros.factory.utils import type_utils
+from cros.factory.utils.gsc_utils import GSCUtils
 
 from cros.factory.external.chromeos_cli import shell
 
@@ -333,6 +334,49 @@ class GSCTool:
     result = self._InvokeCommand([GSCTOOL_PATH, '-a', '--factory_config'],
                                  'Failed to get feature flags.')
     return self.ParseFeatureManagementConfigs(result.stdout)
+
+  def _IsCr50BoardIdSet(self) -> bool:
+    """A simpler implementation of `IsCr50BoardIDSet` in gooftool.Core."""
+    # TODO(stevesu): The current formal way of checking BoardID is to leverage
+    # `Gooftool.Core.IsCr50BoardIDSet()` however this complicates the whole
+    # issue as when probing we shouldn't care about the correctness of
+    # the RLZ code. Requires a refactor to make `IsCr50BoardIDSet` in
+    # gooftool.Core leverages this function.
+    try:
+      board_id = self.GetBoardID()
+    except GSCToolError as e:
+      raise RuntimeError(
+          f'Failed to get boardID with gsctool command: {e!r}') from None
+    return board_id.type != 0xffff_ffff
+
+  def IsGSCFeatureManagementFlagsLocked(self) -> bool:
+    """Check if GSC feature management flags locked to write operation.
+
+    GSC is locked to feature management flags write operation if:
+      1. It has been written once already, or
+      2. the chip is Cr50 and Board ID is set, or
+      3. the chip is Ti50 and initial factory mode is disabled.
+
+    This function checks if the above case is true.
+
+    Returns:
+      `True` if the write operation to GSC is locked.
+    """
+
+    # Flags already been set.
+    feature_flags = self.GetFeatureManagementFlags()
+    if feature_flags != FeatureManagementFlags(False, 0):
+      return True
+
+    # Write locked after board ID set / initial factory mode disabled.
+    if GSCUtils().IsTi50():
+      # TODO(stevesu) The write operation for Ti50 is actually locked when the
+      # chip left the initial factory mode. However currently we don't have an
+      # OS level API to probe for initial factory mode, only Ti50 console
+      # command `sysinfo`. Discussion is being made with b/286998283 and before
+      # the API is ready we can only use `IsFactoryMode` as an approximation.
+      return not self.IsFactoryMode()
+    return self._IsCr50BoardIdSet()
 
   def _InvokeCommand(self, cmd, failure_msg, cmd_result_checker=None):
     cmd_result_checker = cmd_result_checker or (lambda result: result.success)
