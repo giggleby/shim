@@ -40,7 +40,6 @@ class DefaultArgs:
     self.cbi_eeprom_wp_status = cbi_utils.CbiEepromWpStatus.Locked
     self.is_reference_board = False
     self.project = None
-    self.wpsr = ''
     self.mode = FinalizeMode.ASSEMBLED
     self.enforced_release_channels = None
     self.skip_feature_tiering_steps = False
@@ -188,7 +187,6 @@ class FinalizeUnittest(unittest.TestCase):
     self.test.args.enforced_release_channels = ['1', '2', '3']
     self.test.args.enable_zero_touch = True
     self.test.args.is_reference_board = True
-    self.test.args.wpsr = '0 0'
     self.test.args.project = 'project'
 
     actual = self.test.AppendAssembledArgs('')
@@ -207,7 +205,6 @@ class FinalizeUnittest(unittest.TestCase):
         '--enable_zero_touch',
         '--is_reference_board',
         '--has_ec_pubkey',
-        '--wpsr "0 0"',
         '--project project',
     ]
 
@@ -227,7 +224,6 @@ class FinalizeUnittest(unittest.TestCase):
     self.test.args.enforced_release_channels = None
     self.test.args.enable_zero_touch = False
     self.test.args.is_reference_board = False
-    self.test.args.wpsr = ''
     self.test.args.project = None
 
     actual = self.test.AppendAssembledArgs('')
@@ -246,7 +242,6 @@ class FinalizeUnittest(unittest.TestCase):
         '--enable_zero_touch',
         '--is_reference_board',
         '--has_ec_pubkey',
-        '--wpsr',
         '--project',
     ]
     for flag in not_append_flags:
