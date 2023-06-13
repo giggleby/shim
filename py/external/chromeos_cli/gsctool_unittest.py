@@ -18,23 +18,23 @@ class GSCToolTest(unittest.TestCase):
     self.shell = mock.Mock(spec=shell.Shell)
     self.gsctool._shell = self.shell  # pylint: disable=protected-access
 
-  def testGetCr50FirmwareVersion(self):
+  def testGetGSCFirmwareVersion(self):
     self._SetGSCToolUtilityResult(
         stdout=('start\n'
                 'target running protocol version -1\n'
                 'offsets: .....\n'
                 'RO_FW_VER=1.2.34\n'
                 'RW_FW_VER=5.6.78\n'))
-    fw_ver = self.gsctool.GetCr50FirmwareVersion()
+    fw_ver = self.gsctool.GetGSCFirmwareVersion()
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-M', '-a', '-f'])
     self.assertEqual(fw_ver.ro_version, '1.2.34')
     self.assertEqual(fw_ver.rw_version, '5.6.78')
 
     self._SetGSCToolUtilityResult(stdout=('invalid output\n'))
-    self.assertRaises(gsctool.GSCToolError, self.gsctool.GetCr50FirmwareVersion)
+    self.assertRaises(gsctool.GSCToolError, self.gsctool.GetGSCFirmwareVersion)
 
     self._SetGSCToolUtilityResult(status=1)
-    self.assertRaises(gsctool.GSCToolError, self.gsctool.GetCr50FirmwareVersion)
+    self.assertRaises(gsctool.GSCToolError, self.gsctool.GetGSCFirmwareVersion)
 
   def testUpdateCr50Firmware(self):
     self._SetGSCToolUtilityResult()

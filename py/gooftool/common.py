@@ -520,11 +520,11 @@ class Util:
             self.shell('ectool flashprotect').stdout,
         'bios_wp_status':
             self.shell('futility flash --wp-status --ignore-hw').stdout,
-        'cr50_board_id':
+        'gsc_board_id':
             self.shell('gsctool -a -i -M').stdout,
-        'cr50_sn_bits':
+        'gsc_sn_bits':
             self.shell('/usr/share/cros/cr50-read-rma-sn-bits.sh').stdout,
-        'cr50_fw_version':
+        'gsc_fw_version':
             self.shell('gsctool -a -f -M').stdout,
     }
     return system_info

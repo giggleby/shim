@@ -5,8 +5,8 @@
 import enum
 import re
 
-from cros.factory.utils import type_utils
 from cros.factory.utils.gsc_utils import GSCUtils
+from cros.factory.utils import type_utils
 
 from cros.factory.external.chromeos_cli import shell
 
@@ -85,7 +85,7 @@ class GSCToolError(Exception):
 
 
 class GSCTool:
-  """Helper class to operate on Cr50 firmware by the `gsctool` cmdline utility.
+  """Helper class to operate on GSC firmware by the `gsctool` cmdline utility.
   """
 
   def __init__(self, dut=None):
@@ -96,8 +96,8 @@ class GSCTool:
     cmd = [GSCTOOL_PATH, '-a', '-c']
     self._InvokeCommand(cmd, 'failed to clear inactive GSC slot.')
 
-  def GetCr50FirmwareVersion(self):
-    """Get the version of the current Cr50 firmware.
+  def GetGSCFirmwareVersion(self):
+    """Get the version of the current GSC firmware.
 
     Returns:
       Instance of `FirmwareVersion`.
@@ -369,12 +369,12 @@ class GSCTool:
                                  'Failed to get feature flags.')
     return self.ParseFeatureManagementConfigs(result.stdout)
 
-  def _IsCr50BoardIdSet(self) -> bool:
-    """A simpler implementation of `IsCr50BoardIDSet` in gooftool.Core."""
+  def _IsGSCBoardIdSet(self) -> bool:
+    """A simpler implementation of `IsGSCBoardIDSet` in gooftool.Core."""
     # TODO(stevesu): The current formal way of checking BoardID is to leverage
-    # `Gooftool.Core.IsCr50BoardIDSet()` however this complicates the whole
+    # `Gooftool.Core.IsGSCBoardIDSet()` however this complicates the whole
     # issue as when probing we shouldn't care about the correctness of
-    # the RLZ code. Requires a refactor to make `IsCr50BoardIDSet` in
+    # the RLZ code. Requires a refactor to make `IsGSCBoardIDSet` in
     # gooftool.Core leverages this function.
     try:
       board_id = self.GetBoardID()
@@ -410,7 +410,7 @@ class GSCTool:
       # command `sysinfo`. Discussion is being made with b/286998283 and before
       # the API is ready we can only use `IsFactoryMode` as an approximation.
       return not self.IsFactoryMode()
-    return self._IsCr50BoardIdSet()
+    return self._IsGSCBoardIdSet()
 
   def _InvokeCommand(self, cmd, failure_msg, cmd_result_checker=None):
     cmd_result_checker = cmd_result_checker or (lambda result: result.success)

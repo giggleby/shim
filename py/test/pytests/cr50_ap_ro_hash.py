@@ -31,14 +31,14 @@ Examples
 To set/clear AP RO hash, add this to test list::
 
   {
-    "pytest_name": "ap_ro_hash",
+    "pytest_name": "cr50_ap_ro_hash",
     "args": {
       "action": "set"
     }
   }
 
   {
-    "pytest_name": "ap_ro_hash",
+    "pytest_name": "cr50_ap_ro_hash",
     "args": {
       "action": "clear"
     }
@@ -65,7 +65,7 @@ class Cr50APROHashTest(test_case.TestCase):
       session.console.info('Skip Cr50 AP RO hash test '
                            'since the firmware is Ti50.')
       return
-    if self.gooftool.IsCr50BoardIDSet():
+    if self.gooftool.IsGSCBoardIDSet():
       session.console.warn('Unable to modify RO hash, test skipped.')
       return
 
