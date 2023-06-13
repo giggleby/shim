@@ -477,21 +477,19 @@ class GPT:
       self.Update(CRC32=0)
       self.Update(CRC32=binascii.crc32(self.blob))
 
-  class Partition(GPTObject):
-    """The partition entry in GPT.
+  class PartitionBase(GPTObject):
+    """The base partition entry in GPT.
 
-    Please include following properties when creating a Partition object:
-    - image: a string for path to the image file the partition maps to.
-    - number: the 1-based partition number.
+    A base class representing a GPT partition that is not tied to an image file.
+    `FirstLBA` and `LastLBA` doesn't have actual meanings here. They are just
+    used to calculate the size of the partition.
+
+    Please include following properties when creating a PartitionBase object:
     - block_size: an integer for size of each block (LBA, or sector).
     """
     FIELDS = PARTITION_FIELDS
-    __slots__ = [f.name for f in FIELDS] + ['image', 'number', 'block_size']
-    NAMES_ENCODING = 'utf-16-le'
-    NAMES_LENGTH = 72
-
-    def __str__(self):
-      return f'{self.image}#{self.number}'
+    METADATA = ['block_size']
+    __slots__ = [f.name for f in FIELDS] + METADATA
 
     def IsUnused(self):
       """Returns if the partition is unused and can be allocated."""
@@ -515,6 +513,21 @@ class GPT:
     def size(self):
       """Returns size of partition in bytes."""
       return self.blocks * self.block_size
+
+  class Partition(PartitionBase):
+    """The partition entry in GPT.
+
+    Please include following properties when creating a Partition object:
+    - image: a string for path to the image file the partition maps to.
+    - number: the 1-based partition number.
+    - block_size: an integer for size of each block (LBA, or sector).
+    """
+    FIELDS = PARTITION_FIELDS
+    METADATA = ['image', 'number', 'block_size']
+    __slots__ = [f.name for f in FIELDS] + METADATA
+
+    def __str__(self):
+      return f'{self.image}#{self.number}'
 
   def __init__(self):
     """GPT constructor.
@@ -685,11 +698,8 @@ class GPT:
       number: an integer as 1-based partition number.
     """
     ref = self.partitions[number - 1]
-    part = part.Clone()
-    part.number = number
-    part.image = ref.image
-    part.block_size = ref.block_size
-    self.partitions[number - 1] = part
+    self.partitions[number - 1] = self.Partition(
+        *part, image=ref.image, number=number, block_size=ref.block_size)
 
   def GetSize(self):
     return self.block_size * (self.header.BackupLBA + 1)
