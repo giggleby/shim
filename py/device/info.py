@@ -441,7 +441,7 @@ class SystemInfo(device_types.DeviceComponent):
         'type': self._IntToHexStr(board_id.type),
         'flags': self._IntToHexStr(board_id.flags)
     }
-    fw_version = gsctool_.GetCr50FirmwareVersion()
+    fw_version = gsctool_.GetGSCFirmwareVersion()
     gsc_info['version'] = {
         'ro_version': fw_version.ro_version,
         'rw_version': fw_version.rw_version,

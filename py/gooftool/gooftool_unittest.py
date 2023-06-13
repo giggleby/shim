@@ -965,14 +965,14 @@ class GooftoolTest(unittest.TestCase):
     system_summary_keys = {
         'cbi', 'crosid', 'device', 'factory', 'fw', 'gsc', 'hw', 'image',
         'system', 'vpd', 'wp', 'platform_name', 'crossystem', 'modem_status',
-        'ec_wp_status', 'bios_wp_status', 'cr50_board_id', 'cr50_sn_bits',
-        'cr50_fw_version'
+        'ec_wp_status', 'bios_wp_status', 'gsc_board_id', 'gsc_sn_bits',
+        'gsc_fw_version'
     }
     self.assertEqual(system_summary_keys,
                      set(self._gooftool.GetSystemDetails().keys()))
     self._gooftool._util.GetSystemInfo.assert_called_once()
 
-  def testCr50WriteFlashInfoWithCustomType(self):
+  def testGSCWriteFlashInfoWithCustomType(self):
     """Test for custom label field.
 
     Custom label field should only exist in VPD when custom type is custom
@@ -980,7 +980,7 @@ class GooftoolTest(unittest.TestCase):
     """
 
     model_sku_utils.GetDesignConfig = mock.Mock()
-    self._gooftool.Cr50SetBoardId = mock.Mock()
+    self._gooftool.GSCSetBoardId = mock.Mock()
     self._gooftool._util.sys_interface = None
 
     # custom type is 'custom_label' but no custom label field in VPD
@@ -990,7 +990,7 @@ class GooftoolTest(unittest.TestCase):
 
     self.assertRaisesRegex(
         Error, 'This is a custom label device, but custom_label_tag is not set '
-        'in VPD.', self._gooftool.Cr50WriteFlashInfo)
+        'in VPD.', self._gooftool.GSCWriteFlashInfo)
 
     # custom type is rebrand and no custom label field in VPD
     config = self._SIMPLE_MODEL_SKU_CONFIG_REBRAND
@@ -998,7 +998,7 @@ class GooftoolTest(unittest.TestCase):
     self.assertRaisesRegex(
         Error, 'custom_label_tag reported by cros_config and VPD does not '
         'match.  Have you reboot the device after updating VPD '
-        'fields?', self._gooftool.Cr50WriteFlashInfo)
+        'fields?', self._gooftool.GSCWriteFlashInfo)
 
   def testMatchConfigWithIdentity_X86_Frid(self):
     identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
@@ -1203,7 +1203,6 @@ class GooftoolTest(unittest.TestCase):
 
     matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
     self.assertDictEqual(matched_config, configs[0])
-
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO)
