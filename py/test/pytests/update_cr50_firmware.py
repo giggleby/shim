@@ -183,7 +183,7 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
 
     self.gsc_utils = gsc_utils.GSCUtils()
     self.gsctool = gsctool.GSCTool(dut=self.dut)
-    self.fw_ver = self.gsctool.GetCr50FirmwareVersion()
+    self.fw_ver = self.gsctool.GetGSCFirmwareVersion()
     self.board_id = self.gsctool.GetBoardID()
     self.image_info = None
 

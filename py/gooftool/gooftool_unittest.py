@@ -970,7 +970,7 @@ class GooftoolTest(unittest.TestCase):
                      set(self._gooftool.GetSystemDetails().keys()))
     self._gooftool._util.GetSystemInfo.assert_called_once()
 
-  def testCr50WriteFlashInfoWithCustomType(self):
+  def testGSCWriteFlashInfoWithCustomType(self):
     """Test for custom label field.
 
     Custom label field should only exist in VPD when custom type is custom
@@ -978,7 +978,7 @@ class GooftoolTest(unittest.TestCase):
     """
 
     model_sku_utils.GetDesignConfig = mock.Mock()
-    self._gooftool.Cr50SetBoardId = mock.Mock()
+    self._gooftool.GSCSetBoardId = mock.Mock()
     self._gooftool._util.sys_interface = None
 
     # custom type is 'custom_label' but no custom label field in VPD
@@ -988,7 +988,7 @@ class GooftoolTest(unittest.TestCase):
 
     self.assertRaisesRegex(
         Error, 'This is a custom label device, but custom_label_tag is not set '
-        'in VPD.', self._gooftool.Cr50WriteFlashInfo)
+        'in VPD.', self._gooftool.GSCWriteFlashInfo)
 
     # custom type is rebrand and no custom label field in VPD
     config = self._SIMPLE_MODEL_SKU_CONFIG_REBRAND
@@ -996,23 +996,23 @@ class GooftoolTest(unittest.TestCase):
     self.assertRaisesRegex(
         Error, 'custom_label_tag reported by cros_config and VPD does not '
         'match.  Have you reboot the device after updating VPD '
-        'fields?', self._gooftool.Cr50WriteFlashInfo)
+        'fields?', self._gooftool.GSCWriteFlashInfo)
 
 
   @mock.patch('cros.factory.gooftool.core.Gooftool.'
-              'Cr50SetFeatureManagementFlagsWithHwSecUtils')
+              'GSCSetFeatureManagementFlagsWithHwSecUtils')
   @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
-  def testCr50SetFeatureManagementFlags_Flags_Inconsistent_Use_HwSecUtils(
+  def testGSCSetFeatureManagementFlags_Flags_Inconsistent_Use_HwSecUtils(
       self, mock_get_device_data, mock_gsctool, mock_hwsec_wrapper):
 
     mock_get_device_data.side_effect = [True, 1]
 
-    self._gooftool.Cr50SetFeatureManagementFlags()
+    self._gooftool.GSCSetFeatureManagementFlags()
     mock_hwsec_wrapper.assert_called_once()
 
   @mock.patch('cros.factory.gooftool.core.Gooftool.'
-              'Cr50SetFeatureManagementFlagsWithHwSecUtils')
+              'GSCSetFeatureManagementFlagsWithHwSecUtils')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
   def testGSCSetFeatureManagementFlags_Flags_Inconsistent_Use_GSCTool(
       self, mock_get_device_data, mock_hwsec_wrapper):
@@ -1020,29 +1020,29 @@ class GooftoolTest(unittest.TestCase):
     mock_get_device_data.side_effect = [True, 1]
     mock_hwsec_wrapper.side_effect = FileNotFoundError()
 
-    self._gooftool.Cr50SetFeatureManagementFlags()
+    self._gooftool.GSCSetFeatureManagementFlags()
     self._gooftool._gsctool.SetFeatureManagementFlags.assert_called_once()
 
   @mock.patch('cros.factory.gooftool.core.Gooftool.'
-              'Cr50SetFeatureManagementFlagsWithHwSecUtils')
+              'GSCSetFeatureManagementFlagsWithHwSecUtils')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
-  def testCr50SetFeatureManagementFlags_Flags_Consistent(
+  def testGSCSetFeatureManagementFlags_Flags_Consistent(
       self, mock_get_device_data, mock_hwsec_wrapper):
 
     mock_get_device_data.side_effect = [False, 0]
 
-    self._gooftool.Cr50SetFeatureManagementFlags()
+    self._gooftool.GSCSetFeatureManagementFlags()
     mock_hwsec_wrapper.assert_not_called()
 
   @mock.patch('os.path.exists')
-  def testCr50SetFeatureManagementFlagsWithHwSecUtils_Success(
+  def testGSCSetFeatureManagementFlagsWithHwSecUtils_Success(
       self, mock_path_exists):
 
     mock_path_exists.return_value = True
     self._gooftool._util.shell.return_value = Obj(success=True, status=0)
 
     with self.assertLogs(level='INFO') as cm:
-      self._gooftool.Cr50SetFeatureManagementFlagsWithHwSecUtils(False, 0)
+      self._gooftool.GSCSetFeatureManagementFlagsWithHwSecUtils(False, 0)
 
     expect_str = (
         'INFO:root:Successfully set feature management flags with '
@@ -1050,7 +1050,7 @@ class GooftoolTest(unittest.TestCase):
     self.assertEqual([expect_str], cm.output)
 
   @mock.patch('os.path.exists')
-  def testCr50SetFeatureManagementFlagsWithHwSecUtils_AlreadySet(
+  def testGSCSetFeatureManagementFlagsWithHwSecUtils_AlreadySet(
       self, mock_path_exists):
 
     mock_path_exists.return_value = True
@@ -1058,7 +1058,7 @@ class GooftoolTest(unittest.TestCase):
 
     with self.assertLogs(level='ERROR') as cm:
       with self.assertRaises(Error):
-        self._gooftool.Cr50SetFeatureManagementFlagsWithHwSecUtils(False, 0)
+        self._gooftool.GSCSetFeatureManagementFlagsWithHwSecUtils(False, 0)
 
     expect_str = 'ERROR:root:Feature management flags already set.'
     self.assertEqual([expect_str], cm.output)

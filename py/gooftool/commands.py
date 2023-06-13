@@ -586,39 +586,60 @@ def GenerateStableDeviceSecret(options):
 
 
 @Command(
-    'cr50_write_flash_info',
+    'gsc_write_flash_info',
     _enable_zero_touch_cmd_arg,  # this
     _no_write_protect_cmd_arg,  # this
     _factory_process_cmd_arg,  # this
     _skip_feature_tiering_steps_cmd_arg,  # this
     *GetGooftool.__args__)
-def Cr50WriteFlashInfo(options):
-  """Set the serial number bits, board id and flags on the Cr50 chip."""
-  GetGooftool(options).Cr50WriteFlashInfo(
+def GSCWriteFlashInfo(options):
+  """Set the serial number bits, board id and flags on the GSC chip."""
+  GetGooftool(options).GSCWriteFlashInfo(
       enable_zero_touch=options.enable_zero_touch,
       factory_process=options.factory_process,
       skip_feature_tiering_steps=options.skip_feature_tiering_steps,
       no_write_protect=options.no_write_protect)
-  event_log.Log('cr50_write_flash_info')
+  event_log.Log('gsc_write_flash_info')
 
 
-@Command('cr50_disable_factory_mode', *GetGooftool.__args__)
+@Command('cr50_write_flash_info', *GSCWriteFlashInfo.__args__)
+def Cr50WriteFlashInfo(options):
+  """Deprecated: Use |GSCWriteFlashInfo| instead."""
+  GSCWriteFlashInfo(options)
+
+
+@Command('gsc_disable_factory_mode', *GetGooftool.__args__)
+def GSCDisableFactoryMode(options):
+  """Reset GSC state back to default state after RMA."""
+  return GetGooftool(options).GSCDisableFactoryMode()
+
+
+@Command('cr50_disable_factory_mode', *GSCDisableFactoryMode.__args__)
 def Cr50DisableFactoryMode(options):
-  """Reset Cr50 state back to default state after RMA."""
-  return GetGooftool(options).Cr50DisableFactoryMode()
+  """Deprecated: Use |GSCDisableFactoryMode| instead."""
+  return GSCDisableFactoryMode(options)
+
+
+@Command(
+    'gsc_finalize',
+    *GSCDisableFactoryMode.__args__,
+    *GSCWriteFlashInfo.__args__,
+    *GetGooftool.__args__,
+)
+def GSCFinalize(options):
+  """Finalize steps for GSC."""
+
+  GSCWriteFlashInfo(options)
+  GSCDisableFactoryMode(options)
 
 
 @Command(
     'cr50_finalize',
-    *Cr50DisableFactoryMode.__args__,
-    *Cr50WriteFlashInfo.__args__,
-    *GetGooftool.__args__,
+    *GSCFinalize.__args__,
 )
 def Cr50Finalize(options):
-  """Finalize steps for cr50."""
-
-  Cr50WriteFlashInfo(options)
-  Cr50DisableFactoryMode(options)
+  """Deprecated: Use |GSCFinalize| instead."""
+  GSCFinalize(options)
 
 
 @Command(
@@ -810,13 +831,13 @@ def VerifyHWID(options):
       raise
     logging.exception(
         'Failed to verify HWID but it is fine since we believe that the device '
-        'passed VerifyHWID once before Cr50Finalize.')
+        'passed VerifyHWID once before GSCFinalize.')
 
   event_log.Log('verified_hwid', hwid=encoded_string)
 
 
 @Command(
-    'verify_before_cr50_finalize',
+    'verify_before_gsc_finalize',
     _no_write_protect_cmd_arg,  # this
     _has_ec_pubkey_cmd_arg,  # this
     _is_reference_board_cmd_arg,  # this
@@ -837,12 +858,11 @@ def VerifyHWID(options):
     *VerifyVPD.__args__,
     *VerifyFeatureManagementFlags.__args__,
 )
-def VerifyBeforeCr50Finalize(options):
-  """Verifies if the device is ready for finalization before Cr50Finalize.
+def VerifyBeforeGSCFinalize(options):
+  """Verifies if the device is ready for finalization before GSCFinalize.
 
-  This routine performs all the necessary checks to make sure the
-  device is ready to be finalized before Cr50Finalize, but does not modify
-  state.
+  This routine performs all the necessary checks to make sure the device is
+  ready to be finalized before GSCFinalize, but does not modify state.
   """
   VerifyAltSetting(options)
   if not options.no_write_protect:
@@ -866,21 +886,39 @@ def VerifyBeforeCr50Finalize(options):
 
 
 @Command(
-    'verify_after_cr50_finalize',
+    'verify_before_cr50_finalize',
+    *VerifyBeforeGSCFinalize.__args__,
+)
+def VerifyBeforeCr50Finalize(options):
+  """Deprecated: Use |VerifyBeforeGSCFinalize| instead."""
+  VerifyBeforeGSCFinalize(options)
+
+
+@Command(
+    'verify_after_gsc_finalize',
     _no_write_protect_cmd_arg,  # this
     *GetGooftool.__args__,
     *VerifySnBits.__args__,
     *VerifyWPSwitch.__args__,
 )
-def VerifyAfterCr50Finalize(options):
-  """Verifies if the device is ready for finalization after Cr50Finalize.
+def VerifyAfterGSCFinalize(options):
+  """Verifies if the device is ready for finalization after GSCFinalize.
 
-  This routine performs all the necessary checks to make sure the
-  device is ready to be finalized after Cr50Finalize, but does not modify state.
+  This routine performs all the necessary checks to make sure the device is
+  ready to be finalized after GSCFinalize, but does not modify state.
   """
   if not options.no_write_protect:
     VerifyWPSwitch(options)
   VerifySnBits(options)
+
+
+@Command(
+    'verify_after_cr50_finalize',
+    *VerifyAfterGSCFinalize.__args__,
+)
+def VerifyAfterCr50Finalize(options):
+  """Deprecated: Use |VerifyAfterGSCFinalize| instead."""
+  VerifyAfterGSCFinalize(options)
 
 
 @Command('untar_stateful_files')
@@ -1096,8 +1134,8 @@ def SMTFinalize(options):
   spare boards, local OEM projects.
   """
 
-  GetGooftool(options).Cr50SMTWriteFlashInfo()
-  event_log.Log('cr50_smt_write_flash_info')
+  GetGooftool(options).GSCSMTWriteFlashInfo()
+  event_log.Log('gsc_smt_write_flash_info')
   LogSourceHashes(options)
   LogSystemDetails(options)
   UploadReport(options)
@@ -1118,7 +1156,7 @@ def SMTFinalize(options):
     _skip_list_cmd_arg,  # this
     *ClearFactoryVPDEntries.__args__,
     *ClearGBBFlags.__args__,
-    *Cr50Finalize.__args__,
+    *GSCFinalize.__args__,
     *WriteProtect.__args__,
     *FpmcuInitializeEntropy.__args__,
     *GenerateStableDeviceSecret.__args__,
@@ -1129,8 +1167,8 @@ def SMTFinalize(options):
     *SetFirmwareBitmapLocale.__args__,
     *UntarStatefulFiles.__args__,
     *UploadReport.__args__,
-    *VerifyAfterCr50Finalize.__args__,
-    *VerifyBeforeCr50Finalize.__args__,
+    *VerifyAfterGSCFinalize.__args__,
+    *VerifyBeforeGSCFinalize.__args__,
     *VerifyCBIEEPROMWPStatus.__args__,
 )
 def Finalize(options):
@@ -1161,9 +1199,9 @@ def Finalize(options):
       LockHPS(options)
 
   ClearGBBFlags(options)
-  VerifyBeforeCr50Finalize(options)
-  Cr50Finalize(options)
-  VerifyAfterCr50Finalize(options)
+  VerifyBeforeGSCFinalize(options)
+  GSCFinalize(options)
+  VerifyAfterGSCFinalize(options)
   LogSourceHashes(options)
   UntarStatefulFiles(options)
   if options.cros_core:

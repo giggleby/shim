@@ -443,7 +443,7 @@ class SystemInfo(device_types.DeviceComponent):
 
   @InfoProperty
   def gsc_version(self):
-    fw_version = gsctool_module.GSCTool(self._device).GetCr50FirmwareVersion()
+    fw_version = gsctool_module.GSCTool(self._device).GetGSCFirmwareVersion()
     return {
         'ro_version': fw_version.ro_version,
         'rw_version': fw_version.rw_version,

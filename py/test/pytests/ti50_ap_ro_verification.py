@@ -104,7 +104,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
 
         # Set board ID.
         session.console.info('Set board ID.')
-        self.gooftool.Cr50SetBoardId(two_stages=self.args.two_stages)
+        self.gooftool.GSCSetBoardId(two_stages=self.args.two_stages)
 
         # Set Addressing mode and WPSR.
         session.console.info('Set Addressing mode and WPSR.')
