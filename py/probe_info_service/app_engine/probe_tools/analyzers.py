@@ -22,8 +22,11 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
 
-class IComponentProbeStatementConverter(abc.ABC):
-  """Represents a converter for probe info to component probe statement."""
+_ProbeInfoArtifact = probe_info_analytics.ProbeInfoArtifact
+
+
+class IProbeStatementConverter(abc.ABC):
+  """Represents a converter for probe info to probe statement(s)."""
 
   @abc.abstractmethod
   def GetName(self) -> str:
@@ -37,12 +40,11 @@ class IComponentProbeStatementConverter(abc.ABC):
   def ParseProbeParams(
       self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
       allow_missing_params: bool, comp_name_for_probe_statement=None
-  ) -> Tuple[probe_info_analytics.ProbeInfoParsedResult,
-             Optional[probe_config_types.ComponentProbeStatement]]:
+  ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
     """Walk through the given probe parameters.
 
     The method first validate each probe parameter.  Then if specified,
-    it also generates the probe statement from the given input.
+    it also generates the probe statement(s) from the given input.
 
     Args:
       probe_params: A list of `ProbeParameter` to validate.
@@ -53,10 +55,12 @@ class IComponentProbeStatementConverter(abc.ABC):
           are valid.
 
     Returns:
-      A pair of the following:
-        - `ProbeInfoParsedResult`
-        - The component probe statement (which component name is
-          `comp_name_for_probe_statement`) object or `None`.
+      `.probe_info_parsed_result` contains the validation result.  If the
+      validation passes and `comp_name_for_probe_statement` is specified,
+      `.output` contains a non-empty list of component probe statements.
+      The component names of all component probe statements will always start
+      with `comp_name_for_probe_statement`.  The target component is considered
+      probed if and only if all component probe statements detect something.
     """
 
 
@@ -71,14 +75,13 @@ _ProbeInfoParsedResult = probe_info_analytics.ProbeInfoParsedResult
 _ProbeInfoTestResult = probe_info_analytics.ProbeInfoTestResult
 _DeviceProbeResultAnalyzedResult = (
     probe_info_analytics.DeviceProbeResultAnalyzedResult)
-_ProbeInfoArtifact = probe_info_analytics.ProbeInfoArtifact
 _MultiProbeInfoArtifact = probe_info_analytics.MultiProbeInfoArtifact
 _NamedFile = probe_info_analytics.NamedFile
 _IProbeDataSource = probe_info_analytics.IProbeDataSource
 _PayloadInvalidError = probe_info_analytics.PayloadInvalidError
 
 
-class _RawProbeStatementConverter(IComponentProbeStatementConverter):
+class _RawProbeStatementConverter(IProbeStatementConverter):
   """A converter that is simply a wrapper of raw probe statement string."""
 
   _CONVERTER_NAME = 'raw_probe_statement'
@@ -103,8 +106,7 @@ class _RawProbeStatementConverter(IComponentProbeStatementConverter):
   def ParseProbeParams(
       self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
       allow_missing_params: bool, comp_name_for_probe_statement=None
-  ) -> Tuple[_ProbeInfoParsedResult,
-             Optional[probe_config_types.ComponentProbeStatement]]:
+  ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
     """See base class."""
     if (len(probe_params) != 1 or
         probe_params[0].name != self._PARAMETER_NAME or
@@ -112,11 +114,11 @@ class _RawProbeStatementConverter(IComponentProbeStatementConverter):
       parsed_result = _ProbeInfoParsedResult(
           result_type=_ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
           general_error_msg='Got unexpected probe parameter(s).')
-      return parsed_result, None
+      return _ProbeInfoArtifact(parsed_result, None)
 
     try:
-      loaded_component_probe_statement = (
-          probe_config_types.ComponentProbeStatement.FromDict(
+      loaded_component_probe_statements = (
+          probe_config_types.ComponentProbeStatement.FromDictOfMultipleEntries(
               json_utils.LoadStr(probe_params[0].string_value)))
     except ValueError as ex:
       parsed_result = _ProbeInfoParsedResult(
@@ -124,17 +126,32 @@ class _RawProbeStatementConverter(IComponentProbeStatementConverter):
       parsed_result.probe_parameter_errors.add(
           index=0,
           hint=f'Unable to load the component probe statement in JSON: {ex}.')
-      return parsed_result, None
+      return _ProbeInfoArtifact(parsed_result, None)
+    if not loaded_component_probe_statements:
+      parsed_result = _ProbeInfoParsedResult(
+          result_type=_ProbeInfoParsedResult.PROBE_PARAMETER_ERROR)
+      parsed_result.probe_parameter_errors.add(
+          index=0,
+          hint='It must contain at least one component probe statement.')
+      return _ProbeInfoArtifact(parsed_result, None)
 
-    parsed_result = _ProbeInfoParsedResult(
+    pass_result = _ProbeInfoParsedResult(
         result_type=_ProbeInfoParsedResult.PASSED)
-    component_probe_statement = None
-    if comp_name_for_probe_statement is not None:
-      component_probe_statement = probe_config_types.ComponentProbeStatement(
-          loaded_component_probe_statement.category_name,
-          comp_name_for_probe_statement,
-          loaded_component_probe_statement.statement)
-    return parsed_result, component_probe_statement
+    if comp_name_for_probe_statement is None:
+      return _ProbeInfoArtifact(pass_result, None)
+
+    if all(
+        e.component_name.startswith(comp_name_for_probe_statement)
+        for e in loaded_component_probe_statements):
+      return _ProbeInfoArtifact(pass_result, loaded_component_probe_statements)
+
+    return _ProbeInfoArtifact(pass_result, [
+        probe_config_types.ComponentProbeStatement(
+            original.category_name,
+            f'{comp_name_for_probe_statement}-{original.component_name}',
+            original.statement)
+        for original in loaded_component_probe_statements
+    ])
 
   @classmethod
   def BuildProbeInfo(cls, probe_statement: str) -> _ProbeInfo:
@@ -214,7 +231,7 @@ def _GetComponentPartNames(
 class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
   """Provides functionalities related to the probe tool."""
 
-  def __init__(self, converters: Sequence[IComponentProbeStatementConverter]):
+  def __init__(self, converters: Sequence[IProbeStatementConverter]):
     self._converters = {
         c.GetName(): c
         for c in itertools.chain(converters, [_RawProbeStatementConverter()])
@@ -232,10 +249,11 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
     """See base class."""
     probe_info_parsed_result, converter = self._LookupProbeConverter(
         probe_info.probe_function_name)
-    if converter:
-      probe_info_parsed_result, unused_ps = converter.ParseProbeParams(
-          probe_info.probe_parameters, allow_missing_params)
-    return probe_info_parsed_result
+    if not converter:
+      return probe_info_parsed_result
+    parse_result = converter.ParseProbeParams(probe_info.probe_parameters,
+                                              allow_missing_params)
+    return parse_result.probe_info_parsed_result
 
   def CreateProbeDataSource(self, component_name: str,
                             probe_info: _ProbeInfo) -> _IProbeDataSource:
@@ -251,7 +269,8 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
       return result
 
     builder = probe_config_types.ProbeConfigPayload()
-    builder.AddComponentProbeStatement(result.output)
+    for probe_statement in result.output:
+      builder.AddComponentProbeStatement(probe_statement)
     return _ProbeInfoArtifact(result.probe_info_parsed_result,
                               builder.DumpToString())
 
@@ -287,14 +306,14 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
     probe_data_sources = typing.cast(Sequence[_ProbeDataSourceImpl],
                                      probe_data_sources)
     probe_info_parsed_results = []
-    probe_statements = []
+    comp_probe_statements_list = []
     for probe_data_source in probe_data_sources:
-      pi_parsed_result, ps = self._ConvertProbeDataSourceToProbeStatement(
+      parse_result = self._ConvertProbeDataSourceToProbeStatement(
           probe_data_source)
-      probe_statements.append(ps)
-      probe_info_parsed_results.append(pi_parsed_result)
+      probe_info_parsed_results.append(parse_result.probe_info_parsed_result)
+      comp_probe_statements_list.append(parse_result.output)
 
-    if any(ps is None for ps in probe_statements):
+    if not all(comp_probe_statements_list):
       return _MultiProbeInfoArtifact(probe_info_parsed_results, None)
 
     builder = bundle_builder.BundleBuilder()
@@ -309,12 +328,12 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
     pc_payload = probe_config_types.ProbeConfigPayload()
 
     for i, probe_data_source in enumerate(probe_data_sources):
-      metadata.probe_statement_metadatas.add(
+      ps_metadata = metadata.probe_statement_metadatas.add(
           component_name=probe_data_source.component_name,
-          fingerprint=probe_data_source.fingerprint,
-          component_part_names=[probe_data_source.component_name])
-      if probe_statements[i]:
-        pc_payload.AddComponentProbeStatement(probe_statements[i])
+          fingerprint=probe_data_source.fingerprint)
+      for comp_ps in comp_probe_statements_list[i]:
+        ps_metadata.component_part_names.append(comp_ps.component_name)
+        pc_payload.AddComponentProbeStatement(comp_ps)
 
     metadata.probe_config_file_path = 'probe_config.json'
     builder.AddRegularFile(metadata.probe_config_file_path,
@@ -409,7 +428,7 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
 
   def _LookupProbeConverter(
       self, converter_name: str
-  ) -> Tuple[_ProbeInfoParsedResult, IComponentProbeStatementConverter]:
+  ) -> Tuple[_ProbeInfoParsedResult, IProbeStatementConverter]:
     """A helper method to find the probe statement converter instance by name.
 
     When the target probe converter doesn't exist, the method creates and
@@ -423,7 +442,7 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
       A pair of the following:
         - An instance of `_ProbeInfoParsedResult` if not found; otherwise
           `None`.
-        - An instance of `IComponentProbeStatementConverter` if found;
+        - An instance of `IProbeStatementConverter` if found;
           otherwise `None`.
     """
     converter = self._converters.get(converter_name)
@@ -437,16 +456,14 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
 
   def _ConvertProbeDataSourceToProbeStatement(
       self, probe_data_source: _ProbeDataSourceImpl
-  ) -> _ProbeInfoArtifact[probe_config_types.ComponentProbeStatement]:
+  ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
     probe_info_parsed_result, converter = self._LookupProbeConverter(
         probe_data_source.probe_info.probe_function_name)
-    if converter:
-      probe_info_parsed_result, ps = converter.ParseProbeParams(
-          probe_data_source.probe_info.probe_parameters, False,
-          comp_name_for_probe_statement=probe_data_source.component_name)
-    else:
-      ps = None
-    return _ProbeInfoArtifact(probe_info_parsed_result, ps)
+    if not converter:
+      return _ProbeInfoArtifact(probe_info_parsed_result, None)
+    return converter.ParseProbeParams(
+        probe_data_source.probe_info.probe_parameters, False,
+        comp_name_for_probe_statement=probe_data_source.component_name)
 
   def _PreprocessProbeResultPayload(
       self, probe_result_payload: bytes) -> _ProbedOutcomePreprocessConclusion:

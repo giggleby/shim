@@ -16,7 +16,7 @@ ProbeParameterDefinition = stubby_pb2.ProbeParameterDefinition
 ProbeParameterValueType = stubby_pb2.ProbeParameterDefinition.ValueType
 
 ProbeInfo = stubby_pb2.ProbeInfo
-ProbeParameter = stubby_pb2.ProbeInfoTestResult
+ProbeParameter = stubby_pb2.ProbeParameter
 
 ProbeInfoParsedResult = stubby_pb2.ProbeInfoParsedResult
 ProbeParameterSuggestion = stubby_pb2.ProbeParameterSuggestion

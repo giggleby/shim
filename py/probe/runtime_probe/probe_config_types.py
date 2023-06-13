@@ -6,6 +6,7 @@
 import copy
 import enum
 import re
+from typing import Sequence
 
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
@@ -125,6 +126,26 @@ class ComponentProbeStatement:
       raise
     except Exception as e:
       raise ValueError(f'Unexpected format for dict {d!r}') from e
+
+  @classmethod
+  def FromDictOfMultipleEntries(cls, d) -> Sequence['ComponentProbeStatement']:
+    results = []
+
+    try:
+      for category, probe_statements in d.items():
+        if not isinstance(category, str):
+          raise ValueError(f'Category is not a string: {category!r}')
+        for component_name, statement in probe_statements.items():
+          if not isinstance(component_name, str):
+            raise ValueError(
+                f'Component name is not a string: {component_name!r}')
+          results.append(cls(category, component_name, statement))
+    except ValueError:
+      raise
+    except Exception as e:
+      raise ValueError(f'Unexpected format for dict {d!r}') from e
+
+    return results
 
   def UpdateExpect(self, expect):
     self._statement['expect'] = expect

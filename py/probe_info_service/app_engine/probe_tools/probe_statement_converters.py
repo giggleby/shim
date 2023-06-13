@@ -25,7 +25,8 @@ class _IncompatibleError(Exception):
   """Raised when the given input is incompatible with the probe tool."""
 
 
-_IComponentProbeStatementConverter = analyzers.IComponentProbeStatementConverter
+_ProbeInfoArtifact = probe_info_analytics.ProbeInfoArtifact
+_IProbeStatementConverter = analyzers.IProbeStatementConverter
 
 
 class _ParamValueConverter:
@@ -246,7 +247,7 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
 class _IProbeParamSpec(abc.ABC):
   """Interface of probe parameter spec.
 
-  This is for `_IComponentProbeStatementConverter` to define the relationship
+  This is for `_IProbeStatementConverter` to define the relationship
   and conversion between probe info parameters and probe statement parameters.
   """
 
@@ -331,7 +332,7 @@ class _ConcatParam(_IProbeParamSpec):
                                       output_field.probe_statement_generator)
 
 
-class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
+class _SingleProbeFuncConverter(_IProbeStatementConverter):
   """Converts probe info into a statement of one single probe function call."""
 
   _DEFAULT_VALUE_TYPE_MAPPING = {
@@ -383,10 +384,9 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
     return ret
 
   def ParseProbeParams(
-      self, probe_params: Sequence[_ProbeParameter], allow_missing_params: bool,
-      comp_name_for_probe_statement=None
-  ) -> Tuple[_ProbeInfoParsedResult,
-             Optional[probe_config_types.ComponentProbeStatement]]:
+      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
+      allow_missing_params: bool, comp_name_for_probe_statement=None
+  ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
     """See base class."""
     probe_param_errors = []
     expected_values_of_field = collections.defaultdict(list)
@@ -401,14 +401,16 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
           self._ConvertProbeParamInputsToProbeStatementValues(
               probe_param_inputs, allow_missing_params))
     except _IncompatibleError as e:
-      return (_ProbeInfoParsedResult(
-          result_type=_ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
-          general_error_msg=str(e)), None)
+      return _ProbeInfoArtifact(
+          _ProbeInfoParsedResult(
+              result_type=_ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
+              general_error_msg=str(e)), None)
 
     if probe_param_errors:
-      return (_ProbeInfoParsedResult(
-          result_type=_ProbeInfoParsedResult.PROBE_PARAMETER_ERROR,
-          probe_parameter_errors=probe_param_errors), None)
+      return _ProbeInfoArtifact(
+          _ProbeInfoParsedResult(
+              result_type=_ProbeInfoParsedResult.PROBE_PARAMETER_ERROR,
+              probe_parameter_errors=probe_param_errors), None)
 
     ps = None
     if comp_name_for_probe_statement:
@@ -424,10 +426,12 @@ class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
             comp_name_for_probe_statement, self._probe_func_def.name,
             ps_expected_fields)
       except Exception as e:
-        return (_ProbeInfoParsedResult(
-            result_type=_ProbeInfoParsedResult.UNKNOWN_ERROR,
-            general_error_msg=str(e)), None)
-    return _ProbeInfoParsedResult(result_type=_ProbeInfoParsedResult.PASSED), ps
+        return _ProbeInfoArtifact(
+            _ProbeInfoParsedResult(
+                result_type=_ProbeInfoParsedResult.UNKNOWN_ERROR,
+                general_error_msg=str(e)), None)
+    return _ProbeInfoArtifact(
+        _ProbeInfoParsedResult(result_type=_ProbeInfoParsedResult.PASSED), [ps])
 
   def _ConvertProbeParamInputsToProbeStatementValues(
       self, probe_param_inputs: Mapping[str, Sequence[_ProbeParamInput]],
@@ -508,7 +512,7 @@ def _StringToRegexpOrString(value):
   return value
 
 
-def _BuildCPUProbeStatementConverter() -> _IComponentProbeStatementConverter:
+def _BuildCPUProbeStatementConverter() -> _IProbeStatementConverter:
   builder = probe_config_types.ProbeStatementDefinitionBuilder('cpu')
   builder.AddProbeFunction(
       'generic_cpu', 'A currently non-existent runtime probe function for CPU.')
@@ -516,7 +520,7 @@ def _BuildCPUProbeStatementConverter() -> _IComponentProbeStatementConverter:
   return _SingleProbeFuncConverter(builder.Build(), 'generic_cpu')
 
 
-def GetAllConverters() -> Sequence[analyzers.IComponentProbeStatementConverter]:
+def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
   # TODO(yhong): Separate the data piece out the code logic.
   return [
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
