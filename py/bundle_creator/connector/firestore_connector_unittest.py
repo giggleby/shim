@@ -146,6 +146,7 @@ class FirestoreConnectorTest(unittest.TestCase):
     doc_id = self._connector.CreateUserRequest(self._info)
 
     expected_doc = {
+        'id': doc_id,
         'email': self._info.email,
         'board': self._info.board,
         'project': self._info.project,
@@ -257,11 +258,15 @@ class FirestoreConnectorTest(unittest.TestCase):
     user_requests = self._connector.GetUserRequestsByEmail(email)
 
     self.assertEqual(user_requests, [{
+        'id':
+            'doc_2',
         'email':
             email,
         'request_time':
             DatetimeWithNanoseconds(2022, 5, 21, 0, 0, tzinfo=pytz.UTC),
     }, {
+        'id':
+            'doc_1',
         'email':
             email,
         'request_time':
@@ -289,6 +294,8 @@ class FirestoreConnectorTest(unittest.TestCase):
     user_requests = self._connector.GetUserRequestsByProject(project)
 
     self.assertEqual(user_requests, [{
+        'id':
+            'doc_3',
         'email':
             'foo3@bar',
         'project':
@@ -296,6 +303,8 @@ class FirestoreConnectorTest(unittest.TestCase):
         'request_time':
             DatetimeWithNanoseconds(2022, 12, 26, 0, 0, tzinfo=pytz.UTC),
     }, {
+        'id':
+            'doc_1',
         'email':
             'foo@bar',
         'project':
@@ -326,11 +335,15 @@ class FirestoreConnectorTest(unittest.TestCase):
     user_requests = self._connector.GetLatestUserRequestsByStatus(status)
 
     self.assertEqual(user_requests, [{
+        'id':
+            'doc_2',
         'status':
             status.name,
         'request_time':
             DatetimeWithNanoseconds(2022, 6, 8, 0, 0, tzinfo=pytz.UTC),
     }, {
+        'id':
+            'doc_1',
         'status':
             status.name,
         'request_time':
@@ -352,6 +365,8 @@ class FirestoreConnectorTest(unittest.TestCase):
     user_requests = self._connector.GetLatestUserRequestsByStatus(status, 10)
 
     self.assertEqual(user_requests, [{
+        'id':
+            'doc_1',
         'status':
             status.name,
         'request_time':

@@ -118,25 +118,27 @@ class StubbyHandlerTest(unittest.TestCase):
                                             tzinfo=pytz.UTC)
     error_message = 'Fake error message.'
     self._mock_storage_connector.GetBundleInfosByProject.return_value = [
-        self._CreateStorageBundleInfo('foo@bar', 'fake_bundle_1.tar.bz2',
-                                      base_timestamp_sec),
-        self._CreateStorageBundleInfo('foo2@bar', 'fake_bundle_2.tar.bz2',
+        self._CreateStorageBundleInfo(
+            'doc_1', 'foo@bar', 'fake_bundle_1.tar.bz2', base_timestamp_sec),
+        self._CreateStorageBundleInfo('doc_2', 'foo2@bar',
+                                      'fake_bundle_2.tar.bz2',
                                       base_timestamp_sec + 100),
     ]
     self._mock_firestore_connector.GetUserRequestsByProject.return_value = [
         self._CreateUserRequest(
-            firestore_connector.UserRequestStatus.SUCCEEDED, base_datetime,
+            'doc_ignore', firestore_connector.UserRequestStatus.SUCCEEDED,
+            base_datetime,
             start_time=base_datetime + datetime.timedelta(seconds=1),
             end_time=base_datetime + datetime.timedelta(seconds=2)),
         self._CreateUserRequest(
-            firestore_connector.UserRequestStatus.NOT_STARTED,
+            'doc_3', firestore_connector.UserRequestStatus.NOT_STARTED,
             base_datetime + datetime.timedelta(seconds=200)),
         self._CreateUserRequest(
-            firestore_connector.UserRequestStatus.IN_PROGRESS,
+            'doc_4', firestore_connector.UserRequestStatus.IN_PROGRESS,
             base_datetime + datetime.timedelta(seconds=300),
             start_time=base_datetime + datetime.timedelta(seconds=301)),
         self._CreateUserRequest(
-            firestore_connector.UserRequestStatus.FAILED,
+            'doc_5', firestore_connector.UserRequestStatus.FAILED,
             base_datetime + datetime.timedelta(seconds=400),
             start_time=base_datetime + datetime.timedelta(seconds=401),
             end_time=base_datetime + datetime.timedelta(seconds=402),
@@ -147,7 +149,7 @@ class StubbyHandlerTest(unittest.TestCase):
 
     expected_response = factorybundle_v2_pb2.GetBundleInfoResponse()
     expected_response.bundle_infos.append(
-        self._CreateBundleInfo('foo@bar',
+        self._CreateBundleInfo('doc_5', 'foo@bar',
                                firestore_connector.UserRequestStatus.FAILED,
                                request_time_sec=base_timestamp_sec + 400,
                                request_start_time_sec=base_timestamp_sec + 401,
@@ -155,21 +157,24 @@ class StubbyHandlerTest(unittest.TestCase):
                                error_message=error_message))
     expected_response.bundle_infos.append(
         self._CreateBundleInfo(
-            'foo@bar', firestore_connector.UserRequestStatus.IN_PROGRESS,
+            'doc_4', 'foo@bar',
+            firestore_connector.UserRequestStatus.IN_PROGRESS,
             request_time_sec=base_timestamp_sec + 300,
             request_start_time_sec=base_timestamp_sec + 301))
     expected_response.bundle_infos.append(
         self._CreateBundleInfo(
-            'foo@bar', firestore_connector.UserRequestStatus.NOT_STARTED,
+            'doc_3', 'foo@bar',
+            firestore_connector.UserRequestStatus.NOT_STARTED,
             request_time_sec=base_timestamp_sec + 200))
     expected_response.bundle_infos.append(
         self._CreateBundleInfo(
-            'foo2@bar', firestore_connector.UserRequestStatus.SUCCEEDED,
+            'doc_2', 'foo2@bar',
+            firestore_connector.UserRequestStatus.SUCCEEDED,
             blob_path='board/project/fake_bundle_2.tar.bz2',
             filename='fake_bundle_2.tar.bz2',
             bundle_created_timestamp_sec=base_timestamp_sec + 100))
     expected_response.bundle_infos.append(
-        self._CreateBundleInfo('foo@bar',
+        self._CreateBundleInfo('doc_1', 'foo@bar',
                                firestore_connector.UserRequestStatus.SUCCEEDED,
                                blob_path='board/project/fake_bundle_1.tar.bz2',
                                filename='fake_bundle_1.tar.bz2',
@@ -238,21 +243,23 @@ class StubbyHandlerTest(unittest.TestCase):
     self.assertEqual(expected_response, response)
 
   def _CreateStorageBundleInfo(
-      self, email: str, filename: str,
+      self, doc_id: str, email: str, filename: str,
       created_timestamp_sec: int) -> storage_connector.StorageBundleInfo:
     return storage_connector.StorageBundleInfo(
         blob_path=f'board/project/{filename}',
         metadata=storage_connector.StorageBundleMetadata(
-            doc_id='FakeDocId', email=email, board='board', project='project',
+            doc_id=doc_id, email=email, board='board', project='project',
             phase='proto', toolkit_version='11111.0.0',
             test_image_version='22222.0.0', release_image_version='33333.0.0',
             firmware_source='44444.0.0'),
         created_timestamp_sec=created_timestamp_sec)
 
-  def _CreateUserRequest(self, status: firestore_connector.UserRequestStatus,
+  def _CreateUserRequest(self, doc_id: str,
+                         status: firestore_connector.UserRequestStatus,
                          request_time: DatetimeWithNanoseconds,
                          **kwargs) -> Dict[str, any]:
     snapshot = {
+        'id': doc_id,
         'board': 'board',
         'project': 'project',
         'phase': 'proto',
@@ -272,7 +279,7 @@ class StubbyHandlerTest(unittest.TestCase):
       snapshot['error_message'] = kwargs['error_message']
     return snapshot
 
-  def _CreateBundleInfo(self, creator: str,
+  def _CreateBundleInfo(self, doc_id: str, creator: str,
                         status: firestore_connector.UserRequestStatus,
                         **kwargs) -> factorybundle_v2_pb2.BundleInfo:
     info = factorybundle_v2_pb2.BundleInfo()
@@ -283,6 +290,7 @@ class StubbyHandlerTest(unittest.TestCase):
     info.metadata.test_image_version = '22222.0.0'
     info.metadata.release_image_version = '33333.0.0'
     info.metadata.firmware_source = '44444.0.0'
+    info.doc_id = doc_id
     info.creator = creator
     info.status = status.name
     if 'blob_path' in kwargs:

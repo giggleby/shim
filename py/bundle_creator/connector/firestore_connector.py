@@ -215,7 +215,10 @@ class FirestoreConnector:
     """
     query = self._user_request_col_ref.where('email', '==', email)
     query = query.order_by('request_time', direction=firestore.Query.DESCENDING)
-    return [doc.to_dict() for doc in query.stream()]
+    return [
+        self._ConvertSnapshotToDictionary(snapshot)
+        for snapshot in query.stream()
+    ]
 
   def GetUserRequestsByProject(self, project: str) -> List[Dict]:
     """Returns user requests with the specific project.
@@ -229,7 +232,10 @@ class FirestoreConnector:
     """
     query = self._user_request_col_ref.where('project', '==', project)
     query = query.order_by('request_time', direction=firestore.Query.DESCENDING)
-    return [doc.to_dict() for doc in query.stream()]
+    return [
+        self._ConvertSnapshotToDictionary(snapshot)
+        for snapshot in query.stream()
+    ]
 
   def GetLatestUserRequestsByStatus(
       self, status: UserRequestStatus,
@@ -252,7 +258,10 @@ class FirestoreConnector:
                         datetime.now() -
                         timedelta(days=within_days)) if within_days else query
     query = query.order_by('request_time', direction=firestore.Query.DESCENDING)
-    return [doc.to_dict() for doc in query.stream()]
+    return [
+        self._ConvertSnapshotToDictionary(snapshot)
+        for snapshot in query.stream()
+    ]
 
   def UpdateHWIDCLURLAndErrorMessage(self, doc_id: str, cl_url: List[str],
                                      cl_error_msg: Optional[str]):
@@ -290,7 +299,8 @@ class FirestoreConnector:
     Args:
       doc_id: The document id of the document to be fetched.
     """
-    return self._GetUserRequestDocRef(doc_id).get().to_dict()
+    return self._ConvertSnapshotToDictionary(
+        self._GetUserRequestDocRef(doc_id).get())
 
   def _UpdateUserRequestWithCurrentTime(self, doc_id: str, field_name: str):
     self._TryUpdateUserRequestDocRef(doc_id, {field_name: datetime.now()})
@@ -308,3 +318,8 @@ class FirestoreConnector:
       self._GetUserRequestDocRef(doc_id).update(data)
     except Exception as e:
       self._logger.error(e)
+
+  def _ConvertSnapshotToDictionary(self, snapshot: firestore.DocumentSnapshot):
+    result = snapshot.to_dict()
+    result['id'] = snapshot.id
+    return result

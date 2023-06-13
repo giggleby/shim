@@ -22,6 +22,7 @@ message BundleInfo {
   double request_end_time_sec = 8;
   double bundle_created_timestamp_sec = 9;
   string error_message = 10;
+  string doc_id = 11;
 }
 
 message HwidOption {

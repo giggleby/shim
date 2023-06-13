@@ -66,6 +66,7 @@ class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
       bundle_info = factorybundle_v2_pb2.BundleInfo()
       bundle_info.metadata.MergeFrom(
           storage_bundle_info.metadata.ToV2BundleMetadata())
+      bundle_info.doc_id = storage_bundle_info.metadata.doc_id
       bundle_info.creator = storage_bundle_info.metadata.email
       bundle_info.status = firestore_connector.UserRequestStatus.SUCCEEDED.name
       bundle_info.blob_path = storage_bundle_info.blob_path
@@ -89,6 +90,7 @@ class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
       bundle_info.metadata.release_image_version = snapshot.get(
           'release_image_version', '')
       bundle_info.metadata.firmware_source = snapshot.get('firmware_source', '')
+      bundle_info.doc_id = snapshot.get('id', '')
       bundle_info.creator = snapshot.get('email', '')
       bundle_info.status = status
       bundle_info.error_message = snapshot.get('error_message', '')
