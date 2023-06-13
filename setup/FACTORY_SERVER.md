@@ -102,7 +102,8 @@ choices - just choose one of them:
 1. Download latest version from web. Make sure you have `curl` and `base64`
    then type following commands:
 
-       curl -L http://goo.gl/gKCyo1 | base64 --decode >cros_docker.sh
+       URL="https://chromium.googlesource.com/chromiumos/platform/factory/+/main/setup/cros_docker.sh?format=TEXT"
+       curl -L "${URL}" | base64 --decode >cros_docker.sh
        sh ./cros_docker.sh update  # Self-test and change file permission.
 
 2. Or, check out from factory software repository:
