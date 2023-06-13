@@ -13,8 +13,8 @@ from google.protobuf import text_format
 
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.probe_info_service.app_engine import bundle_builder
-from cros.factory.probe_info_service.app_engine.probe_tools import client_payload_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import probe_info_analytics
+from cros.factory.probe_info_service.app_engine.probe_tools import client_payload_pb2  # pylint: disable=no-name-in-module
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
@@ -53,7 +53,8 @@ class IComponentProbeStatementConverter(abc.ABC):
     Returns:
       A pair of the following:
         - `ProbeInfoParsedResult`
-        - A probe statement object or `None`.
+        - The component probe statement (which component name is
+          `comp_name_for_probe_statement`) object or `None`.
     """
 
 
@@ -202,6 +203,12 @@ class _ProbedOutcomePreprocessConclusion(NamedTuple):
   probed_components: Optional[Sequence[str]]
 
 
+def _GetComponentPartNames(
+    ps_metadata: client_payload_pb2.ProbeStatementMetadata) -> Sequence[str]:
+  return (ps_metadata.component_part_names
+          if ps_metadata.component_part_names else [ps_metadata.component_name])
+
+
 class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
   """Provides functionalities related to the probe tool."""
 
@@ -302,7 +309,8 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
     for i, probe_data_source in enumerate(probe_data_sources):
       metadata.probe_statement_metadatas.add(
           component_name=probe_data_source.component_name,
-          fingerprint=probe_data_source.fingerprint)
+          fingerprint=probe_data_source.fingerprint,
+          component_part_names=[probe_data_source.component_name])
       if probe_statements[i]:
         pc_payload.AddComponentProbeStatement(probe_statements[i])
 
@@ -345,13 +353,16 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
           result_type=_ProbeInfoTestResult.INTRIVIAL_ERROR,
           intrivial_error_msg=preproc_conclusion.intrivial_error_msg)
 
-    if preproc_conclusion.probed_components:
+    expect_component_parts = set(_GetComponentPartNames(ps_metadata))
+    missing_component_parts = (
+        expect_component_parts - set(preproc_conclusion.probed_components))
+    if not missing_component_parts:
       return _ProbeInfoTestResult(result_type=_ProbeInfoTestResult.PASSED)
 
     # TODO(yhong): Provide hints from generic probed result.
     return _ProbeInfoTestResult(
-        result_type=_ProbeInfoTestResult.INTRIVIAL_ERROR,
-        intrivial_error_msg='No component is found.')
+        result_type=_ProbeInfoTestResult.INTRIVIAL_ERROR, intrivial_error_msg=(
+            f'Component(s) not found: ({missing_component_parts}).'))
 
   def AnalyzeDeviceProbeResultPayload(
       self, probe_data_sources: Sequence[_IProbeDataSource],
@@ -377,6 +388,7 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
           intrivial_error_msg=preproc_conclusion.intrivial_error_msg,
           probe_info_test_results=None)
     pi_test_result_types = []
+    probed_components = set(preproc_conclusion.probed_components)
     for pds in probe_data_sources:
       comp_name = pds.component_name
       ps_metadata = ps_metadata_of_comp_name.get(comp_name, None)
@@ -384,7 +396,7 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
         pi_test_result_types.append(_ProbeInfoTestResult.NOT_INCLUDED)
       elif ps_metadata.fingerprint != pds.fingerprint:
         pi_test_result_types.append(_ProbeInfoTestResult.LEGACY)
-      elif any(c == comp_name for c in preproc_conclusion.probed_components):
+      elif not set(_GetComponentPartNames(ps_metadata)) - probed_components:
         pi_test_result_types.append(_ProbeInfoTestResult.PASSED)
       else:
         pi_test_result_types.append(_ProbeInfoTestResult.NOT_PROBED)
@@ -453,7 +465,9 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
                            f'{rp_invocation_result.return_code}.'), None)
 
     known_component_names = set(
-        m.component_name for m in probed_outcome.probe_statement_metadatas)
+        itertools.chain.from_iterable(
+            _GetComponentPartNames(m)
+            for m in probed_outcome.probe_statement_metadatas))
     probed_components = []
     try:
       probed_result = json_utils.LoadStr(

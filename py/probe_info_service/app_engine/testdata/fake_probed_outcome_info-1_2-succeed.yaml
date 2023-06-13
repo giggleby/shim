@@ -10,10 +10,12 @@ probed_outcome_prototxt: '
   probe_statement_metadatas: {
     component_name: "AVL_1"
     fingerprint: "5b4e4b54aebea41595c10d4d59cf8cc0493ff428"
+    component_part_names: "AVL_1"
   }
   probe_statement_metadatas: {
     component_name: "AVL_2"
     fingerprint: "814e23462e0b8ba62d90739475cf2cd83f869d99"
+    component_part_names: "AVL_2"
   }
   rp_invocation_result: {
     result_type: FINISHED
