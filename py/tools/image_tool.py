@@ -293,32 +293,31 @@ class SysUtils:
         Sudo(['rm', '-rf', tmp_folder], check=False)
 
   @classmethod
-  def PartialCopy(cls, src_path, dest_path, count, src_offset=0, dest_offset=0,
-                  buffer_size=32 * MEGABYTE, sync=False, verbose=None):
-    """Copy partial contents from one file to another file, like 'dd'."""
-    with open(src_path, 'rb') as src:
-      if verbose is None:
-        verbose = count // buffer_size > 5
-      with open(dest_path, 'r+b') as dest:
-        fd = dest.fileno()
-        src.seek(src_offset)
-        dest.seek(dest_offset)
-        remains = count
-        while remains > 0:
-          data = src.read(min(remains, buffer_size))
-          dest.write(data)
-          remains -= len(data)
-          if sync:
-            dest.flush()
-            os.fdatasync(fd)
-          if verbose:
-            if sys.stderr.isatty():
-              width = 5
-              sys.stderr.write(
-                  '%*.1f%%%s' % (width, (1 - remains / count) * 100,
-                                 '\b' * (width + 1)))
-            else:
-              sys.stderr.write('.')
+  def PartialCopyFromStream(cls, src_stream, count, dest_path, dest_offset=0,
+                            buffer_size=32 * MEGABYTE, sync=False,
+                            verbose=None):
+    """Copy partial contents from one stream to another file, like 'dd'."""
+    if verbose is None:
+      verbose = count // buffer_size > 5
+    with open(dest_path, 'r+b') as dest:
+      fd = dest.fileno()
+      dest.seek(dest_offset)
+      remains = count
+      while remains > 0:
+        data = src_stream.read(min(remains, buffer_size))
+        dest.write(data)
+        remains -= len(data)
+        if sync:
+          dest.flush()
+          os.fdatasync(fd)
+        if verbose:
+          if sys.stderr.isatty():
+            width = 5
+            sys.stderr.write(
+                '%*.1f%%%s' % (width,
+                               (1 - remains / count) * 100, '\b' * (width + 1)))
+          else:
+            sys.stderr.write('.')
     if verbose:
       sys.stderr.write('\n')
 
@@ -676,8 +675,51 @@ def Aligned(value, alignment):
 class GPT(pygpt.GPT):
   """A special version GPT object with more helper utilities."""
 
-  class Partition(pygpt.GPT.Partition):
-    """A special GPT Partition object with mount ability."""
+  class CopyablePartitionMixin:
+    """A mixin class that supports copying partitions.
+
+    The child class should override `OpenAsStream()` function to return a
+    stream-like object that supports `read()` operation.
+    """
+
+    @contextlib.contextmanager
+    def OpenAsStream(self):
+
+      class Reader:
+        """A reader class that supports `read()` operation."""
+
+        @classmethod
+        def read(cls, num):
+          raise NotImplementedError
+
+      yield Reader()
+
+    def Copy(self, dest, check_equal=True, sync=False, verbose=False):
+      """Copies this partition to another partition.
+
+      Args:
+        dest: a Partition object as the destination.
+        check_equal: True to raise exception if the sizes of partitions are
+                     different.
+      """
+      if self.size != dest.size:
+        if check_equal:
+          raise RuntimeError(
+              f'Partition size is different ({int(self.size)}, {int(dest.size)}'
+              ').')
+        if self.size > dest.size:
+          raise RuntimeError(
+              f'Source partition ({self.size}) is larger than destination ('
+              f'{dest.size}).')
+      if verbose:
+        logging.info('Copying partition %s => %s...', self, dest)
+
+      with self.OpenAsStream() as src_stream:
+        SysUtils.PartialCopyFromStream(src_stream, self.size, dest.image,
+                                       dest.offset, sync=sync)
+
+  class Partition(pygpt.GPT.Partition, CopyablePartitionMixin):
+    """A special GPT Partition object with mount and copy ability."""
 
     @classmethod
     @contextlib.contextmanager
@@ -894,27 +936,12 @@ class GPT(pygpt.GPT):
             new_size // MEGABYTE if new_size else '(ALL)')
       return real_size
 
-    def Copy(self, dest, check_equal=True, sync=False, verbose=False):
-      """Copies one partition to another partition.
-
-      Args:
-        dest: a Partition object as the destination.
-        check_equal: True to raise exception if the sizes of partitions are
-                     different.
-      """
-      if self.size != dest.size:
-        if check_equal:
-          raise RuntimeError(
-              f'Partition size is different ({int(self.size)}, {int(dest.size)}'
-              ').')
-        if self.size > dest.size:
-          raise RuntimeError(
-              f'Source partition ({self.size}) is larger than destination ('
-              f'{dest.size}).')
-      if verbose:
-        logging.info('Copying partition %s => %s...', self, dest)
-      SysUtils.PartialCopy(self.image, dest.image, self.size, self.offset,
-                           dest.offset, sync=sync)
+    @contextlib.contextmanager
+    def OpenAsStream(self):
+      """CopyablePartitionMixin override."""
+      with open(self.image, 'rb') as src:
+        src.seek(self.offset)
+        yield src
 
 
 def Partition(image, number):
