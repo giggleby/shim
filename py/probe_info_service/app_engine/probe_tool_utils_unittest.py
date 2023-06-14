@@ -65,6 +65,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
         'storage.ufs_storage',
         'raw_probe_statement',
         'cpu.generic_cpu',
+        'touchscreen_module.generic_input_device_and_edid',
     ])
 
   def testValidateProbeInfo_InvalidProbeFunction(self):

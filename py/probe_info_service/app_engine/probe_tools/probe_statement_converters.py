@@ -340,6 +340,18 @@ class _ConcatParam(_IProbeParamSpec):
                                       output_field.probe_statement_generator)
 
 
+def _ToProbeParamInputs(
+    probe_params: Sequence[_ProbeParameter]
+) -> Mapping[str, Sequence[_ProbeParamInput]]:
+  probe_param_inputs = collections.defaultdict(list)
+
+  for index, probe_param in enumerate(probe_params):
+    probe_param_inputs[probe_param.name].append(
+        _ProbeParamInput(index, probe_param))
+
+  return probe_param_inputs
+
+
 class _SingleProbeFuncConverter(_IProbeStatementConverter):
   """Converts probe info into a statement of one single probe function call."""
 
@@ -362,7 +374,7 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
     if probe_params is None:
       probe_params = [_ProbeFunctionParam(n) for n in output_fields]
 
-    self._probe_params: List[_IProbeStatementParam] = [
+    self._probe_params = [
         spec.BuildProbeStatementParam(output_fields) for spec in probe_params
     ]
 
@@ -376,6 +388,10 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
     ps_generator = probe_config_definition.GetProbeStatementDefinition(
         runtime_probe_category_name)
     return cls(ps_generator, runtime_probe_func_name, probe_params=probe_params)
+
+  @property
+  def probe_params(self) -> Sequence[_IProbeStatementParam]:
+    return self._probe_params
 
   def GetName(self) -> str:
     """See base class."""
@@ -391,18 +407,13 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
 
     return ret
 
-  def ParseProbeParams(
-      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
-      allow_missing_params: bool, comp_name_for_probe_statement=None
+  def ParseProbeParamInputs(
+      self, probe_param_inputs: Mapping[str, Sequence[_ProbeParamInput]],
+      allow_missing_params: bool, comp_name_for_probe_statement: Optional[str]
   ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
-    """See base class."""
+    """See `ParseProbeParams()` for more details."""
     probe_param_errors = []
     expected_values_of_field = collections.defaultdict(list)
-    probe_param_inputs = collections.defaultdict(list)
-
-    for index, probe_param in enumerate(probe_params):
-      probe_param_inputs[probe_param.name].append(
-          _ProbeParamInput(index, probe_param))
 
     try:
       expected_values_of_field, probe_param_errors = (
@@ -440,6 +451,15 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
                 general_error_msg=str(e)), None)
     return _ProbeInfoArtifact(
         _ProbeInfoParsedResult(result_type=_ProbeInfoParsedResult.PASSED), [ps])
+
+  def ParseProbeParams(
+      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
+      allow_missing_params: bool, comp_name_for_probe_statement=None
+  ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
+    """See base class."""
+    return self.ParseProbeParamInputs(
+        _ToProbeParamInputs(probe_params), allow_missing_params,
+        comp_name_for_probe_statement)
 
   def _ConvertProbeParamInputsToProbeStatementValues(
       self, probe_param_inputs: Mapping[str, Sequence[_ProbeParamInput]],
@@ -495,6 +515,100 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
     return expected_values_of_field, probe_param_errors
 
 
+class _MultiProbeFuncConverter(_IProbeStatementConverter):
+  """Converts a probe info into multiple component probe statements.
+
+  It can convert one single probe info into a list of component probe
+  statements, each identifies one single part of the component.  This
+  conversion enables probe statement generation for components that
+  show multiple functionalities from software's point of view.
+  """
+
+  def __init__(self, name: str, description: str,
+               sub_converters: Mapping[str, _SingleProbeFuncConverter]):
+    self._name = name
+    self._description = description
+    self._sub_converters = sub_converters
+
+  def GetName(self) -> str:
+    """See base class."""
+    return self._name
+
+  def GenerateDefinition(self) -> probe_info_analytics.ProbeFunctionDefinition:
+    """See base class."""
+    ret = probe_info_analytics.ProbeFunctionDefinition(
+        name=self._name, description=self._description)
+    for sub_converter in self._sub_converters.values():
+      ret.parameter_definitions.extend(
+          sub_converter.GenerateDefinition().parameter_definitions)
+    return ret
+
+  def _AggregrateProbeInfoParsedResults(
+      self,
+      sources: Sequence[_ProbeInfoParsedResult]) -> _ProbeInfoParsedResult:
+    aggregated_result = _ProbeInfoParsedResult(
+        general_error_msg=' '.join(
+            s.general_error_msg for s in sources if s.general_error_msg),
+        probe_parameter_errors=itertools.chain.from_iterable(
+            s.probe_parameter_errors for s in sources))
+
+    for error_result_type in (_ProbeInfoParsedResult.UNKNOWN_ERROR,
+                              _ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
+                              _ProbeInfoParsedResult.PROBE_PARAMETER_ERROR):
+      if any(s.result_type == error_result_type for s in sources):
+        aggregated_result.result_type = error_result_type
+        return aggregated_result
+    aggregated_result.result_type = (
+        _ProbeInfoParsedResult.UNKNOWN_ERROR if any(
+            s.result_type != _ProbeInfoParsedResult.PASSED for s in sources)
+        else _ProbeInfoParsedResult.PASSED)
+    return aggregated_result
+
+  def ParseProbeParams(
+      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
+      allow_missing_params: bool, comp_name_for_probe_statement=None
+  ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
+    """See base class."""
+    remaining_probe_param_inputs = _ToProbeParamInputs(probe_params)
+
+    sub_probe_info_artifacts = []
+    for sub_converter_name, sub_converter in self._sub_converters.items():
+      probe_param_inputs = {}
+      for param in sub_converter.probe_params:
+        for param_name in param.probe_info_param_definitions:
+          if param_name in remaining_probe_param_inputs:
+            probe_param_inputs[param_name] = remaining_probe_param_inputs.pop(
+                param_name)
+      sub_comp_name = (f'{comp_name_for_probe_statement}-{sub_converter_name}'
+                       if comp_name_for_probe_statement else None)
+      sub_probe_info_artifacts.append(
+          sub_converter.ParseProbeParamInputs(
+              probe_param_inputs, allow_missing_params, sub_comp_name))
+
+    all_parsed_results = [
+        r.probe_info_parsed_result for r in sub_probe_info_artifacts
+    ]
+    if remaining_probe_param_inputs:
+      error_msg = ('Unknown probe parameters: '
+                   f'{", ".join(remaining_probe_param_inputs)}.')
+      all_parsed_results.append(
+          _ProbeInfoParsedResult(
+              result_type=_ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
+              general_error_msg=error_msg))
+
+    aggregated_parsed_result = self._AggregrateProbeInfoParsedResults(
+        all_parsed_results)
+    if (aggregated_parsed_result.result_type != _ProbeInfoParsedResult.PASSED or
+        not comp_name_for_probe_statement):
+      return _ProbeInfoArtifact(aggregated_parsed_result, None)
+
+    return _ProbeInfoArtifact(
+        aggregated_parsed_result,
+        list(
+            itertools.chain.from_iterable(
+                a.output for a in sub_probe_info_artifacts)))
+
+
 def _RemoveHexPrefixAndCapitalize(value: str) -> str:
   if not value.lower().startswith('0x'):
     raise ValueError('Expect hex value to start with "0x" or "0X".')
@@ -526,6 +640,38 @@ def _BuildCPUProbeStatementConverter() -> _IProbeStatementConverter:
       'generic_cpu', 'A currently non-existent runtime probe function for CPU.')
   builder.AddStrOutputField('identifier', 'Model name on x86, chip-id on ARM.')
   return _SingleProbeFuncConverter(builder.Build(), 'generic_cpu')
+
+
+def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
+  sub_converters = {
+      'touchscreen_controller':
+          _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+              'touchscreen', 'input_device', [
+                  _ProbeFunctionParam(
+                      'module_vendor_id', value_converter=_ParamValueConverter(
+                          'string', _CapitalizeHexValueWithoutPrefix),
+                      probe_statement_param_name='vendor'),
+                  _ProbeFunctionParam(
+                      'module_product_id', value_converter=_ParamValueConverter(
+                          'string', _CapitalizeHexValueWithoutPrefix),
+                      probe_statement_param_name='product'),
+              ]),
+      'edid_panel':
+          _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+              'display_panel', 'edid', [
+                  _ProbeFunctionParam('panel_edid_vendor_code',
+                                      probe_statement_param_name='vendor'),
+                  _ProbeFunctionParam(
+                      'panel_edid_product_id',
+                      value_converter=_ParamValueConverter(
+                          'string', _CapitalizeHexValueWithoutPrefix),
+                      probe_statement_param_name='product_id'),
+              ]),
+  }
+  return _MultiProbeFuncConverter(
+      'touchscreen_module.generic_input_device_and_edid',
+      'Probe statement converter for touchscreen modules with eDP displays.',
+      sub_converters)
 
 
 def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
@@ -628,4 +774,5 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
                                   _ParamValueConverter('int')),
           ]),
       _BuildCPUProbeStatementConverter(),
+      BuildTouchscreenModuleConverter(),
   ]
