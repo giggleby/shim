@@ -32,6 +32,7 @@ or
   "BrandedChassis"
 
 """
+import logging
 from typing import Union
 
 from cros.factory.test import device_data
@@ -40,6 +41,9 @@ from cros.factory.test.i18n import _
 from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
+from cros.factory.utils.arg_utils import Arg
+
+from cros.factory.external.chromeos_cli.gsctool import GSCTool
 
 
 def IsInconsistentResponse(existing_data: Union[None, bool], response: bool):
@@ -49,6 +53,9 @@ def IsInconsistentResponse(existing_data: Union[None, bool], response: bool):
 
 class VerifyBrandedChassis(test_case.TestCase):
   """Factory Test for verifying Branded Chassis"""
+
+  # This test should support RMA.
+  ARGS = [Arg('rma_mode', bool, 'Enable rma_mode.', default=False)]
 
   def setUp(self) -> None:
     self.feature_management = device_data.GetFeatureDeviceData()
@@ -62,6 +69,12 @@ class VerifyBrandedChassis(test_case.TestCase):
   def runTest(self):
     branded_chassis_data = self.feature_management.get(
         device_data_constants.NAME_CHASSIS_BRANDED, None)
+
+    if (self.args.rma_mode and GSCTool().IsGSCFeatureManagementFlagsLocked()):
+      branded_chassis_data = GSCTool().GetFeatureManagementFlags(
+      ).is_chassis_branded
+      logging.info('Chassis branded already set in GSC as %s.',
+                   branded_chassis_data)
 
     self.ShowPrompt()
     key = self.ui.WaitKeysOnce(['Y', 'N'], 20)

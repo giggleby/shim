@@ -56,8 +56,8 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils.type_utils import Error
 
+from cros.factory.external.chromeos_cli import gsctool
 from cros.factory.external.chromeos_cli import vpd
-
 
 # TODO(tammo): Replace calls to sys.exit with raise Exit, and maybe
 # treat that specially (as a smoot exit, as opposed to the more
@@ -676,7 +676,10 @@ def WipeInit(options):
       options.test_umount)
 
 
-@Command('verify_feature_management_flags', *GetGooftool.__args__)
+@Command(
+    'verify_feature_management_flags',
+    _factory_process_cmd_arg,  # this
+    *GetGooftool.__args__)
 def VerifyFeatureManagementFlags(options):
   """Verify the flags for feature managements.
 
@@ -719,6 +722,18 @@ def VerifyFeatureManagementFlags(options):
                                            hwid_utils.ProbeProject().upper())
   hw_compliance_version_checker = checker.CheckFeatureComplianceVersion(
       identity)
+
+  # TODO(stevesu) We should refactor this function to a Verifier class to
+  # have better flow control and cleaner code.
+  rma_mode = options.factory_process == FactoryProcessEnum.RMA
+  if (rma_mode and gsctool.GSCTool().IsGSCFeatureManagementFlagsLocked()):
+    feature_flags = gsctool.GSCTool().GetFeatureManagementFlags()
+    # In RMA scene, when GSC feature flags already set, we let (False, 0)
+    # bypass compliance version verification for the checker part, as no
+    # matter it is actually (False, 0) or (False, n), we can always enable
+    # feature by soft-branding. Overwrite it with the one in GSC.
+    if feature_flags == gsctool.FeatureManagementFlags(False, 0):
+      hw_compliance_version_checker = feature_flags.hw_compliance_version
 
   if hw_compliance_version_device_data != hw_compliance_version_checker:
     raise Error(
