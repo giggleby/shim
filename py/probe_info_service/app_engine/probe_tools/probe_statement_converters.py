@@ -4,6 +4,7 @@
 
 import abc
 import collections
+import copy
 import itertools
 import re
 from typing import Any, Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple
@@ -362,10 +363,12 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
 
   def __init__(self, ps_generator: probe_config_types.ProbeStatementDefinition,
                probe_function_name: str,
-               probe_params: Optional[Sequence[_IProbeParamSpec]] = None):
+               probe_params: Optional[Sequence[_IProbeParamSpec]] = None,
+               probe_function_argument: Optional[Mapping[str, Any]] = None):
     self._ps_generator = ps_generator
     self._probe_func_def = self._ps_generator.probe_functions[
         probe_function_name]
+    self._probe_function_argument = probe_function_argument
     output_fields: Mapping[str, probe_config_types.OutputFieldDefinition] = {
         f.name: f
         for f in self._probe_func_def.output_fields
@@ -384,10 +387,12 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
   @classmethod
   def FromDefaultRuntimeProbeStatementGenerator(
       cls, runtime_probe_category_name: str, runtime_probe_func_name: str,
-      probe_params: Optional[Sequence[_IProbeParamSpec]] = None):
+      probe_params: Optional[Sequence[_IProbeParamSpec]] = None,
+      probe_function_argument: Optional[Mapping[str, Any]] = None):
     ps_generator = probe_config_definition.GetProbeStatementDefinition(
         runtime_probe_category_name)
-    return cls(ps_generator, runtime_probe_func_name, probe_params=probe_params)
+    return cls(ps_generator, runtime_probe_func_name, probe_params=probe_params,
+               probe_function_argument=probe_function_argument)
 
   @property
   def probe_params(self) -> Sequence[_IProbeStatementParam]:
@@ -443,7 +448,8 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
       try:
         ps = self._ps_generator.GenerateProbeStatement(
             comp_name_for_probe_statement, self._probe_func_def.name,
-            ps_expected_fields)
+            ps_expected_fields,
+            probe_function_argument=self._probe_function_argument)
       except Exception as e:
         return _ProbeInfoArtifact(
             _ProbeInfoParsedResult(
@@ -515,6 +521,27 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
     return expected_values_of_field, probe_param_errors
 
 
+def _AggregrateProbeInfoParsedResults(
+    sources: Sequence[_ProbeInfoParsedResult]) -> _ProbeInfoParsedResult:
+  aggregated_result = _ProbeInfoParsedResult(
+      general_error_msg=' '.join(
+          s.general_error_msg for s in sources if s.general_error_msg),
+      probe_parameter_errors=itertools.chain.from_iterable(
+          s.probe_parameter_errors for s in sources))
+
+  for error_result_type in (_ProbeInfoParsedResult.UNKNOWN_ERROR,
+                            _ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
+                            _ProbeInfoParsedResult.PROBE_PARAMETER_ERROR):
+    if any(s.result_type == error_result_type for s in sources):
+      aggregated_result.result_type = error_result_type
+      return aggregated_result
+  aggregated_result.result_type = (
+      _ProbeInfoParsedResult.UNKNOWN_ERROR if any(
+          s.result_type != _ProbeInfoParsedResult.PASSED for s in sources) else
+      _ProbeInfoParsedResult.PASSED)
+  return aggregated_result
+
+
 class _MultiProbeFuncConverter(_IProbeStatementConverter):
   """Converts a probe info into multiple component probe statements.
 
@@ -543,33 +570,12 @@ class _MultiProbeFuncConverter(_IProbeStatementConverter):
           sub_converter.GenerateDefinition().parameter_definitions)
     return ret
 
-  def _AggregrateProbeInfoParsedResults(
-      self,
-      sources: Sequence[_ProbeInfoParsedResult]) -> _ProbeInfoParsedResult:
-    aggregated_result = _ProbeInfoParsedResult(
-        general_error_msg=' '.join(
-            s.general_error_msg for s in sources if s.general_error_msg),
-        probe_parameter_errors=itertools.chain.from_iterable(
-            s.probe_parameter_errors for s in sources))
-
-    for error_result_type in (_ProbeInfoParsedResult.UNKNOWN_ERROR,
-                              _ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
-                              _ProbeInfoParsedResult.PROBE_PARAMETER_ERROR):
-      if any(s.result_type == error_result_type for s in sources):
-        aggregated_result.result_type = error_result_type
-        return aggregated_result
-    aggregated_result.result_type = (
-        _ProbeInfoParsedResult.UNKNOWN_ERROR if any(
-            s.result_type != _ProbeInfoParsedResult.PASSED for s in sources)
-        else _ProbeInfoParsedResult.PASSED)
-    return aggregated_result
-
-  def ParseProbeParams(
-      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
-      allow_missing_params: bool, comp_name_for_probe_statement=None
+  def ParseProbeParamInputs(
+      self, probe_param_inputs: Mapping[str, Sequence[_ProbeParamInput]],
+      allow_missing_params: bool, comp_name_for_probe_statement: Optional[str]
   ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
-    """See base class."""
-    remaining_probe_param_inputs = _ToProbeParamInputs(probe_params)
+    """See `ParseProbeParams()` for more details."""
+    remaining_probe_param_inputs = copy.deepcopy(probe_param_inputs)
 
     sub_probe_info_artifacts = []
     for sub_converter_name, sub_converter in self._sub_converters.items():
@@ -596,7 +602,7 @@ class _MultiProbeFuncConverter(_IProbeStatementConverter):
               result_type=_ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
               general_error_msg=error_msg))
 
-    aggregated_parsed_result = self._AggregrateProbeInfoParsedResults(
+    aggregated_parsed_result = _AggregrateProbeInfoParsedResults(
         all_parsed_results)
     if (aggregated_parsed_result.result_type != _ProbeInfoParsedResult.PASSED or
         not comp_name_for_probe_statement):
@@ -607,6 +613,15 @@ class _MultiProbeFuncConverter(_IProbeStatementConverter):
         list(
             itertools.chain.from_iterable(
                 a.output for a in sub_probe_info_artifacts)))
+
+  def ParseProbeParams(
+      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
+      allow_missing_params: bool, comp_name_for_probe_statement=None
+  ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
+    """See base class."""
+    return self.ParseProbeParamInputs(
+        _ToProbeParamInputs(probe_params), allow_missing_params,
+        comp_name_for_probe_statement=comp_name_for_probe_statement)
 
 
 def _RemoveHexPrefixAndCapitalize(value: str) -> str:
@@ -674,6 +689,116 @@ def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
       sub_converters)
 
 
+_MMC_BASIC_PARAMS = (
+    _ProbeFunctionParam(
+        'mmc_manfid', value_converter=_ParamValueConverter(
+            'string', _RemoveHexPrefixAndCapitalize)),
+    _ProbeFunctionParam(
+        'mmc_name', value_converter=_ParamValueConverter(
+            'string', lambda hex_with_prefix: bytes.fromhex(hex_with_prefix[2:])
+            .decode('ascii'))),
+)
+
+
+class MMCWithBridgeProbeStatementConverter(_IProbeStatementConverter):
+
+  _NAME = 'emmc_pcie_assembly.generic'
+  _DESCRIPTION = (
+      'The probe statement converter for eMMC + eMMC-PCIe bridge assemblies.')
+  _NVME_MODEL = 'nvme_model'
+
+  _INVISIBLE_EMMC_TAG = '(to_be_removed)'
+
+  def __init__(self):
+
+    def _BuildPCIeParam(param_name, probe_statement_param_name):
+      return _ProbeFunctionParam(
+          param_name, value_converter=_ParamValueConverter(
+              'string', _RemoveHexPrefixAndCapitalize),
+          probe_statement_param_name=probe_statement_param_name)
+
+    emmc_converter = (
+        _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+            'storage', 'mmc_storage', _MMC_BASIC_PARAMS))
+    mmc_host_converter = (
+        _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+            'mmc_host', 'mmc_host', [
+                _BuildPCIeParam('bridge_pcie_vendor', 'vendor'),
+                _BuildPCIeParam('bridge_pcie_device', 'device'),
+                _BuildPCIeParam('bridge_pcie_class', 'class'),
+            ], probe_function_argument={'is_emmc_attached': True}))
+    nvme_converter = (
+        _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+            'storage', 'nvme_storage', [
+                _BuildPCIeParam('bridge_pcie_vendor', 'pci_vendor'),
+                _BuildPCIeParam('bridge_pcie_device', 'pci_device'),
+                _BuildPCIeParam('bridge_pcie_class', 'pci_class'),
+                _ProbeFunctionParam(self._NVME_MODEL),
+            ]))
+    self._emmc_and_host_converter = _MultiProbeFuncConverter(
+        self._NAME, self._DESCRIPTION, {
+            'storage': emmc_converter,
+            'bridge': mmc_host_converter,
+        })
+    self._invisible_emmc_and_nvme_converter = _MultiProbeFuncConverter(
+        self._NAME, self._DESCRIPTION, {
+            self._INVISIBLE_EMMC_TAG: emmc_converter,
+            'assembly': nvme_converter,
+        })
+
+  def GetName(self) -> str:
+    """See base class."""
+    return self._NAME
+
+  def GenerateDefinition(self) -> probe_info_analytics.ProbeFunctionDefinition:
+    """See base class."""
+    ret = probe_info_analytics.ProbeFunctionDefinition(
+        name=self._NAME, description=self._DESCRIPTION)
+    appended_param_names = set()
+    for p in self._emmc_and_host_converter.GenerateDefinition(
+    ).parameter_definitions:
+      ret.parameter_definitions.append(p)
+      appended_param_names.add(p.name)
+    for p in self._invisible_emmc_and_nvme_converter.GenerateDefinition(
+    ).parameter_definitions:
+      if p.name in appended_param_names:
+        continue
+      ret.parameter_definitions.append(p)
+      ret.parameter_definitions[-1].description += (
+          ' (if the bridge component contains a NVMe controller)')
+    return ret
+
+  def ParseProbeParams(
+      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
+      allow_missing_params: bool, comp_name_for_probe_statement=None
+  ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
+    """See base class."""
+    probe_param_inputs = _ToProbeParamInputs(probe_params)
+
+    # Treat "empty NVMe model string" as not exist.
+    nvme_model_params = probe_param_inputs.pop(self._NVME_MODEL, [])
+    for nvme_model_param in nvme_model_params:
+      if (nvme_model_param.raw_value.WhichOneof('value') != 'string_value' or
+          nvme_model_param.raw_value.string_value):
+        probe_param_inputs[self._NVME_MODEL].append(nvme_model_param)
+
+    if self._NVME_MODEL not in probe_param_inputs:
+      return self._emmc_and_host_converter.ParseProbeParamInputs(
+          probe_param_inputs, allow_missing_params,
+          comp_name_for_probe_statement=comp_name_for_probe_statement)
+
+    result = self._invisible_emmc_and_nvme_converter.ParseProbeParamInputs(
+        probe_param_inputs, allow_missing_params,
+        comp_name_for_probe_statement=comp_name_for_probe_statement)
+    if not result.output:
+      return result
+    return _ProbeInfoArtifact(result.probe_info_parsed_result, [
+        cps for cps in result.output
+        if self._INVISIBLE_EMMC_TAG not in cps.component_name
+    ])
+
+
+
 def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
   # TODO(yhong): Separate the data piece out the code logic.
   return [
@@ -738,13 +863,7 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'storage', 'mmc_storage', [
-              _ProbeFunctionParam(
-                  'mmc_manfid', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndCapitalize)),
-              _ProbeFunctionParam(
-                  'mmc_name', value_converter=_ParamValueConverter(
-                      'string', lambda hex_with_prefix: bytes.fromhex(
-                          hex_with_prefix[2:]).decode('ascii'))),
+              *_MMC_BASIC_PARAMS,
               _ProbeFunctionParam(
                   'mmc_prv', value_converter=_ParamValueConverter(
                       'string', _RemoveHexPrefixAndCapitalize)),
@@ -775,4 +894,5 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
           ]),
       _BuildCPUProbeStatementConverter(),
       BuildTouchscreenModuleConverter(),
+      MMCWithBridgeProbeStatementConverter(),
   ]

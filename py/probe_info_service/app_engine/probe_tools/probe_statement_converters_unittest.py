@@ -159,5 +159,124 @@ class TouchscreenModuleConverterTest(unittest.TestCase):
     self.assertCountEqual(actual.output, expected_probe_statements)
 
 
+class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = ps_converters.MMCWithBridgeProbeStatementConverter()
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    converter_description = (
+        'The probe statement converter for eMMC + eMMC-PCIe bridge assemblies.')
+    nvme_model_param_description = (
+        'NVMe model name. (if the bridge component contains a NVMe controller)')
+    expect = text_format.Parse(
+        f'''
+        name: "emmc_pcie_assembly.generic"
+        description: "{converter_description}"
+        parameter_definitions {{
+          name: "mmc_manfid"
+          description: "Manufacturer ID (MID) in CID register."
+          value_type: STRING
+        }}
+        parameter_definitions {{
+          name: "mmc_name"
+          description: "Product name (PNM) in CID register."
+          value_type: STRING
+        }}
+        parameter_definitions {{
+          name: "bridge_pcie_vendor"
+          description: "PCIe vendor ID"
+          value_type: STRING
+        }}
+        parameter_definitions {{
+          name: "bridge_pcie_device"
+          description: "PCIe device ID"
+          value_type: STRING
+        }}
+        parameter_definitions {{
+          name: "bridge_pcie_class"
+          description: "PCIe class code"
+          value_type: STRING
+        }}
+        parameter_definitions {{
+          name: "nvme_model"
+          description: "{nvme_model_param_description}"
+          value_type: STRING
+        }}''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateMMCAndMMCHostProbeStatements(self):
+    probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1a'),
+        _CreateStrProbeParam('mmc_name', '0x656565656565'),
+        _CreateStrProbeParam('bridge_pcie_vendor', '0xab12'),
+        _CreateStrProbeParam('bridge_pcie_device', '0xcd34'),
+        _CreateStrProbeParam('bridge_pcie_class', '0x010809'),
+        _CreateStrProbeParam('nvme_model', ''),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name-storage', {
+                'eval': {
+                    'mmc_storage': {}
+                },
+                'expect': {
+                    'mmc_manfid': [True, 'hex', '!eq 0x1A'],
+                    'mmc_name': [True, 'str', '!eq eeeeee']
+                }
+            }),
+        probe_config_types.ComponentProbeStatement(
+            'mmc_host', 'comp_name-bridge', {
+                'eval': {
+                    'mmc_host': {
+                        'is_emmc_attached': True,
+                    }
+                },
+                'expect': {
+                    'vendor': [True, 'hex', '!eq 0xAB12'],
+                    'device': [True, 'hex', '!eq 0xCD34'],
+                    'class': [True, 'hex', '!eq 0x010809'],
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_CanGenerateNVMeProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1a'),
+        _CreateStrProbeParam('mmc_name', '0x656565656565'),
+        _CreateStrProbeParam('bridge_pcie_vendor', '0xab12'),
+        _CreateStrProbeParam('bridge_pcie_device', '0xcd34'),
+        _CreateStrProbeParam('bridge_pcie_class', '0x010809'),
+        _CreateStrProbeParam('nvme_model', 'the_model_with_eeeeee'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name-assembly', {
+                'eval': {
+                    'nvme_storage': {}
+                },
+                'expect': {
+                    'nvme_model': [True, 'str', '!eq the_model_with_eeeeee'],
+                    'pci_vendor': [True, 'hex', '!eq 0xAB12'],
+                    'pci_device': [True, 'hex', '!eq 0xCD34'],
+                    'pci_class': [True, 'hex', '!eq 0x010809'],
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+
 if __name__ == '__main__':
   unittest.main()

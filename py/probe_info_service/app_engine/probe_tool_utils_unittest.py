@@ -66,6 +66,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
         'raw_probe_statement',
         'cpu.generic_cpu',
         'touchscreen_module.generic_input_device_and_edid',
+        'emmc_pcie_assembly.generic',
     ])
 
   def testValidateProbeInfo_InvalidProbeFunction(self):

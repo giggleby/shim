@@ -99,6 +99,15 @@ def _GetAllProbeStatementDefinitions():
                             probe_function_names=probe_function_names)
   probe_statement_definitions['storage'] = builder.Build()
 
+  # Create mmc_host builder
+  builder = probe_config_types.ProbeStatementDefinitionBuilder('mmc_host')
+  builder.AddProbeFunction('mmc_host',
+                           'The probe function for MMC host components.')
+  builder.AddHexOutputField('vendor', 'PCIe vendor ID', num_value_digits=4)
+  builder.AddHexOutputField('device', 'PCIe device ID', num_value_digits=4)
+  builder.AddHexOutputField('class', 'PCIe class code', num_value_digits=6)
+  probe_statement_definitions['mmc_host'] = builder.Build()
+
   # Create network builder
   for network_type in ['cellular', 'ethernet', 'wireless']:
     builder = probe_config_types.ProbeStatementDefinitionBuilder(network_type)
