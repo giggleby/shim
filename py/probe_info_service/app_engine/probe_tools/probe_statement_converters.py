@@ -122,30 +122,33 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
   for `_ConcatProbeStatementParam`.
   """
 
-  def __init__(self, name: str, description: str,
+  def __init__(self, param_name: str, description: str,
                value_converter: _ParamValueConverter,
+               probe_statement_param_name: Optional[str] = None,
                ps_gen_checker: Optional[Callable] = None):
-    self._name = name
+    probe_statement_param_name = probe_statement_param_name or param_name
+    self._param_name = param_name
     self._description = description
     self._value_converter = value_converter
     self._ps_gen_checker = ps_gen_checker
     self._is_informational = ps_gen_checker is None
+    self._probe_statement_param_name = probe_statement_param_name
 
   @property
   def probe_info_param_definitions(
       self) -> Mapping[str, _ProbeParameterDefinition]:
     """See base class."""
     definition = _ProbeParameterDefinition(
-        name=self._name, description=self._description,
+        name=self._param_name, description=self._description,
         value_type=self._value_converter.value_type)
     return {
-        self._name: definition
+        self._param_name: definition
     }
 
   @property
   def probe_statement_param_name(self) -> Optional[str]:
     """See base class."""
-    return None if self._is_informational else self._name
+    return None if self._is_informational else self._probe_statement_param_name
 
   def ConvertValues(
       self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
@@ -153,7 +156,7 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
     """See base class."""
     converted_values = []
     suggestions = []
-    for probe_parameter in probe_parameters.get(self._name, []):
+    for probe_parameter in probe_parameters.get(self._param_name, []):
       try:
         value = self._value_converter.ConvertValue(probe_parameter.raw_value)
         if not self._is_informational:
@@ -163,7 +166,7 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
         converted_values.append(value)
       except _IncompatibleError as e:
         raise _IncompatibleError(
-            f'Got improper probe parameter {self._name!r}: '
+            f'Got improper probe parameter {self._param_name!r}: '
             f'{e}.') from e
       except (TypeError, ValueError) as e:
         suggestions.append(
@@ -273,21 +276,24 @@ class _ProbeFunctionParam(_IProbeParamSpec):
   }
 
   def __init__(self, param_name: str, description: Optional[str] = None,
-               value_converter: Optional[_ParamValueConverter] = None):
+               value_converter: Optional[_ParamValueConverter] = None,
+               probe_statement_param_name: Optional[str] = None):
     self._param_name = param_name
     self._description = description
     self._value_converter = value_converter
+    self._probe_statement_param_name = probe_statement_param_name or param_name
 
   def BuildProbeStatementParam(
       self,
       output_fields: Mapping[str, probe_config_types.OutputFieldDefinition],
   ) -> _IProbeStatementParam:
     """See base class."""
-    output_field = output_fields[self._param_name]
+    output_field = output_fields[self._probe_statement_param_name]
     return _SingleProbeStatementParam(
         self._param_name, self._description or output_field.description,
         (self._value_converter or
          self._DEFAULT_VALUE_TYPE_MAPPING[output_field.value_type]),
+        self._probe_statement_param_name,
         output_field.probe_statement_generator)
 
 
@@ -305,9 +311,11 @@ class _InformationalParam(_IProbeParamSpec):
   ) -> _IProbeStatementParam:
     """See base class."""
     del output_fields
+    probe_statement_param_name = None
     ps_gen_checker = None
-    return _SingleProbeStatementParam(self._param_name, self._description,
-                                      self._value_converter, ps_gen_checker)
+    return _SingleProbeStatementParam(
+        self._param_name, self._description, self._value_converter,
+        probe_statement_param_name, ps_gen_checker)
 
 
 class _ConcatParam(_IProbeParamSpec):
