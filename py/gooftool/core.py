@@ -28,8 +28,8 @@ from cros.factory.gooftool import vpd_data
 from cros.factory.gooftool import wipe
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
-from cros.factory.test import device_data
 from cros.factory.probe.functions import flash_chip
+from cros.factory.test import device_data
 from cros.factory.test.l10n import regions
 from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
@@ -1678,7 +1678,9 @@ class Gooftool:
 
     # Setting the feature management flags to GSC is a write-once operation,
     # so we should set these flags right before Cr50SetBoardId.
-    self.Cr50SetFeatureManagementFlags()
+    if (not rma_mode or
+        not gsctool_module.GSCTool().IsGSCFeatureManagementFlagsLocked()):
+      self.Cr50SetFeatureManagementFlags()
 
     if not rma_mode:
       self.Cr50SetBoardId(

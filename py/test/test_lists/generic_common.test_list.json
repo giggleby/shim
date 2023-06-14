@@ -245,7 +245,10 @@
       }
     },
     "BrandedChassis": {
-      "pytest_name": "branded_chassis"
+      "pytest_name": "branded_chassis",
+      "args": {
+        "rma_mode": "eval! constants.factory_process == 'RMA'"
+      }
     },
     "Button": {
       "pytest_name": "button",
