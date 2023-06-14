@@ -212,6 +212,9 @@ class Finalize(test_case.TestCase):
           'shimless RMA. SET "MLB" if the MLB is produced for RMA or LOEM '
           'project. SET "ASSEMBLED" if the DUT is full assembled and ready to '
           'enter shipping mode.', default=FinalizeMode.ASSEMBLED),
+      Arg('skip_feature_tiering_steps', bool,
+          'Set as True to skip feature flag provisions for legacy projects.',
+          default=False)
   ]
 
   FINALIZE_TIMEOUT = 180
@@ -426,6 +429,8 @@ class Finalize(test_case.TestCase):
       command += f' --project {self.args.project}'
     command += f' --phase "{phase.GetPhase()}"'
     command += f' --factory_process {self.args.factory_process}'
+    if self.args.skip_feature_tiering_steps:
+      command += ' --skip_feature_tiering_steps'
 
     return command
 

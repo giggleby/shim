@@ -17,7 +17,8 @@
       "secure_wipe": true,
       "is_reference_board": false,
       "project": null,
-      "wpsr": ""
+      "wpsr": "",
+      "skip_feature_tiering_steps": false
     }
   },
   "definitions": {
@@ -64,7 +65,8 @@
         "is_reference_board": "eval! constants.grt.is_reference_board",
         "project": "eval! constants.grt.project",
         "wpsr": "eval! constants.grt.wpsr",
-        "mode": "ASSEMBLED"
+        "mode": "ASSEMBLED",
+        "skip_feature_tiering_steps": "eval! constants.grt.skip_feature_tiering_steps"
       }
     },
     "GRTItems": {

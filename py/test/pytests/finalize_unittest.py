@@ -43,6 +43,7 @@ class DefaultArgs:
     self.wpsr = ''
     self.mode = FinalizeMode.ASSEMBLED
     self.enforced_release_channels = None
+    self.skip_feature_tiering_steps = False
 
 
 class FinalizeUnittest(unittest.TestCase):
