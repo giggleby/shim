@@ -36,6 +36,8 @@ from cros.factory.test import device_data
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 
+from cros.factory.external.chromeos_cli.gsctool import GSCTool
+
 
 class FeatureComplianceVersionTest(test_case.TestCase):
   """Factory test for verifying feature compliance version."""
@@ -77,6 +79,36 @@ class FeatureComplianceVersionTest(test_case.TestCase):
     logging.info(identity)
     return identity
 
+  def CheckFeatureComplianceForRMACr50Locked(self,
+                                             checker_hw_compliance_version):
+    """Specific test flow used for RMA when Feature Flags already fixed in GSC.
+
+    For GSC (True/False, n) case, the hw_compliance_version in GSC should be
+    the same as the one calculated from checker. But for GSC (False, 0), as
+    the feature can always be enabled with soft-branding mechanism, we
+    should bypass checking it to reduce the effort of possible GSC reworks.
+
+    Args:
+      `checker_hw_compliance_version`: HW compliance version calculated.
+    """
+
+    logging.info('RMA case for feature compliance check.')
+    feature_flags = GSCTool().GetFeatureManagementFlags()
+    if (feature_flags.hw_compliance_version >
+        feature_compliance.FEATURE_INCOMPLIANT_VERSION):
+      self.assertEqual(
+          checker_hw_compliance_version, feature_flags.hw_compliance_version,
+          'The hw_compliance_version calculated from checker '
+          f'({checker_hw_compliance_version}) differs from the '
+          f'one in GSC ({feature_flags.hw_compliance_version}). '
+          f'GSC feature flags are set as ({feature_flags.is_chassis_branded}, '
+          f'{feature_flags.hw_compliance_version}) now. '
+          'If the GSC configuration matches target RMA scene, please '
+          'check if the installed components match feature requirements. '
+          'Otherwise, it is possible that GSC/MLB might need a rework here.')
+
+    device_data.SetHWComplianceVersionData(feature_flags.hw_compliance_version)
+
   def runTest(self) -> None:
 
     branded_chassis_device_data = device_data.GetDeviceData(
@@ -103,4 +135,8 @@ class FeatureComplianceVersionTest(test_case.TestCase):
       self.assertGreaterEqual(checker_hw_compliance_version,
                               feature_compliance.FEATURE_INCOMPLIANT_VERSION)
 
-    device_data.SetHWComplianceVersionData(checker_hw_compliance_version)
+    # Add further checks for RMA but the above asserts should always be True.
+    if (self.args.rma_mode and GSCTool().IsGSCFeatureManagementFlagsLocked()):
+      self.CheckFeatureComplianceForRMACr50Locked(checker_hw_compliance_version)
+    else:
+      device_data.SetHWComplianceVersionData(checker_hw_compliance_version)
