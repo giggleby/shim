@@ -132,14 +132,15 @@ Each identifier must start with either ``xkb:`` or ``m17n:`` or
 
 - ``xkb:...``: XKB input methods listed in any file in JSON files in
   the Chromium `src/chrome/browser/resources/chromeos/input_method
-  <http://goo.gl/z4JGvK>`_ directory. (Look for the ``id`` attributes
-  of each ``input_components`` list entry.)  For example, you will
-  find ``xkb:us::eng`` in `google_xkb_manifest.json
-  <http://goo.gl/jBtjIV>`_.
+  <https://source.chromium.org/chromium/chromium/src/+/main:chrome/browser/resources/chromeos/input_method/>`_
+  directory. (Look for the ``id`` attributes of each ``input_components`` list
+  entry.)  For example, you will find ``xkb:us::eng`` in `google_xkb_manifest.json
+  <https://source.chromium.org/chromium/chromium/src/+/main:chrome/browser/resources/chromeos/input_method/google_xkb_manifest.json>`_.
 
 - ``ime:...``: (M38+ only) Any hard-coded strings listed in
   ``kEngineIdMigrationMap`` in Chromium's `input_method_util.cc
-  <http://goo.gl/cDO53r>`_. Currently this is:
+  <https://source.chromium.org/chromium/chromium/src/+/main:ui/base/ime/ash/input_method_util.cc>`_.
+  Currently this is:
 
     - ``ime:zh-t:quick``
     - ``ime:zh-t:pinyin`` (not yet supported as of this writing, but
@@ -174,7 +175,7 @@ time zone default.
 This must be a `tz database time zone
 <http://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_
 identifier (e.g., ``America/Los_Angeles``). See `timezone_settings.cc
-<http://goo.gl/WSVUeE>`_ for supported time zones.
+<https://source.chromium.org/chromium/chromium/src/+/main:chromeos/ash/components/settings/timezone_settings.cc>`_ for supported time zones.
 
 There is no hard-and-fast rule for selecting the time zone, but as a
 rule of thumb, you can choose the city representing the time zone in
@@ -185,7 +186,7 @@ the region with the largest population.
 Language codes
 ~~~~~~~~~~~~~~
 The ``language_codes`` field  is a list of language codes. See the
-``kAcceptLanguageList`` array in `l10n_util.cc <http://goo.gl/kVkht>`_
+``kAcceptLanguageList`` array in `l10n_util.cc <https://source.chromium.org/chromium/chromium/src/+/main:ui/base/l10n/l10n_util.cc>`_
 for supported languages.
 
 Keyboard mechanical layout

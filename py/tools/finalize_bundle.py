@@ -293,7 +293,8 @@ class FinalizeBundle:
       logging.error(str(e))
       raise FinalizeBundleException(
           'Invalid manifest content. '
-          'Please refer to setup/BUNDLE.md (https://goo.gl/pM1pxo)') from None
+          'Please refer to setup/BUNDLE.md (https://chromium.googlesource.com/chromiumos/platform/factory/+/main/setup/BUNDLE.md)'
+      ) from None
 
     self.build_board = cros_board_utils.BuildBoard(self.manifest['board'])
     self.board = self.build_board.full_name
@@ -1671,7 +1672,9 @@ class FinalizeBundle:
       manifest = yaml.safe_load(file_utils.ReadFile(manifest_path))
     except Exception:
       logging.exception('Failed to load manifest: %s', manifest_path)
-      logging.error('Please refer to setup/BUNDLE.md (https://goo.gl/pM1pxo)')
+      logging.error(
+          'Please refer to setup/BUNDLE.md (https://chromium.googlesource.com/chromiumos/platform/factory/+/main/setup/BUNDLE.md)'
+      )
       raise
     work_dir = args.dir or os.path.dirname(os.path.realpath(manifest_path))
     return cls(manifest, work_dir, args.download, args.archive,

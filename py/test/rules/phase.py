@@ -51,8 +51,8 @@ class Phase(enum.Enum, metaclass=PhaseEnumMeta):
   - DVT = second build with plastics
   - PVT_DOGFOOD = production of salable units, except that write protection
     may be disabled.  These are suitable for internal "dogfood" testing
-    (http://goo.gl/iU8vlW), but non-write-protected devices may not actually
-    be sold.
+    (https://en.wikipedia.org/wiki/Eating_your_own_dog_food), but
+    non-write-protected devices may not actually be sold.
   - PVT = production of salable units
   """
   PROTO = 0

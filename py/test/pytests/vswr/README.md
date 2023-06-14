@@ -62,8 +62,8 @@ This test measures VSWR value using an Agilent E5071C Network Analyzer (ENA).
    ```
    Change `/dev/sdx` to your USB stick path.
 4. Plug the USB stick into the testing host.
-5. On the host, make sure it's in [developer mode](https://goo.gl/J7YjwW), and
-   press `Ctrl+u` at the boot screen
+5. On the host, make sure it's in [developer mode](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_mode.md),
+   and press `Ctrl+u` at the boot screen
 6. Wait for it to boot, when finished, press `Ctrl+Alt+F2` to enter VT2. Type:
    ```shell
    chromeos-install --yes && sync && reboot

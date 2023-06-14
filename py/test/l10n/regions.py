@@ -92,14 +92,15 @@ class Region:
   """A `tz database time zone
   <http://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_
   identifier (e.g., ``America/Los_Angeles``). See
-  `timezone_settings.cc <http://goo.gl/WSVUeE>`_ for supported time
-  zones.
+  `timezone_settings.cc <https://source.chromium.org/chromium/chromium/src/+/main:chromeos/ash/components/settings/timezone_settings.cc>`_
+  for supported time zones.
 
   This was used for legacy VPD ``initial_timezone`` value."""
 
   language_codes = None
   """A list of default language codes (e.g., ``en-US``); see
-  `l10n_util.cc <http://goo.gl/kVkht>`_ for supported languages.
+  `l10n_util.cc <https://source.chromium.org/chromium/chromium/src/+/main:ui/base/l10n/l10n_util.cc>`_
+  for supported languages.
 
   This was used for legacy VPD ``initial_locale`` value."""
 

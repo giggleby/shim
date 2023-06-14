@@ -11,7 +11,7 @@ CONFIG_FILE="${MYDIR}/../run_whale_servo"
 SHILL_BIN="/usr/bin/shill"
 DISABLED_BIN="${FACTORY_BASE}/sh/disabled.sh"
 
-# Based on Whale network topology: http://goo.gl/rrvT8C
+# Based on Whale network topology: go/whale-design-doc
 IP_ADDRESS="192.168.234.2"
 
 WHALE_SERVO_BIN="${FACTORY_BASE}/py/test/fixture/whale/host/whale_servo"
