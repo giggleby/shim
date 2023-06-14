@@ -16,7 +16,8 @@
       "re_sign_release_kernel": false,
       "secure_wipe": true,
       "is_reference_board": false,
-      "project": null
+      "project": null,
+      "skip_feature_tiering_steps": false
     }
   },
   "definitions": {
@@ -61,7 +62,8 @@
         "write_protection": "eval! constants.grt.force_write_protect or options.phase == 'PVT'",
         "cbi_eeprom_wp_status": "eval! 'Locked' if constants.grt.cbi_eeprom_wp_status != 'Absent' and options.phase == 'PVT' else constants.grt.cbi_eeprom_wp_status",
         "is_reference_board": "eval! constants.grt.is_reference_board",
-        "project": "eval! constants.grt.project"
+        "project": "eval! constants.grt.project",
+        "skip_feature_tiering_steps": "eval! constants.grt.skip_feature_tiering_steps"
       }
     },
     "GRTItems": {

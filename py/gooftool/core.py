@@ -1603,13 +1603,15 @@ class Gooftool:
     # So we only set Board ID flags for security issue.
     self._Cr50SetBoardId(two_stages=True, is_flags_only=True)
 
-  def Cr50WriteFlashInfo(self, enable_zero_touch=False,
-                         factory_process=FactoryProcessEnum.FULL):
+  def Cr50WriteFlashInfo(
+      self, enable_zero_touch=False, factory_process=FactoryProcessEnum.FULL,
+      skip_feature_tiering_steps=False):
     """Write full device info into cr50 flash.
 
     Args:
       enable_zero_touch: Will set SN-bits in cr50 if not in RMA center.
       factory_process: The process that a device/MLB is produced or assembled.
+      skip_feature_tiering_steps: Skip provisioning feature flags if True.
     """
 
     rma_mode = factory_process == FactoryProcessEnum.RMA
@@ -1624,10 +1626,13 @@ class Gooftool:
       # Ti50 uses different way to set/verify AP RO Hash.
       self._Cr50SetROHashForShipping()
 
+    skip_feature_tiering_steps |= (
+        rma_mode and
+        gsctool_module.GSCTool().IsGSCFeatureManagementFlagsLocked())
+
     # Setting the feature management flags to GSC is a write-once operation,
     # so we should set these flags right before Cr50SetBoardId.
-    if (not rma_mode or
-        not gsctool_module.GSCTool().IsGSCFeatureManagementFlagsLocked()):
+    if not skip_feature_tiering_steps:
       self.Cr50SetFeatureManagementFlags()
 
     if not rma_mode:

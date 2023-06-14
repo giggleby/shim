@@ -321,6 +321,9 @@ _is_reference_board_cmd_arg = CmdArg(
 _fast_cmd_arg = CmdArg('--fast', action='store_true',
                        help='use non-secure but faster wipe method.')
 
+_skip_feature_tiering_steps_cmd_arg = CmdArg(
+    '--skip_feature_tiering_steps', action='store_true', default=False,
+    help='Skip feature flag provisions for legacy project on features.')
 
 @Command('verify_dlc_images', *GetGooftool.__args__)
 def VerifyDLCImages(options):
@@ -583,12 +586,14 @@ def GenerateStableDeviceSecret(options):
     'cr50_write_flash_info',
     _enable_zero_touch_cmd_arg,  # this
     _factory_process_cmd_arg,  # this
+    _skip_feature_tiering_steps_cmd_arg,  # this
     *GetGooftool.__args__)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
   GetGooftool(options).Cr50WriteFlashInfo(
       enable_zero_touch=options.enable_zero_touch,
-      factory_process=options.factory_process)
+      factory_process=options.factory_process,
+      skip_feature_tiering_steps=options.skip_feature_tiering_steps)
   event_log.Log('cr50_write_flash_info')
 
 
@@ -673,6 +678,7 @@ def WipeInit(options):
 @Command(
     'verify_feature_management_flags',
     _factory_process_cmd_arg,  # this
+    _skip_feature_tiering_steps_cmd_arg,  # this
     *GetGooftool.__args__)
 def VerifyFeatureManagementFlags(options):
   """Verify the flags for feature managements.
@@ -684,6 +690,10 @@ def VerifyFeatureManagementFlags(options):
   2. hw_compliance_version computed from HWID string matches
      hw_compliance_version stored in device data.
   """
+
+  if options.skip_feature_tiering_steps:
+    logging.info('Legacy device, skip GRT.VerifyFeatureManagementFlags.')
+    return
 
   chassis_branded_device_data = device_data.GetDeviceData(
       device_data.KEY_FM_CHASSIS_BRANDED)

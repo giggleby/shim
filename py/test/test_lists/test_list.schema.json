@@ -439,6 +439,10 @@
             "project": {
               "type": ["string", "null"],
               "default": null
+            },
+            "skip_feature_tiering_steps": {
+              "type": "boolean",
+              "default": false
             }
           },
           "patternProperties": {
