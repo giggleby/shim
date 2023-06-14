@@ -807,6 +807,29 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/204729913)
   @label_utils.Informational
+  def testAddFirmwareComponent_NewCompClass_AppendNullAtZero(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddFirmwareComponent(
+          'ro_ec_firmware', {'version': 'version_string'}, 'firmware1')
+
+    db = db_builder.Build()
+
+    self.assertDictEqual(
+        {
+            0: {
+                'ro_ec_firmware': []
+            },
+            1: {
+                'ro_ec_firmware': ['firmware1']
+            },
+        }, db.GetEncodedField('ro_ec_firmware_field'))
+    self.assertIn(
+        database.PatternField('ro_ec_firmware_field', 1),
+        db.GetPattern().fields)
+
+  # TODO (b/204729913)
+  @label_utils.Informational
   def testAddFirmwareComponent_InitialDB_DontUpdatePattern(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_INITIAL_DATABASE_PATH) as db_builder:

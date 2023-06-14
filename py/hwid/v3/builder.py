@@ -374,8 +374,16 @@ class DatabaseBuilder:
                              comp_info.bundle_uuids)
         return
 
-    self.AddComponentCheck(comp_cls, value, comp_name, supported=supported)
     field_name = f'{comp_cls}_field'
+
+    # Append null comp for new firmware comp, otherwise the index 0 will be
+    # decoded by default and break the existing devices.
+    if (not self._database.is_initial and
+        comp_cls not in self._database.GetComponentClasses()):
+      self.AddNullComponent(comp_cls)
+      self.AppendEncodedFieldBit(field_name, 1)
+
+    self.AddComponentCheck(comp_cls, value, comp_name, supported=supported)
     if field_name not in self._database.encoded_fields:
       self.AddNewEncodedField(comp_cls, [comp_name])
     else:
