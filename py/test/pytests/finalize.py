@@ -206,6 +206,9 @@ class Finalize(test_case.TestCase):
           '"<sr_value1> <sr_mask1> <sr_value2> <sr_mask2> ...", '
           'e.g. "0x0f 0x0f 0x00 0xf0". The value will be deduced automatically'
           ' if not provided.', default=''),
+      Arg('skip_feature_tiering_steps', bool,
+          'Set as True to skip feature flag provisions for legacy projects.',
+          default=False)
   ]
 
   FINALIZE_TIMEOUT = 180
@@ -401,8 +404,10 @@ class Finalize(test_case.TestCase):
       phase.AssertStartingAtPhase(
           phase.PVT, self.args.project is None,
           'Should not use `project` option in this phase')
-      command += ' --project %s' % self.args.project
-    command += ' --phase "%s"' % phase.GetPhase()
+      command += f' --project {self.args.project}'
+    command += f' --phase "{phase.GetPhase()}"'
+    if self.args.skip_feature_tiering_steps:
+      command += ' --skip_feature_tiering_steps'
 
     self._FinalizeWipeInPlace(command)
 
