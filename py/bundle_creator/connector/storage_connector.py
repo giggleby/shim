@@ -134,11 +134,6 @@ class FactoryBundleStorageConnector(StorageConnector):
                       self._bucket_name)
     blob.upload_from_filename(bundle_path)
 
-    # Set read permission for the requester's email, the entity method creates a
-    # new acl entity and add it to the blob.
-    blob.acl.entity('user', bundle_metadata.email).grant_read()
-    blob.acl.save()
-
     created_timestamp_s = blob.time_created.timestamp()
     metadata = {
         'Bundle-Creator': bundle_metadata.email,

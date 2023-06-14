@@ -140,18 +140,6 @@ class FactoryBundleStorageConnectorTest(unittest.TestCase):
     self._mock_blob.upload_from_filename.assert_called_once_with(
         self._BUNDLE_PATH)
 
-  def testUploadCreatedBundle_verifyGrantUserReadPermission(self):
-    mock_acl_entity = mock.Mock()
-    self._mock_blob.acl.entity.return_value = mock_acl_entity
-
-    self._connector.UploadCreatedBundle(self._BUNDLE_PATH,
-                                        self._bundle_metadata)
-
-    self.assertEqual(self._mock_blob.acl.entity.call_args.args,
-                     ('user', 'foo@bar'))
-    mock_acl_entity.grant_read.assert_called_once()
-    self._mock_blob.acl.save.assert_called_once()
-
   def testUploadCreatedBundle_withoutFirmwareSource_verifyUpdateMetadata(self):
     created_timestamp = 1651939200
     self._mock_blob.time_created.timestamp.return_value = created_timestamp
