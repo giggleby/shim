@@ -15,7 +15,6 @@ _FAKE_INDEX = 'FAKE_INDEX'
 NOTHING = []
 INITIAL_DATA = [{}]
 
-
 # The registered function table mapping from the name to the function class.
 _function_map = {}
 _function_loaded = False  # Only load the function classes in 'functions/' once.
@@ -65,6 +64,10 @@ def LoadFunctions():
     if func_classes:
       logging.info('Load function: %s', module_name)
       RegisterFunction(module_name, func_classes[0][1])
+
+  from cros.factory.probe.lib import runtime_probe_function
+  for fun in runtime_probe_function.GetAllFunctions():
+    RegisterFunction(fun.FUNCTION_NAME, fun)
 
 
 def InterpretFunction(func_expression):

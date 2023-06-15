@@ -6,18 +6,38 @@ from cros.factory.probe.lib import probe_function
 from cros.factory.probe.runtime_probe import runtime_probe_adapter
 
 
-class RuntimeProbeFunction(probe_function.ProbeFunction):
-  """The base class of runtime probe functions.
+def CreateRuntimeProbeFunction(probe_function_name, args):
+  """Create a runtime probe function.
 
   While evaluation, the function proxies the argument to runtime probe and
-  return its result. Override the following fields to indicate the function to
-  call. See cros.factory.probe.runtime_probe.probe_config_definition for the
-  possible values.
-  """
-  FUNCTION_NAME = None
+  return its result.
 
-  def Probe(self):
-    if not self.FUNCTION_NAME:
-      raise NotImplementedError
-    return runtime_probe_adapter.RunProbeFunction(self.FUNCTION_NAME,
-                                                  self.args.ToDict())
+  Args:
+    probe_function_name: runtime probe function name to be called.
+    args: See cros.factory.probe.Function.ARGS.
+  Returns:
+    A class derived from probe_function.ProbeFunction to run the runtime probe
+    function.
+  """
+
+  class RuntimeProbeFunction(probe_function.ProbeFunction):
+    FUNCTION_NAME = probe_function_name
+    ARGS = args
+
+    def Probe(self):
+      return runtime_probe_adapter.RunProbeFunction(self.FUNCTION_NAME,
+                                                    self.args.ToDict())
+
+  return RuntimeProbeFunction
+
+
+def GetAllFunctions():
+  """Returns all runtime probe functions.
+  """
+  return [
+      CreateRuntimeProbeFunction('generic_battery', []),
+      CreateRuntimeProbeFunction('generic_camera', []),
+      CreateRuntimeProbeFunction('generic_storage', []),
+      CreateRuntimeProbeFunction('gpu', []),
+      CreateRuntimeProbeFunction('tcpc', []),
+  ]
