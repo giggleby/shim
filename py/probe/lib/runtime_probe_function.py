@@ -36,6 +36,7 @@ def GetAllFunctions():
   """Returns all runtime probe functions.
   """
   return [
+      CreateRuntimeProbeFunction('audio_codec', []),
       CreateRuntimeProbeFunction('generic_battery', []),
       CreateRuntimeProbeFunction('generic_camera', []),
       CreateRuntimeProbeFunction('generic_storage', []),
