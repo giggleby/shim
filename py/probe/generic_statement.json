@@ -162,5 +162,23 @@
     "generic": {
       "eval": "generic_network_device:wireless"
     }
+  },
+  "sdcard_reader": {
+    "generic": {
+      "eval": {
+        "mmc_host": {
+          "is_emmc_attached": false
+        }
+      }
+    }
+  },
+  "pci_storage_bridge": {
+    "generic": {
+      "eval": {
+        "mmc_host": {
+          "is_emmc_attached": true
+        }
+      }
+    }
   }
 }

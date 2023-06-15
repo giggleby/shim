@@ -4,6 +4,7 @@
 
 from cros.factory.probe.lib import probe_function
 from cros.factory.probe.runtime_probe import runtime_probe_adapter
+from cros.factory.utils import arg_utils
 
 
 def CreateRuntimeProbeFunction(probe_function_name, args):
@@ -39,5 +40,11 @@ def GetAllFunctions():
       CreateRuntimeProbeFunction('generic_camera', []),
       CreateRuntimeProbeFunction('generic_storage', []),
       CreateRuntimeProbeFunction('gpu', []),
+      CreateRuntimeProbeFunction('mmc_host', [
+          arg_utils.Arg(
+              'is_emmc_attached', bool,
+              'Only fetches the devices match the emmc attached state',
+              default=None),
+      ]),
       CreateRuntimeProbeFunction('tcpc', []),
   ]

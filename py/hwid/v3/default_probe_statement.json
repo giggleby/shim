@@ -344,5 +344,47 @@
         "subsystem_device"
       ]
     }
+  },
+  "sdcard_reader": {
+    "generic": {
+      "eval": {
+        "mmc_host": {
+          "is_emmc_attached": false
+        }
+      },
+      "keys": [
+        "bus_type",
+        "pci_vendor_id",
+        "pci_device_id",
+        "pci_revision",
+        "pci_subsystem",
+        "sdio_vendor_id",
+        "sdio_device_id",
+        "usb_vendor_id",
+        "usb_product_id",
+        "usb_bcd_device"
+      ]
+    }
+  },
+  "pci_storage_bridge": {
+    "generic": {
+      "eval": {
+        "mmc_host": {
+          "is_emmc_attached": true
+        }
+      },
+      "keys": [
+        "bus_type",
+        "pci_vendor_id",
+        "pci_device_id",
+        "pci_revision",
+        "pci_subsystem",
+        "sdio_vendor_id",
+        "sdio_device_id",
+        "usb_vendor_id",
+        "usb_product_id",
+        "usb_bcd_device"
+      ]
+    }
   }
 }
