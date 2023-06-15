@@ -15,7 +15,6 @@ from cros.factory.hwid.service.appengine import verification_payload_generator
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import common as hwid_common
 from cros.factory.hwid.v3 import database
-from cros.factory.hwid.v3 import rule as hwid_rule
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.utils import json_utils
 
@@ -42,77 +41,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
     cls._GenerateBatteryProbeStatement = staticmethod(
         GetProbeStatementGenerator('battery'))
 
-  def testTryGenerate_Integrated(self):
-    comp = database.ComponentInfo(
-        {
-            'chemistry': 'LION',
-            'manufacturer': 'foo',
-            'model_name': 'bar',
-        }, hwid_common.ComponentStatus.supported)
-    vp_piece = self._GenerateBatteryProbeStatement('battery', comp)
-    self.assertEqual(
-        vp_piece.probe_statement,
-        probe_config_types.ComponentProbeStatement(
-            'battery', 'battery', {
-                'eval': {
-                    'generic_battery': {}
-                },
-                'expect': {
-                    'chemistry': [False, 'str'],
-                    'manufacturer': [True, 'str', '!eq foo'],
-                    'model_name': [True, 'str', '!eq bar'],
-                }
-            }))
-
-  def testTryGenerate_Integrated_VendorSpecificChemistry(self):
-    comp = database.ComponentInfo(
-        {
-            'chemistry': 'OOI0',
-            'manufacturer': 'foo',
-            'model_name': 'bar',
-        }, hwid_common.ComponentStatus.supported)
-    vp_piece = self._GenerateBatteryProbeStatement('battery', comp)
-    self.assertEqual(
-        vp_piece.probe_statement,
-        probe_config_types.ComponentProbeStatement(
-            'battery', 'battery', {
-                'eval': {
-                    'generic_battery': {}
-                },
-                'expect': {
-                    'chemistry': [True, 'str', '!eq OOI0'],
-                    'manufacturer': [True, 'str', '!eq foo'],
-                    'model_name': [True, 'str', '!eq bar'],
-                }
-            }))
-
-  def testTryGenerate_Sysfs(self):
-    comp = database.ComponentInfo(
-        {
-            'manufacturer': 'foo-567',
-            'model_name': 'bar-567',
-            'technology': 'Li-ion'
-        }, hwid_common.ComponentStatus.supported)
-    vp_piece = self._GenerateBatteryProbeStatement('sysfs_battery', comp)
-    self.assertEqual(
-        vp_piece.probe_statement,
-        probe_config_types.ComponentProbeStatement(
-            'battery', 'sysfs_battery', {
-                'eval': {
-                    'generic_battery': {}
-                },
-                'expect': [{
-                    'manufacturer': [True, 'str', r'!re foo\-567.*'],
-                    'model_name': [True, 'str', r'!re bar\-567.*'],
-                    'technology': [True, 'str', '!eq Li-ion']
-                }, {
-                    'chemistry': [False, 'str'],
-                    'manufacturer': [True, 'str', '!eq foo-567'],
-                    'model_name': [True, 'str', '!eq bar-567'],
-                }]
-            }))
-
-  def testTryGenerate_Sysfs_ShortFields(self):
+  def testTryGenerate_CommonTechnology(self):
     comp = database.ComponentInfo(
         {
             'manufacturer': 'foo',
@@ -124,58 +53,6 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
         vp_piece.probe_statement,
         probe_config_types.ComponentProbeStatement(
             'battery', 'sysfs_battery', {
-                'eval': {
-                    'generic_battery': {}
-                },
-                'expect': [{
-                    'manufacturer': [True, 'str', r'!re foo(\s{4}.*)?'],
-                    'model_name': [True, 'str', r'!re bar(\s{4}.*)?'],
-                    'technology': [True, 'str', '!eq Li-ion']
-                }, {
-                    'chemistry': [False, 'str'],
-                    'manufacturer': [True, 'str', '!eq foo'],
-                    'model_name': [True, 'str', '!eq bar'],
-                }]
-            }))
-
-  def testTryGenerate_SysfsWithRegex(self):
-    comp = database.ComponentInfo(
-        {
-            'manufacturer': 'foo-567',
-            'model_name': hwid_rule.Value('bar.*', is_re=True),
-            'technology': 'Li-ion'
-        }, hwid_common.ComponentStatus.supported)
-    vp_piece = self._GenerateBatteryProbeStatement('sysfs_battery', comp)
-    self.assertEqual(
-        vp_piece.probe_statement,
-        probe_config_types.ComponentProbeStatement(
-            'battery', 'sysfs_battery', {
-                'eval': {
-                    'generic_battery': {}
-                },
-                'expect': [{
-                    'manufacturer': [True, 'str', r'!re foo\-567.*'],
-                    'model_name': [True, 'str', '!re bar.*'],
-                    'technology': [True, 'str', '!eq Li-ion']
-                }, {
-                    'chemistry': [False, 'str'],
-                    'manufacturer': [True, 'str', '!eq foo-567'],
-                    'model_name': [True, 'str', '!re bar.*']
-                }]
-            }))
-
-  def testTryGenerate_Ectool(self):
-    comp = database.ComponentInfo(
-        {
-            'manufacturer': 'foo',
-            'model_name': 'bar',
-            'technology': 'LION'
-        }, hwid_common.ComponentStatus.supported)
-    vp_piece = self._GenerateBatteryProbeStatement('ec_battery', comp)
-    self.assertEqual(
-        vp_piece.probe_statement,
-        probe_config_types.ComponentProbeStatement(
-            'battery', 'ec_battery', {
                 'eval': {
                     'generic_battery': {}
                 },
@@ -186,7 +63,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                 }
             }))
 
-  def testTryGenerate_Ectool_VendorSpecificTechnology(self):
+  def testTryGenerate_VendorSpecificTechnology(self):
     comp = database.ComponentInfo(
         {
             'manufacturer': 'foo',

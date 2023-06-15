@@ -7,7 +7,6 @@
 import abc
 import collections
 import hashlib
-import itertools
 import logging
 import re
 from typing import DefaultDict, Dict, List, Mapping, NamedTuple, Optional, Set, Union
@@ -28,9 +27,7 @@ from cros.factory.utils import type_utils
 
 BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH = 7
 BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH = 7
-COMMON_SYSFS_TECHNOLOGY = frozenset(['Li-ion', 'Li-poly'])
-COMMON_ECTOOL_CHEMISTRY = frozenset(['LION', 'LiP', 'LIP'])
-COMMON_HWID_TECHNOLOGY = COMMON_SYSFS_TECHNOLOGY | COMMON_ECTOOL_CHEMISTRY
+COMMON_HWID_TECHNOLOGY = frozenset(['Li-ion', 'Li-poly', 'LION', 'LiP', 'LIP'])
 
 
 class GenericProbeStatementInfoRecord:
@@ -156,21 +153,6 @@ class StrValueConverter(IValueConverter):
     return str(value)
 
 
-class TruncatedStrValueConverter(IValueConverter):
-
-  def __init__(self, truncated_length: int = 0):
-    self._truncated_length = truncated_length
-
-  def __call__(self, value):
-    if isinstance(value, hwid_rule.Value):
-      return re.compile(value.raw_value) if value.is_re else value.raw_value
-    space_count = self._truncated_length - len(value)
-    if space_count > 0:
-      # TODO: Use raw f-string once yapf supports it.
-      return re.compile(f'{re.escape(value)}(\\s{{{space_count}}}.*)?')
-    return re.compile(f'{re.escape(value)}.*')
-
-
 class IntValueConverter(IValueConverter):
 
   def __call__(self, value):
@@ -216,18 +198,6 @@ class FloatToHexValueConverter(IValueConverter):
   def __call__(self, value):
     value = f'{int(float(value)):04x}'
     return self._hex_to_hex_converter(value)
-
-
-class BatteryTechnologySysfsValueConverter(IValueConverter):
-  VALUE_ALLOWLIST = COMMON_SYSFS_TECHNOLOGY
-
-  def __init__(self):
-    self._str_converter = StrValueConverter()
-
-  def __call__(self, value):
-    if value in self.VALUE_ALLOWLIST:
-      return self._str_converter(value)
-    raise ValueError(f'Unknown battery technology {value}.')
 
 
 class InputDeviceVendorValueConverter(IValueConverter):
@@ -402,41 +372,12 @@ def GetAllProbeStatementGenerators():
   all_probe_statement_generators = {}
 
   all_probe_statement_generators['battery'] = [
-      _ProbeStatementGenerator(
-          'battery',
-          'generic_battery',
-          [
-              [
-                  _SameNameFieldRecord('chemistry', str_converter,
-                                       skip_values=COMMON_ECTOOL_CHEMISTRY),
-                  _SameNameFieldRecord('manufacturer', str_converter),
-                  _SameNameFieldRecord('model_name', str_converter),
-              ],
-              # Components from sysfs. Since the maximum length of the
-              # manufacturer field and the model_name field are both 7 and the
-              # trailing spaces will be truncated, we should fill the space if
-              # it is too short and do a prefix matching.
-              [
-                  _SameNameFieldRecord(
-                      'manufacturer',
-                      TruncatedStrValueConverter(
-                          BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH)),
-                  _SameNameFieldRecord(
-                      'model_name',
-                      TruncatedStrValueConverter(
-                          BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH)),
-                  _SameNameFieldRecord('technology',
-                                       BatteryTechnologySysfsValueConverter()),
-              ],
-              # Components from EC.
-              # For the chemistry field, keep only vendor-specific value.
-              [
-                  _SameNameFieldRecord('manufacturer', str_converter),
-                  _SameNameFieldRecord('model_name', str_converter),
-                  _FieldRecord('technology', 'chemistry', str_converter,
-                               skip_values=COMMON_HWID_TECHNOLOGY),
-              ]
-          ])
+      _ProbeStatementGenerator('battery', 'generic_battery', [
+          _SameNameFieldRecord('manufacturer', str_converter),
+          _SameNameFieldRecord('model_name', str_converter),
+          _FieldRecord('technology', 'chemistry', str_converter,
+                       is_optional=True, skip_values=COMMON_HWID_TECHNOLOGY),
+      ])
   ]
 
   storage_shared_fields = [_SameNameFieldRecord('sectors', int_converter)]
@@ -750,6 +691,63 @@ def GetAllComponentVerificationPayloadPieces(
     to know whether that component is covered by this verification payload
     generator.
   """
+
+  def _BatteryShouldApplyPrefixMatch(
+      target_comp_name: str,
+      batteries: Mapping[str, database.ComponentInfo]) -> bool:
+    """Check if we should apply a prefix match for the target battery.
+
+    Return False if any of the following is satisfied:
+    1. The target battery's `model_name` and `manufacturer` are prefixes of the
+        corresponding field values of a battery in `batteries` other than
+        itself, and at least one of the field values is different between the
+        two batteries.
+    2. The target battery's `model_name` or `manufacturer` is a regex value.
+    Otherwise, return True
+    """
+    target = batteries[target_comp_name].values
+    for field in ['model_name', 'manufacturer']:
+      # TODO(b/281479050): Also check regex in HWID database.
+      if not isinstance(target.get(field), str):
+        return False
+
+    for comp_name, comp_info in batteries.items():
+      if comp_name == target_comp_name:
+        continue
+
+      comp_vals = comp_info.values
+      is_identical = True
+      for field in ['model_name', 'manufacturer']:
+        target_val = target.get(field)
+        comp_val = comp_vals.get(field)
+        if comp_val != target_val:
+          is_identical = False
+        if not (isinstance(comp_val, str) and comp_val.startswith(target_val)):
+          break
+      else:
+        if not is_identical:
+          # The target battery's field values are prefixes of the field values
+          # of `comp_info` but not identical. Apply an exact match.
+          return False
+
+    return True
+
+  def _PreprocessComponents(hwid_comp_category: str,
+                            components: Mapping[str, database.ComponentInfo]):
+    for skip_comp_name in skip_comp_names:
+      components.pop(skip_comp_name, None)
+
+    if hwid_comp_category == 'battery':
+      for comp_name, comp_info in components.items():
+        if _BatteryShouldApplyPrefixMatch(comp_name, components):
+          new_comp_values = comp_info.values.copy()
+          for field in ['model_name', 'manufacturer']:
+            val = new_comp_values[field]
+            new_comp_values[field] = hwid_rule.Value(f'{val}.*', is_re=True)
+          new_comp_info = comp_info.Replace(values=new_comp_values)
+          components[comp_name] = new_comp_info
+
+  skip_comp_names = skip_comp_names or set()
   ret = {}
 
   model_prefix = db.project.lower()
@@ -759,9 +757,8 @@ def GetAllComponentVerificationPayloadPieces(
     if hwid_comp_category in vpg_config.waived_comp_categories:
       continue
     comps = db.GetComponents(hwid_comp_category, include_default=False)
+    _PreprocessComponents(hwid_comp_category, comps)
     for comp_name, comp_info in comps.items():
-      if skip_comp_names and comp_name in skip_comp_names:
-        continue
       unique_comp_name = model_prefix + '_' + comp_name
       vp_piece = GenerateProbeStatement(ps_gens, unique_comp_name, comp_info)
       if vp_piece is None:
@@ -878,99 +875,6 @@ def GenerateVerificationPayload(dbs):
 
       probe_config.AddComponentProbeStatement(vp_piece.probe_statement)
 
-  def _CheckShouldSkipBattery(battery_lhs: Mapping[str, str],
-                              battery_rhs: Mapping[str, str]):
-    """Check if we should skip generating probe statements for either
-    `battery_lhs` or `battery_rhs`.
-
-    Return True if the following are satisfied:
-    1. `model_name` and `manufacturer` of one battery are prefixes of the
-       corresponding field values of the other.
-    2. At least one of `model_name`, `manufacturer` and `technology` are
-       different between the two batteries.
-    3. At least one of the batteries' `technology` is Li-ion or Li-poly.
-    """
-
-    for field in ['model_name', 'manufacturer', 'technology']:
-      field_lhs = battery_lhs.get(field)
-      field_rhs = battery_rhs.get(field)
-      if field_lhs != field_rhs:
-        break
-    else:
-      # Return False on the special case that all fields are the same between
-      # two batteries.
-      return False
-
-    lhs_technology = battery_lhs.get('technology')
-    rhs_technology = battery_rhs.get('technology')
-    if not (lhs_technology in COMMON_SYSFS_TECHNOLOGY or
-            rhs_technology in COMMON_SYSFS_TECHNOLOGY):
-      return False
-
-    lhs_match = True
-    rhs_match = True
-
-    for field, min_length in [
-        ('model_name', BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH),
-        ('manufacturer', BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH)
-    ]:
-      field_lhs = battery_lhs.get(field)
-      field_rhs = battery_rhs.get(field)
-      if not (isinstance(field_lhs, str) and isinstance(field_rhs, str)):
-        return False
-
-      field_lhs = field_lhs.ljust(min_length)
-      field_rhs = field_rhs.ljust(min_length)
-
-      if not field_rhs.startswith(field_lhs):
-        lhs_match = False
-      if not field_lhs.startswith(field_rhs):
-        rhs_match = False
-
-    return lhs_match or rhs_match
-
-  def _CollectSkipCompNames(db: database.Database) -> Set[str]:
-    """Collect a set of component names for which we should skip generating
-    probe statements.
-
-    This function checks all components in `db` and collect those for which we
-    should skip generating probe statements. Currently it only checks battery
-    components.
-    """
-    skip_comp_names = set()
-
-    batteries = db.GetComponents('battery', include_default=False)
-
-    def BatteryKeyFunc(comp_name: str):
-      """Key function for deciding which battery to skip.
-
-      The battery with larger key returned by this function is going to be
-      skipped, in the order:
-      1. Qualification status.
-      2. Length of model_name (skip the longer one).
-      3. Length of manufacturer (skip the longer one).
-      4. Component name (skip the lexicographically larger one).
-      """
-      component = batteries[comp_name]
-      model_name = component.values['model_name']
-      manufacturer = component.values['manufacturer']
-      status = _STATUS_MAP.get(component.status)
-      qual = _QUAL_STATUS_PREFERENCE.get(status, 3)
-
-      return (qual, len(model_name), len(manufacturer), comp_name)
-
-    for comp_name_1, comp_name_2 in itertools.combinations(batteries, 2):
-      if comp_name_1 in skip_comp_names or comp_name_2 in skip_comp_names:
-        continue
-
-      comp_1 = batteries[comp_name_1].values
-      comp_2 = batteries[comp_name_2].values
-
-      if _CheckShouldSkipBattery(comp_1, comp_2):
-        skip_comp_names.add(max(comp_name_1, comp_name_2, key=BatteryKeyFunc))
-
-    return skip_comp_names
-
   error_msgs = []
   generated_file_contents = {}
 
@@ -983,13 +887,7 @@ def GenerateVerificationPayload(dbs):
     model_prefix = db.project.lower()
     probe_config = probe_config_types.ProbeConfigPayload()
 
-    skip_comp_names = _CollectSkipCompNames(db)
-    if skip_comp_names:
-      logging.info('Skip generating payload for components: %s',
-                   skip_comp_names)
-
-    all_pieces = GetAllComponentVerificationPayloadPieces(
-        db, vpg_config, skip_comp_names)
+    all_pieces = GetAllComponentVerificationPayloadPieces(db, vpg_config)
     grouped_comp_vp_piece = collections.defaultdict(list)
     grouped_primary_comp_name = {}
     grouped_merge_vp_piece = collections.defaultdict(list)

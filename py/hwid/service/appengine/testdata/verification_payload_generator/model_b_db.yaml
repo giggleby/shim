@@ -10,39 +10,57 @@ pattern:
   - image_ids: [0]
     encoding_scheme: base8192
     fields:
-    - battery: 2
+    - battery: 3
 
 encoded_fields:
   battery:
-    0: {battery: battery_small_supported}
-    1: {battery: battery_medium_supported}
-    2: {battery: battery_large_supported_tech_1}
-    3: {battery: battery_large_supported_tech_2}
+    0: {battery: battery_0_0}
+    1: {battery: battery_0_0#2}
+    2: {battery: battery_1_1}
+    3: {battery: battery_1_1#4}
+    4: {battery: battery_2_2}
+    5: {battery: battery_2_2#6}
 
 components:
   battery:
     items:
-      battery_small_supported:
-        values:
-          manufacturer: mfr
-          model_name: S
-          technology: Li-ion
-      battery_medium_supported:
+      # ===================================================================== #
+      battery_0_0:  # Field values are prefixes of other batteries. Apply an exact match.
         status: supported
         values:
-          manufacturer: mfr
-          model_name: M
+          manufacturer: ABCDEFG
+          model_name: abcdefg
           technology: Li-ion
-      battery_large_supported_tech_1:
-        values:
-          manufacturer: mfr
-          model_name: L
-          technology: Li-ion
-      battery_large_supported_tech_2:
+      battery_0_0#2:  # Apply a prefix match.
         status: supported
         values:
-          manufacturer: mfr2
-          model_name: L
-          technology: Li-poly
+          manufacturer: ABCDEFGZ
+          model_name: abcdefgz
+          technology: Li-ion
+      battery_1_1:  # Field values are prefixes of battery_1_1#4. Apply an exact match.
+        status: supported
+        values:
+          manufacturer: ABCDEFGHIJK
+          model_name: abcdefghijk
+          technology: Li-ion
+      battery_1_1#4:  # Apply a prefix match.
+        status: supported
+        values:
+          manufacturer: ABCDEFGHIJKL
+          model_name: abcdefghijkl
+          technology: Li-ion
+      # ===================================================================== #
+      battery_2_2:  # Field values are prefixes of battery_2_2#6. Apply an exact match.
+        status: supported
+        values:
+          manufacturer: DEF
+          model_name: def
+          technology: Li-ion
+      battery_2_2#6:  # Apply a prefix match.
+        status: supported
+        values:
+          manufacturer: DEF
+          model_name: def123
+          technology: Li-ion
 
 rules: []
