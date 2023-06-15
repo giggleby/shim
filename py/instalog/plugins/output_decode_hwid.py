@@ -133,7 +133,8 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
     # Use verbose=True to get details of components.
     data = {
         'hwid': list(hwids),
-        "verbose": True
+        'verbose': True,
+        'no_avl_name': True
     }
 
     # If we didn't receive response, we still call Commit() to avoid the plugin
