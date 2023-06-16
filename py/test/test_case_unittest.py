@@ -14,6 +14,7 @@ from cros.factory.test import event as test_event
 from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
+from cros.factory.test.utils import pytest_utils
 from cros.factory.unittest_utils import mock_time_utils
 from cros.factory.utils import type_utils
 
@@ -33,6 +34,9 @@ class TestCaseTest(unittest.TestCase):
     def PostNewEvent(self, event_type, **kwargs):
       if event_type == _EventType.END_EVENT_LOOP:
         self._event_loop_end.put(kwargs)
+      # Call `MockPostNewEvent` for checking function calling
+      # since we don't mock `PostNewEvent`.
+      self.mock.MockPostNewEvent(event_type=event_type, **kwargs)
 
     def Run(self):
       end_event_kwargs = self._event_loop_end.get()
@@ -49,11 +53,12 @@ class TestCaseTest(unittest.TestCase):
     self._patchers.extend(mock_time_utils.MockAll(self._timeline))
 
     # Mocks goofy_rpc
-    goofy_mock_attrs = {
-        'GetCurrentFactoryTest.return_value': mock.Mock(id='UniqueID')
+    mock_goofy_rpc_attributes = {
+        'GetAttributeOfCurrentFactoryTest.return_value': 'mock_attribute',
     }
-    self._CreatePatcher(
-        state, 'GetInstance').return_value = mock.Mock(**goofy_mock_attrs)
+    self._mock_goofy_rpc = mock.Mock(**mock_goofy_rpc_attributes)
+    self._CreatePatcher(state,
+                        'GetInstance').return_value = self._mock_goofy_rpc
 
     self._test = test_case.TestCase()
     self._test.ui_class = mock.Mock
@@ -109,11 +114,11 @@ class TestCaseTest(unittest.TestCase):
     errors = self.GetRunResult()
     self.assertFalse(errors)
 
-  def AssertRunFail(self, error_msg=None):
+  def AssertRunFailOrWaive(self, msg=None):
     errors = self.GetRunResult()
     self.assertEqual(1, len(errors))
-    if error_msg:
-      self.assertIn(error_msg, errors[0][1])
+    if msg:
+      self.assertIn(msg, errors[0][1])
 
   def AssertNotReached(self):
     raise AssertionError('This should not be reached.')
@@ -121,7 +126,9 @@ class TestCaseTest(unittest.TestCase):
   def testGetNextTaskStageKey(self):
     # pylint: disable=protected-access
     self.assertEqual(self._test._next_task_stage_key,
-                     'factory.test_case.next_task_stage.UniqueID')
+                     'factory.test_case.next_task_stage.mock_attribute')
+    self._mock_goofy_rpc.GetAttributeOfCurrentFactoryTest.assert_called_with(
+        current_invocation_uuid=None, attribute_name='id')
 
   def testAutomaticPass(self):
     def _RunTest():
@@ -149,7 +156,22 @@ class TestCaseTest(unittest.TestCase):
 
     self._test.runTest = _RunTest
 
-    self.AssertRunFail()
+    self.AssertRunFailOrWaive()
+
+  def testWaiveTest(self):
+
+    def _Task():
+      self._test.WaiveTest('Test waived.')
+      self.AssertNotReached()
+
+    self._test.AddTask(_Task)
+
+    self.AssertRunFailOrWaive()
+    self.assertRaises(pytest_utils.IndirectException)
+    self._mock_event_loop.mock.MockPostNewEvent.assert_called_with(
+        event_type=_EventType.END_EVENT_LOOP,
+        status=state.TestState.FAILED_AND_WAIVED, exception_index=0)
+    self._mock_goofy_rpc.WaiveCurrentFactoryTest.assert_called_once()
 
   def testFailWithAssert(self):
     def _RunTest():
@@ -157,7 +179,7 @@ class TestCaseTest(unittest.TestCase):
 
     self._test.runTest = _RunTest
 
-    self.AssertRunFail('False is not true')
+    self.AssertRunFailOrWaive('False is not true')
 
   def testAddTask_AllPass(self):
     executed_tasks = []
@@ -186,7 +208,7 @@ class TestCaseTest(unittest.TestCase):
     self._test.AddTask(lambda: _Task('task2', fail=True))
     self._test.AddTask(lambda: _Task('task3'))
 
-    self.AssertRunFail()
+    self.AssertRunFailOrWaive()
     self.assertEqual(['task1', 'task2'], executed_tasks)
 
   def testAddTask_CheckNextTaskStage_WithoutReboot(self):
@@ -216,7 +238,7 @@ class TestCaseTest(unittest.TestCase):
     self._test.AddTask(_Task)
     self._test.AddTask(_Task, reboot=True)
 
-    self.AssertRunFail()
+    self.AssertRunFailOrWaive()
     self.assertEqual([1, 2, 3], next_task_stages)
 
   def testAddTasks_SkipFinishedTasksAfterReboot(self):
@@ -264,7 +286,7 @@ class TestCaseTest(unittest.TestCase):
     self._test.AddTask(_Task)
 
     self._test.UpdateNextTaskStage(1)
-    self.AssertRunFail()
+    self.AssertRunFailOrWaive()
     self.assertEqual(self._test.GetNextTaskStage(), 0)
 
   def testAddTasks_UnexpectedReboot(self):
@@ -281,7 +303,8 @@ class TestCaseTest(unittest.TestCase):
     self._test.AddTask(_Task, reboot=False)
     self._test.AddTask(_Task)
 
-    self.AssertRunFail('Unexpected reboot was triggered while running "_Task".')
+    self.AssertRunFailOrWaive(
+        'Unexpected reboot was triggered while running "_Task".')
 
   @mock.patch('time.sleep')
   def testAddTasks_RebootNotTriggeredWithinBufferTime(self, time_sleep):
@@ -293,9 +316,9 @@ class TestCaseTest(unittest.TestCase):
     self._test.AddTask(_Task, reboot=True)
     self._test.AddTask(_Task)
 
-    self.AssertRunFail('Reboot not triggered '
-                       'within buffer time (5 seconds), '
-                       'next task may be executed in advance.')
+    self.AssertRunFailOrWaive('Reboot not triggered '
+                              'within buffer time (5 seconds), '
+                              'next task may be executed in advance.')
     time_sleep.assert_called_once()
 
   @mock.patch('time.sleep')
@@ -307,9 +330,9 @@ class TestCaseTest(unittest.TestCase):
     self._test.AddTask(_Task, reboot=True, reboot_timeout_secs=3)
     self._test.AddTask(_Task)
 
-    self.AssertRunFail('Reboot not triggered '
-                       'within buffer time (3 seconds), '
-                       'next task may be executed in advance.')
+    self.AssertRunFailOrWaive('Reboot not triggered '
+                              'within buffer time (3 seconds), '
+                              'next task may be executed in advance.')
     time_sleep.assert_called_once_with(3)
 
   def testWaitTaskEnd(self):
@@ -343,7 +366,7 @@ class TestCaseTest(unittest.TestCase):
     self._test.runTest = _RunTest
     self._timeline.AddEvent(10, _TestEnd)
 
-    self.AssertRunFail()
+    self.AssertRunFailOrWaive()
     self._timeline.AssertTimeAt(10)
 
   def testSleep(self):
@@ -362,7 +385,7 @@ class TestCaseTest(unittest.TestCase):
     self._test.runTest = _RunTest
     self._timeline.AddEvent(5, _TestEnd)
 
-    self.AssertRunFail()
+    self.AssertRunFailOrWaive()
     self.assertEqual(5, self._timeline.GetTime())
     self.assertEqual([0, 2, 4], times)
 

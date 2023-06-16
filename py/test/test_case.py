@@ -26,6 +26,10 @@ class TaskEndException(Exception):
   """The exception to end a task."""
 
 
+class TestWaivedException(Exception):
+  """The exception to waive a test."""
+
+
 _Task = collections.namedtuple('Task',
                                ['name', 'run', 'reboot', 'reboot_timeout_secs'])
 
@@ -44,7 +48,7 @@ class TestCase(unittest.TestCase):
 
     self.__method_name = methodName
     self.__task_end_event = threading.Event()
-    self.__task_failed = False
+    self.__task_stopped = False
     self.__tasks = collections.deque()
 
     self.__exceptions = []
@@ -57,7 +61,8 @@ class TestCase(unittest.TestCase):
   @type_utils.LazyProperty
   def _next_task_stage_key(self):
     # Gets the unique id of test object as the key name of next stage flag.
-    test_id = self.goofy_rpc.GetCurrentFactoryTest(self.invocation_uuid).id
+    test_id = self.goofy_rpc.GetAttributeOfCurrentFactoryTest(
+        current_invocation_uuid=self.invocation_uuid, attribute_name='id')
     return '.'.join(('factory.test_case.next_task_stage', test_id))
 
   def PassTask(self):
@@ -76,17 +81,15 @@ class TestCase(unittest.TestCase):
     """
     raise type_utils.TestFailure(msg)
 
-  def WaiveTask(self, msg):
-    """Waive current task.
+  def WaiveTest(self, msg):
+    """The function for making test waived.
+
+    Make current task stopped, then stop the test and make it waived.
 
     Should only be called in the event callbacks or primary background test
     thread.
     """
-    current_factory_test = self.goofy_rpc.GetCurrentFactoryTest(
-        self.invocation_uuid)
-    current_factory_test.Waive()
-    self.FailTask(msg + '\nWaive current running factory test: '
-                  f'{current_factory_test.path}')
+    raise TestWaivedException(msg)
 
   def __WaitTaskEnd(self, timeout):
     if self.__task_end_event.wait(timeout=timeout):
@@ -192,10 +195,20 @@ class TestCase(unittest.TestCase):
     thread = process_utils.StartDaemonThread(target=self.__RunTasks)
     try:
       end_event = self.event_loop.Run()
-      if end_event.status == state.TestState.FAILED:
+      if end_event.status != state.TestState.PASSED:
         exc_idx = getattr(end_event, 'exception_index', None)
-        if exc_idx is None:
-          raise type_utils.TestFailure(getattr(end_event, 'error_msg', None))
+
+        if end_event.status == state.TestState.FAILED:
+          if exc_idx is None:
+            raise type_utils.TestFailure(getattr(end_event, 'error_msg', None))
+        elif end_event.status == state.TestState.FAILED_AND_WAIVED:
+          waived_test = self.goofy_rpc.WaiveCurrentFactoryTest(
+              self.invocation_uuid)
+          session.console.warning(
+              f'Waive current running factory test: {waived_test}')
+          if exc_idx is None:
+            raise TestWaivedException(getattr(end_event, 'waive_msg', None))
+
         # pylint: disable=invalid-sequence-index
         raise pytest_utils.IndirectException(*self.__exceptions[exc_idx])
     finally:
@@ -284,11 +297,11 @@ class TestCase(unittest.TestCase):
 
         for task in self.__tasks:
           self.__RunTask(task, tasks_with_reboot)
-          if self.__task_failed:
+          if self.__task_stopped:
             return
       except Exception:
         self.__HandleException()
-        if self.__task_failed:
+        if self.__task_stopped:
           return
       finally:
         if tasks_with_reboot:
@@ -314,11 +327,14 @@ class TestCase(unittest.TestCase):
         exc_idx = len(self.__exceptions)
         self.__exceptions.append((exception, tb))
 
-      self.event_loop.PostNewEvent(
-          test_event.Event.Type.END_EVENT_LOOP,
-          status=state.TestState.FAILED,
-          exception_index=exc_idx)
-      self.__task_failed = True
+      test_status = (
+          state.TestState.FAILED_AND_WAIVED if isinstance(
+              exception, TestWaivedException) else state.TestState.FAILED)
+
+      self.event_loop.PostNewEvent(test_event.Event.Type.END_EVENT_LOOP,
+                                   status=test_status, exception_index=exc_idx)
+      self.__task_stopped = True
+
     self.__task_end_event.set()
 
   def __SetupGoofyJSEvents(self):
@@ -330,6 +346,8 @@ class TestCase(unittest.TestCase):
         self.PassTask()
       elif status == state.TestState.FAILED:
         self.FailTask(event.data.get('error_msg', ''))
+      elif status == state.TestState.FAILED_AND_WAIVED:
+        self.WaiveTest(event.data.get('waive_msg', ''))
       else:
         raise ValueError(f'Unexpected status in event {event!r}')
 

@@ -854,6 +854,22 @@ class GoofyRPC:
                               f'{current_invocation_uuid}')
     return current_invocation.test
 
+  def WaiveCurrentFactoryTest(self, current_invocation_uuid):
+    """Waives current test object.
+
+    `root` attribute of `FactroyTest` will be lost while serializing,
+    so we add this function to call `FactoryTest.Waive` in `goofy_rpc`,
+    instead of calling it in pytest.
+    """
+    current_factory_test = self.GetCurrentFactoryTest(current_invocation_uuid)
+    current_factory_test.Waive()
+    return current_factory_test.path
+
+  def GetAttributeOfCurrentFactoryTest(self, current_invocation_uuid,
+                                       attribute_name):
+    current_factory_test = self.GetCurrentFactoryTest(current_invocation_uuid)
+    return getattr(current_factory_test, attribute_name)
+
 
 def main():
   parser = argparse.ArgumentParser(

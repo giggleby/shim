@@ -114,10 +114,10 @@ class Cr50APROVerficationTest(test_case.TestCase):
   def PreCheck(self):
     # skip the test if the firmware is Ti50
     if GSCUtils().IsTi50():
-      self.WaiveTask('Skip Cr50 AP RO Verification test '
+      self.WaiveTest('Skip Cr50 AP RO Verification test '
                      'since the firmware is Ti50.')
     if self.gooftool.IsCr50BoardIDSet():
-      self.WaiveTask('Unable to verify RO hash '
+      self.WaiveTest('Unable to verify RO hash '
                      'since the board ID is set, test skipped.')
     if not self.gooftool.IsCr50ROHashSet():
       raise Exception('Please set RO hash first.')

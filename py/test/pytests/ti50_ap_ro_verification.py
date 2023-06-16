@@ -78,7 +78,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
   def PreCheck(self):
     # Skip the test if thr firmware is not Ti50.
     if not GSCUtils().IsTi50():
-      self.WaiveTask('Skip Ti50 AP RO Verification test '
+      self.WaiveTest('Skip Ti50 AP RO Verification test '
                      'since the firmware is not Ti50.')
 
   def VerifyAPRO(self):
