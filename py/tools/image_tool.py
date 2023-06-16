@@ -2577,13 +2577,15 @@ class ChromeOSFactoryBundle:
       AddResource('setup', os.path.join(self.setup_dir, '*'))
     if self.netboot:
       SysUtils.CreateDirectories(os.path.join(bundle_dir, 'netboot'))
-      for netboot_firmware_image in glob.glob(
-          os.path.join(self.netboot, 'image*.net.bin')):
-        self.CreateNetbootFirmware(
-            netboot_firmware_image,
-            os.path.join(bundle_dir, 'netboot',
-                         os.path.basename(netboot_firmware_image)))
-      AddResource('netboot', os.path.join(self.netboot, 'image*.net.bin'))
+      netboot_image_paths = glob.glob(
+          os.path.join(self.netboot, 'image*.net.bin'))
+      if netboot_image_paths:
+        for netboot_firmware_image in netboot_image_paths:
+          self.CreateNetbootFirmware(
+              netboot_firmware_image,
+              os.path.join(bundle_dir, 'netboot',
+                           os.path.basename(netboot_firmware_image)))
+        AddResource('netboot', os.path.join(self.netboot, 'image*.net.bin'))
       if has_tftp:
         AddResource('netboot', os.path.join(self.netboot, 'tftp'))
       else:
