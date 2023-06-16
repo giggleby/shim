@@ -10,6 +10,7 @@ PY_PKG_DIR="${FACTORY_DIR}/py_pkg"
 APPENGINE_DIR="${PY_PKG_DIR}/cros/factory/hwid/service/appengine"
 HW_VERIFIER_DIR="${FACTORY_DIR}/../../platform2/hardware_verifier/proto"
 RT_PROBE_DIR="${FACTORY_DIR}/../../platform2/system_api/dbus/runtime_probe"
+FEATURE_MANAGEMENT_DIR="${FACTORY_DIR}/../feature-management/proto"
 TEST_DIR="${APPENGINE_DIR}/test"
 PLATFORM_DIR="$(dirname ${FACTORY_DIR})"
 REGIONS_DIR="$(readlink -f "${FACTORY_DIR}/../../platform2/regions")"
@@ -19,7 +20,8 @@ DEPLOYMENT_PROD="prod"
 DEPLOYMENT_STAGING="staging"
 DEPLOYMENT_LOCAL="local"
 DEPLOYMENT_E2E="e2e"
-PUBLIC_DEPENDENCY=(src/platform/factory src/platform2)
+PUBLIC_DEPENDENCY=(src/platform/factory src/platform/feature-management \
+  src/platform2)
 INTERNAL_DEPENDENCY=(src/platform/factory-private src/platform/chromeos-hwid)
 DEPENDENCY=("${PUBLIC_DEPENDENCY[@]}" "${INTERNAL_DEPENDENCY[@]}")
 DOCKER_TAG="hwid_service"
@@ -137,10 +139,14 @@ prepare_protobuf() {
     -I="${RT_PROBE_DIR}" \
     -I="${HW_VERIFIER_DIR}" \
     -I="${FACTORY_PROTO_DIR}" \
+    -I="${FEATURE_MANAGEMENT_DIR}" \
     --python_out="${protobuf_out}" \
     "${HW_VERIFIER_DIR}/hardware_verifier.proto" \
     "${RT_PROBE_DIR}/runtime_probe.proto" \
-    "${FACTORY_PROTO_DIR}/factory_hwid_feature_requirement.proto"
+    "${FACTORY_PROTO_DIR}/factory_hwid_feature_requirement.proto" \
+    "${FEATURE_MANAGEMENT_DIR}/device_selection.proto" \
+    "${FEATURE_MANAGEMENT_DIR}/feature_management.proto" \
+    "${FEATURE_MANAGEMENT_DIR}/hwid_feature_requirement.proto"
 
   "${protoc}" \
     -I="${TEMP_DIR}" \

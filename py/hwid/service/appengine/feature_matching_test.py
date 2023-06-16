@@ -316,6 +316,219 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
           with self.assertRaises(expected_match_result_or_error):
             matcher.Match(hwid_string)
 
+  def testConvertedHWIDFeatureMatcher_GenerateLegacyPayload_Normal(self):
+    feature_version = 1
+    db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
+                             feature_version=str(feature_version))
+    legacy_brands = ['ABCD']
+    hwid_requirement_candidates = [
+        features.HWIDRequirement(
+            description='scenario_1', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(
+                    description='image_id_0_or_1',
+                    bit_positions=[4, 3, 2, 1,
+                                   0], required_values=[0b00000, 0b00001]),
+            ]),
+        features.HWIDRequirement(
+            description='scenario_2', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(description='image_id_2',
+                                                  bit_positions=[4, 3, 2, 1, 0],
+                                                  required_values=[0b00010]),
+                features.HWIDBitStringRequirement(
+                    description='bit_5_6_7_has_100_or_111',
+                    bit_positions=[5, 6, 7], required_values=[0b001, 0b111]),
+            ]),
+    ]
+
+    builder = feature_matching.HWIDFeatureMatcherBuilder()
+    source = builder.GenerateFeatureMatcherRawSource(
+        feature_version, legacy_brands, hwid_requirement_candidates)
+    matcher = builder.CreateHWIDFeatureMatcher(db, source)
+
+    actual = matcher.GenerateLegacyPayload()
+    self.assertEqual(
+        actual,
+        textwrap.dedent("""\
+            feature_level: 1
+            scope: SCOPE_DEVICES_0
+            hwid_profiles {
+              prefix: "THEPROJ-ABCD"
+              encoding_requirements {
+                bit_locations: 4
+                bit_locations: 3
+                bit_locations: 2
+                bit_locations: 1
+                bit_locations: 0
+                required_values: "00000"
+                required_values: "10000"
+              }
+            }
+            hwid_profiles {
+              prefix: "THEPROJ-ABCD"
+              encoding_requirements {
+                bit_locations: 4
+                bit_locations: 3
+                bit_locations: 2
+                bit_locations: 1
+                bit_locations: 0
+                required_values: "01000"
+              }
+              encoding_requirements {
+                bit_locations: 5
+                bit_locations: 6
+                bit_locations: 7
+                required_values: "100"
+                required_values: "111"
+              }
+            }
+            """))
+
+  def testConvertedHWIDFeatureMatcher_GenerateLegacyPayload_MultiLegacyBrands(
+      self):
+    feature_version = 1
+    db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
+                             feature_version=str(feature_version))
+    legacy_brands = ['ABCD', 'EFGH']
+    hwid_requirement_candidates = [
+        features.HWIDRequirement(
+            description='scenario_1', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(
+                    description='image_id_0_or_1',
+                    bit_positions=[4, 3, 2, 1,
+                                   0], required_values=[0b00000, 0b00001]),
+            ]),
+        features.HWIDRequirement(
+            description='scenario_2', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(description='image_id_2',
+                                                  bit_positions=[4, 3, 2, 1, 0],
+                                                  required_values=[0b00010]),
+                features.HWIDBitStringRequirement(
+                    description='bit_5_6_7_has_100_or_111',
+                    bit_positions=[5, 6, 7], required_values=[0b001, 0b111]),
+            ]),
+    ]
+
+    builder = feature_matching.HWIDFeatureMatcherBuilder()
+    source = builder.GenerateFeatureMatcherRawSource(
+        feature_version, legacy_brands, hwid_requirement_candidates)
+    matcher = builder.CreateHWIDFeatureMatcher(db, source)
+
+    actual = matcher.GenerateLegacyPayload()
+    # TODO(b/273883217): Support multiple brand codes in single profile.
+    self.assertEqual(
+        actual,
+        textwrap.dedent("""\
+            feature_level: 1
+            scope: SCOPE_DEVICES_0
+            hwid_profiles {
+              prefix: "THEPROJ-ABCD"
+              encoding_requirements {
+                bit_locations: 4
+                bit_locations: 3
+                bit_locations: 2
+                bit_locations: 1
+                bit_locations: 0
+                required_values: "00000"
+                required_values: "10000"
+              }
+            }
+            hwid_profiles {
+              prefix: "THEPROJ-EFGH"
+              encoding_requirements {
+                bit_locations: 4
+                bit_locations: 3
+                bit_locations: 2
+                bit_locations: 1
+                bit_locations: 0
+                required_values: "00000"
+                required_values: "10000"
+              }
+            }
+            hwid_profiles {
+              prefix: "THEPROJ-ABCD"
+              encoding_requirements {
+                bit_locations: 4
+                bit_locations: 3
+                bit_locations: 2
+                bit_locations: 1
+                bit_locations: 0
+                required_values: "01000"
+              }
+              encoding_requirements {
+                bit_locations: 5
+                bit_locations: 6
+                bit_locations: 7
+                required_values: "100"
+                required_values: "111"
+              }
+            }
+            hwid_profiles {
+              prefix: "THEPROJ-EFGH"
+              encoding_requirements {
+                bit_locations: 4
+                bit_locations: 3
+                bit_locations: 2
+                bit_locations: 1
+                bit_locations: 0
+                required_values: "01000"
+              }
+              encoding_requirements {
+                bit_locations: 5
+                bit_locations: 6
+                bit_locations: 7
+                required_values: "100"
+                required_values: "111"
+              }
+            }
+            """))
+
+  def testConvertedHWIDFeatureMatcher_GenerateLegacyPayload_NoFeature(self):
+    feature_version = 0
+    db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
+                             feature_version=str(feature_version))
+    legacy_brands = ['ABCD']
+    hwid_requirement_candidates = [
+        features.HWIDRequirement(
+            description='scenario_1', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(
+                    description='image_id_0_or_1',
+                    bit_positions=[4, 3, 2, 1,
+                                   0], required_values=[0b00000, 0b00001]),
+            ]),
+    ]
+
+    builder = feature_matching.HWIDFeatureMatcherBuilder()
+    source = builder.GenerateFeatureMatcherRawSource(
+        feature_version, legacy_brands, hwid_requirement_candidates)
+    matcher = builder.CreateHWIDFeatureMatcher(db, source)
+
+    actual = matcher.GenerateLegacyPayload()
+    self.assertEqual(actual, '')
+
+  def testConvertedHWIDFeatureMatcher_GenerateLegacyPayload_NoLegacyBrands(
+      self):
+    feature_version = 1
+    db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
+                             feature_version=str(feature_version))
+    legacy_brands = []
+    hwid_requirement_candidates = [
+        features.HWIDRequirement(
+            description='scenario_1', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(
+                    description='image_id_0_or_1',
+                    bit_positions=[4, 3, 2, 1,
+                                   0], required_values=[0b00000, 0b00001]),
+            ]),
+    ]
+
+    builder = feature_matching.HWIDFeatureMatcherBuilder()
+    source = builder.GenerateFeatureMatcherRawSource(
+        feature_version, legacy_brands, hwid_requirement_candidates)
+    matcher = builder.CreateHWIDFeatureMatcher(db, source)
+
+    actual = matcher.GenerateLegacyPayload()
+    self.assertEqual(actual, '')
+
 
 if __name__ == '__main__':
   unittest.main()

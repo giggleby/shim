@@ -8,8 +8,11 @@ import functools
 import hashlib
 from typing import Collection, Mapping, NamedTuple, Union
 
+import device_selection_pb2  # pylint: disable=import-error
 import factory_hwid_feature_requirement_pb2  # pylint: disable=import-error
+import feature_management_pb2  # pylint: disable=import-error
 from google.protobuf import text_format
+import hwid_feature_requirement_pb2  # pylint: disable=import-error
 
 from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine.proto import feature_match_pb2  # pylint: disable=no-name-in-module
@@ -184,7 +187,25 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
 
   def GenerateLegacyPayload(self) -> str:
     """See base class."""
-    return ''
+    if self._spec.feature_version == 0 or not self._spec.legacy_brands:
+      return ''
+    payload_msg = device_selection_pb2.DeviceSelection(
+        feature_level=self._spec.feature_version,
+        scope=feature_management_pb2.Feature.Scope.SCOPE_DEVICES_0)
+    db_project = self._db.project.upper()
+    for hwid_requirement_candidate in self._spec.hwid_requirement_candidates:
+      profile = hwid_feature_requirement_pb2.HwidProfile()
+      for encoding_requirement in (
+          hwid_requirement_candidate.encoding_requirements):
+        profile.encoding_requirements.append(
+            hwid_feature_requirement_pb2.HwidProfile.EncodingRequirement(
+                bit_locations=encoding_requirement.bit_positions,
+                required_values=encoding_requirement.required_values))
+      # TODO(b/273883217): Support multiple brand codes in single profile.
+      for brand_code in self._spec.legacy_brands:
+        profile.prefix = f'{db_project}-{brand_code}'
+        payload_msg.hwid_profiles.append(profile)
+    return text_format.MessageToString(payload_msg)
 
   def _BuildFeatureManagementFlagChecker(
       self, target_field: _FeatureManagementFlagField
