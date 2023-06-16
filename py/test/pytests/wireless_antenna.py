@@ -275,6 +275,9 @@ class SwitchAntennaWiFiChip(wifi.WiFiChip):
 
     try:
       _SwitchAntenna()
+    except type_utils.MaxRetryError as e:
+      raise wifi.WiFiError(
+          f'Failed to set antenna for {max_retries} tries') from e
     finally:
       self._device.wifi.BringsUpInterface(self._interface,
                                           self._switch_antenna_sleep_secs)
