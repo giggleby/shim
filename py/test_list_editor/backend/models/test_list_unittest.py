@@ -169,6 +169,42 @@ class TestHelperFunc(unittest.TestCase):
             }]
         })
 
+  def testResolveSubtestNoSubtests(self) -> None:
+    items = {
+        'A': {
+            'test_item_id': 'A',
+            'display_name': 'A',
+        },
+        'B': {
+            'test_item_id': 'B',
+            'display_name': 'B',
+            'subtests': ['A']
+        },
+        'C': {
+            'test_item_id': 'C',
+            'display_name': 'C',
+            'subtests': ['B']
+        }
+    }
+    self.assertEqual(
+        test_list._ResolveSubtest('C', items),  # pylint: disable=protected-access
+        {
+            'test_item_id':
+                'C',
+            'display_name':
+                'C',
+            'subtests': [{
+                'test_item_id':
+                    'B',
+                'display_name':
+                    'B',
+                'subtests': [{
+                    'test_item_id': 'A',
+                    'display_name': 'A',
+                    'subtests': []
+                }]
+            }]
+        })
 
 class TestDiffUnit(unittest.TestCase):
 

@@ -144,7 +144,7 @@ def _ResolveSubtest(test_item_id: str, test_items: TestItemCollection):
 
   resolved_subtests = [
       _ResolveSubtest(subtest_id, test_items)
-      for subtest_id in test_item.get(SUBTEST_KEY)
+      for subtest_id in test_item.get(SUBTEST_KEY, [])
   ]
 
   result = {
