@@ -8,8 +8,8 @@ import functools
 import hashlib
 from typing import Collection, Mapping, NamedTuple, Union
 
+import factory_hwid_feature_requirement_pb2  # pylint: disable=import-error
 from google.protobuf import text_format
-import hwid_feature_requirement_pb2  # pylint: disable=import-error
 
 from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine.proto import feature_match_pb2  # pylint: disable=no-name-in-module
@@ -124,7 +124,7 @@ class HWIDFeatureMatcher(abc.ABC):
 
 
 _BrandFeatureRequirementSpec = (
-    hwid_feature_requirement_pb2.BrandFeatureRequirementSpec)
+    factory_hwid_feature_requirement_pb2.BrandFeatureRequirementSpec)
 
 
 class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
@@ -162,7 +162,7 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
 
   @type_utils.LazyProperty
   def _hwid_feature_requirement_payload(self) -> str:
-    spec_msg = hwid_feature_requirement_pb2.FeatureRequirementSpec()
+    spec_msg = factory_hwid_feature_requirement_pb2.FeatureRequirementSpec()
     brand_spec_msg = spec_msg.brand_specs.get_or_create('')
     brand_spec_msg.feature_version = self._spec.feature_version
     brand_spec_msg.feature_enablement_case = (
@@ -209,7 +209,7 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     hwid_requirement_candidates = (
         hwid_requirement_resolver.DeduceHWIDRequirementCandidates(self._db, {}))
 
-    checker_spec = hwid_feature_requirement_pb2.FeatureRequirementSpec()
+    checker_spec = factory_hwid_feature_requirement_pb2.FeatureRequirementSpec()
     default_brand_spec = checker_spec.brand_specs.get_or_create('')
     default_brand_spec.feature_version = self._spec.feature_version
     default_brand_spec.feature_enablement_case = default_brand_spec.MIXED
@@ -247,7 +247,7 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     """The checker to match the feature enablement state for legacy devices."""
     assert self._spec.feature_version != features.NO_FEATURE_VERSION
 
-    spec_msg = hwid_feature_requirement_pb2.FeatureRequirementSpec()
+    spec_msg = factory_hwid_feature_requirement_pb2.FeatureRequirementSpec()
     for brand_name in self._spec.legacy_brands:
       brand_matching_spec_msg = spec_msg.brand_specs.get_or_create(brand_name)
       brand_matching_spec_msg.feature_version = self._spec.feature_version

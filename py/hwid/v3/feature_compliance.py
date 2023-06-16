@@ -17,14 +17,14 @@ from cros.factory.utils import file_utils
 
 try:
   # For HWID service testing environment.
-  import hwid_feature_requirement_pb2
+  import factory_hwid_feature_requirement_pb2
 except ImportError:
   # For factory software environment.
-  from cros.factory.proto import hwid_feature_requirement_pb2  # pylint: disable=ungrouped-imports
+  from cros.factory.proto import factory_hwid_feature_requirement_pb2  # pylint: disable=ungrouped-imports
 
 
 _BrandFeatureRequirementSpec = (
-    hwid_feature_requirement_pb2.BrandFeatureRequirementSpec)
+    factory_hwid_feature_requirement_pb2.BrandFeatureRequirementSpec)
 _Profile = _BrandFeatureRequirementSpec.Profile
 _EncodingRequirement = _Profile.EncodingRequirement
 
@@ -78,7 +78,7 @@ class FeatureRequirementSpecChecker(Checker):
 
   @classmethod
   def _ValidateFeatureRequirementSpec(
-      cls, spec: hwid_feature_requirement_pb2.FeatureRequirementSpec):
+      cls, spec: factory_hwid_feature_requirement_pb2.FeatureRequirementSpec):
     """Validates the raw feature requirement spec protobuf message.
 
     Args:
@@ -110,7 +110,8 @@ class FeatureRequirementSpecChecker(Checker):
             raise ValueError(f'{error_msg_prompt}: required value bit-string '
                              'length mismatch.')
 
-  def __init__(self, spec: hwid_feature_requirement_pb2.FeatureRequirementSpec):
+  def __init__(
+      self, spec: factory_hwid_feature_requirement_pb2.FeatureRequirementSpec):
     """Initializer.
 
     Args:
@@ -225,5 +226,5 @@ def LoadChecker(data_dir: str, project_name: str) -> Optional[Checker]:
     raise ValueError(f'Invalid checksum in {spec_pathname}.')
 
   return FeatureRequirementSpecChecker(
-      text_format.Parse(msg,
-                        hwid_feature_requirement_pb2.FeatureRequirementSpec()))
+      text_format.Parse(
+          msg, factory_hwid_feature_requirement_pb2.FeatureRequirementSpec()))

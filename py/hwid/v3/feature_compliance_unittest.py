@@ -14,7 +14,7 @@ from google.protobuf import text_format
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import feature_compliance
 from cros.factory.hwid.v3 import identity as identity_module
-from cros.factory.proto import hwid_feature_requirement_pb2
+from cros.factory.proto import factory_hwid_feature_requirement_pb2
 from cros.factory.utils import file_utils
 
 
@@ -31,7 +31,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
     hwid_identity = _CreateHWIDIdentityForTest('AABB', '0000000000')
 
     checker = feature_compliance.FeatureRequirementSpecChecker(
-        hwid_feature_requirement_pb2.FeatureRequirementSpec())
+        factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
     with self.assertRaises(ValueError):
       checker.CheckFeatureComplianceVersion(hwid_identity)
@@ -54,7 +54,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                 }
                 feature_enablement_case: MIXED
             }
-        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+        }'''), factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
     checker = feature_compliance.FeatureRequirementSpecChecker(spec)
     actual_value = checker.CheckFeatureComplianceVersion(hwid_identity)
@@ -86,7 +86,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                 }
                 feature_enablement_case: MIXED
             }
-        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+        }'''), factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
     checker = feature_compliance.FeatureRequirementSpecChecker(spec)
     actual_value = checker.CheckFeatureComplianceVersion(hwid_identity)
@@ -118,7 +118,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                 }
                 feature_enablement_case: MIXED
             }
-        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+        }'''), factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
     checker = feature_compliance.FeatureRequirementSpecChecker(spec)
     actual_value = checker.CheckFeatureComplianceVersion(hwid_identity)
@@ -126,7 +126,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
     self.assertEqual(actual_value, 3)
 
   def testCheckFeatureEnablement_NoBrandInfo(self):
-    spec = hwid_feature_requirement_pb2.FeatureRequirementSpec()
+    spec = factory_hwid_feature_requirement_pb2.FeatureRequirementSpec()
 
     checker = feature_compliance.FeatureRequirementSpecChecker(spec)
 
@@ -151,7 +151,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                 }
                 feature_enablement_case: FEATURE_MUST_ENABLED
             }
-        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+        }'''), factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
     checker = feature_compliance.FeatureRequirementSpecChecker(spec)
     permit_to_enable = checker.CheckFeatureEnablement('AABB', True)
@@ -175,7 +175,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                 }
                 feature_enablement_case: FEATURE_MUST_NOT_ENABLED
             }
-        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+        }'''), factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
     checker = feature_compliance.FeatureRequirementSpecChecker(spec)
     permit_to_enable = checker.CheckFeatureEnablement('AABB', True)
@@ -199,7 +199,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                 }
                 feature_enablement_case: MIXED
             }
-        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+        }'''), factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
     checker = feature_compliance.FeatureRequirementSpecChecker(spec)
     permit_to_enable = checker.CheckFeatureEnablement('AABB', True)
@@ -223,7 +223,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                 }
                 feature_enablement_case: MIXED
             }
-        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+        }'''), factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
     checker = feature_compliance.FeatureRequirementSpecChecker(spec)
     permit_to_enable = checker.CheckFeatureEnablement('AABB', True)

@@ -140,7 +140,7 @@ prepare_protobuf() {
     --python_out="${protobuf_out}" \
     "${HW_VERIFIER_DIR}/hardware_verifier.proto" \
     "${RT_PROBE_DIR}/runtime_probe.proto" \
-    "${FACTORY_PROTO_DIR}/hwid_feature_requirement.proto"
+    "${FACTORY_PROTO_DIR}/factory_hwid_feature_requirement.proto"
 
   "${protoc}" \
     -I="${TEMP_DIR}" \
