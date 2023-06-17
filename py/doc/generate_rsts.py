@@ -24,10 +24,12 @@ from io import StringIO
 import logging
 import os
 import re
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+import urllib.parse
 
 from cros.factory.probe import function as probe_function
 from cros.factory.test.env import paths
+from cros.factory.test import test_case
 from cros.factory.test.test_lists import manager
 from cros.factory.test.test_lists import test_object as test_object_module
 from cros.factory.test.utils import pytest_utils
@@ -109,12 +111,14 @@ class RSTWriter:
   def WriteListItem(self, content):
     self.WriteParagraph('- ' + content)
 
-  def WriteListTableHeader(self, widths=None, header_rows=None):
+  def WriteListTableHeader(self, widths=None, header_rows=None, align='left'):
     self.io.write('.. list-table::\n')
     if widths is not None:
       self.io.write(f"   :widths: {' '.join(map(str, widths))}\n")
     if header_rows is not None:
       self.io.write(f'   :header-rows: {int(header_rows)}\n')
+    if align is not None:
+      self.io.write(f'   :align: {align}\n')
     self.io.write('\n')
 
   def WriteListTableRow(self, row):
@@ -164,7 +168,9 @@ def WriteArgsTable(rst, title, args):
     rst.WriteListTableRow((arg.name, arg_types, description))
 
 
-def GenerateTestDocs(rst, pytest_name):
+def GenerateTestDocs(
+    rst: RSTWriter,
+    pytest_name: str) -> Tuple[str, Sequence[test_case.TestCategory]]:
   """Generates test docs for a pytest.
 
   Args:
@@ -175,9 +181,11 @@ def GenerateTestDocs(rst, pytest_name):
     The first line of the docstring.
   """
   module = pytest_utils.LoadPytestModule(pytest_name)
-  test_case = pytest_utils.FindTestCase(module)
+  test_case_type = pytest_utils.FindTestCase(module)
 
-  args = getattr(test_case, 'ARGS', [])
+  args = getattr(test_case_type, 'ARGS', [])
+
+  related_components = getattr(test_case_type, 'related_components', tuple())
 
   doc = getattr(module, '__doc__', None)
   if doc is None:
@@ -189,13 +197,36 @@ def GenerateTestDocs(rst, pytest_name):
   WriteArgsTable(rst, 'Test Arguments', args)
 
   # Remove everything after the first pair of newlines.
-  return re.sub(r'(?s)\n\s*\n.+', '', doc).strip()
+  return re.sub(r'(?s)\n\s*\n.+', '', doc).strip(), related_components
+
+
+def LinkToAVL(component: test_case.TestCategory):
+  url = 'https://chromeos.google.com/partner/dlm/avl/component'
+  encoded_args = urllib.parse.quote_plus(component.avl_name)
+  return f'`{component.avl_name} <{url}?q=componentType:"{encoded_args}">`_'
+
+
+def GenerateOneTypeOfPyTestsDoc(
+    rst: RSTWriter, component: Optional[test_case.TestCategory],
+    tests: List[str], pytest_description: Dict[str, str]):
+  if component:
+    name = LinkToAVL(component) if component.avl_name else component.name
+    rst.WriteTitle(f'Tests for {name}', '-')
+  else:
+    rst.WriteTitle('Uncategorized pytests', '-')
+  rst.WriteParagraph('')
+  rst.WriteListTableHeader(widths=(30, 70), header_rows=1)
+  rst.WriteListTableRow(('pytest name', 'description'))
+  for name in sorted(tests):
+    rst.WriteListTableRow((LinkToDoc(name, name), pytest_description[name]))
 
 
 @DocGenerator('pytests')
 def GeneratePyTestsDoc(pytests_output_dir):
   # Map of pytest name to info returned by GenerateTestDocs.
-  pytest_info = {}
+  pytest_description: Dict[str, str] = {}
+  uncategorized_tests: List[str] = []
+  component_to_tests: Dict[test_case.TestCategory, List[str]] = {}
 
   for relpath in pytest_utils.GetPytestList(paths.FACTORY_DIR):
     pytest_name = pytest_utils.RelpathToPytestName(relpath)
@@ -203,7 +234,14 @@ def GeneratePyTestsDoc(pytests_output_dir):
         os.path.join(pytests_output_dir, pytest_name + '.rst'),
         'w', 'utf-8') as out:
       try:
-        pytest_info[pytest_name] = GenerateTestDocs(RSTWriter(out), pytest_name)
+        description, related_components = GenerateTestDocs(
+            RSTWriter(out), pytest_name)
+        pytest_description[pytest_name] = description
+        if not related_components:
+          uncategorized_tests.append(pytest_name)
+        for related_component in related_components:
+          component_to_tests.setdefault(related_component,
+                                        []).append(pytest_name)
       except Exception:
         logging.exception('Failed to generate document for pytest %s.',
                           pytest_name)
@@ -211,8 +249,12 @@ def GeneratePyTestsDoc(pytests_output_dir):
   index_rst = os.path.join(pytests_output_dir, 'index.rst')
   with open(index_rst, 'a', encoding='utf8') as f:
     rst = RSTWriter(f)
-    for k, v in sorted(pytest_info.items()):
-      rst.WriteListTableRow((LinkToDoc(k, k), v))
+    for component, tests in sorted(component_to_tests.items(),
+                                   key=lambda args: args[0].avl_name):
+      GenerateOneTypeOfPyTestsDoc(rst, component, tests, pytest_description)
+
+    GenerateOneTypeOfPyTestsDoc(rst, None, uncategorized_tests,
+                                pytest_description)
 
 
 def WriteTestObjectDetail(

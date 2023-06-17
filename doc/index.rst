@@ -5,7 +5,8 @@ Welcome to the Chromium OS Factory SDK documentation.  From here you
 can find documentation on working with the factory software and
 adapting and extending it to work for your project.
 
-Contents:
+Contents
+========
 
 .. toctree::
    :maxdepth: 2
@@ -17,7 +18,8 @@ Contents:
    test_lists/index.rst
    probe/index.rst
 
-APIs:
+APIs
+====
 
 .. toctree::
    :maxdepth: 2
@@ -29,7 +31,8 @@ APIs:
    test_list_api
    shopfloor_api
 
-READMEs:
+READMEs
+=======
 
 .. toctree::
    :glob:

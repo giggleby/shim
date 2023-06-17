@@ -183,6 +183,7 @@ class AudioTest(test_case.TestCase):
   It randomly picks a digit to play and checks if the operator presses the
   correct digit. It also prevents key-swiping cheating.
   """
+  related_components = (test_case.TestCategory.AUDIOCODEC, )
   ARGS = [
       Arg('audio_conf', str, 'Audio config file path', default=None),
       Arg('initial_actions', list,

@@ -9,12 +9,14 @@ import subprocess
 import sys
 import threading
 import time
+from typing import Sequence
 import unittest
 
 from cros.factory.test import device_data
 from cros.factory.test import event as test_event
 from cros.factory.test import session
 from cros.factory.test import state
+from cros.factory.test import test_tags
 from cros.factory.test import test_ui
 from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import file_utils
@@ -33,6 +35,7 @@ class TestWaivedException(Exception):
 
 _Task = collections.namedtuple('Task',
                                ['name', 'run', 'reboot', 'reboot_timeout_secs'])
+TestCategory = test_tags.TestCategory
 
 
 class TestCase(unittest.TestCase):
@@ -42,6 +45,7 @@ class TestCase(unittest.TestCase):
   """
 
   ui_class = test_ui.StandardUI
+  related_components: Sequence[test_tags.TestCategory] = tuple()
 
   def __init__(self, methodName='runTest'):
     super().__init__(methodName='_RunTest')

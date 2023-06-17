@@ -62,6 +62,9 @@ _SOUND_DIRECTORY = os.path.join(
 
 
 class AudioBasicTest(test_case.TestCase):
+
+  related_components = (test_case.TestCategory.AUDIOCODEC, )
+
   ARGS = [
       i18n_arg_utils.I18nArg('audio_title', 'Label Title of audio test',
                              default=_('Headset')),

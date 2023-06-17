@@ -58,6 +58,7 @@ Test Arguments
 .. list-table::
    :widths: 20 10 60
    :header-rows: 1
+   :align: left
 
    * - Name
      - Type
@@ -73,7 +74,6 @@ Test Arguments
        \n         - bar
          - baz
 """
-      self.maxDiff = None
       self.assertEqual(pseudo_output, '\n'.join(lines))
 
 

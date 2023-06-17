@@ -2,12 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# DESCRIPTION :
-#
-# This test case is a manual test to do audio functions on DUT
-# and let operator or engineer mark pass or fail from their own judgement.
+"""Tests to manually test audio playback and record quality.
 
-"""Tests to manually test audio playback and record quality."""
+Description
+-----------
+This test case is a manual test to do audio functions on DUT and let operator or
+engineer mark pass or fail from their own judgement.
+
+Test Procedure
+--------------
+1. Operator triggers audio function on the UI.
+2. Operator marks pass or fail.
+
+Dependency
+----------
+- JavaScript MediaStream API
+
+Examples
+--------
+To check that audio can be recorded and played, add this into test list::
+
+  {
+    "pytest_name": "audio_diagnostic"
+  }
+
+"""
 
 from cros.factory.test import test_case
 from cros.factory.test.utils import audio_utils
@@ -19,6 +38,8 @@ class AudioDiagnosticTest(test_case.TestCase):
   This is a manual test run by operator who judges
   pass/fail result according to the heard audio quality.
   """
+
+  related_components = (test_case.TestCategory.AUDIOCODEC, )
 
   def setUp(self):
     """Setup CRAS and bind events to corresponding tasks at backend."""
