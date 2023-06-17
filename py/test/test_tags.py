@@ -49,6 +49,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
     return {
         TestCategory.AUDIOCODEC:
             CategoryProperties('Audio Jack Codec', 'audio_codec'),
+        TestCategory.BATTERY:
+            CategoryProperties('Battery', 'battery'),
     }.get(self, CategoryProperties(None, None))
 
   @property

@@ -36,12 +36,14 @@ To disable wear level check, set ``percent_battery_wear_allowed`` to ``-1``.
 import unittest
 
 from cros.factory.device import device_utils
+from cros.factory.test import test_tags
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
 
 class SysfsBatteryTest(unittest.TestCase):
   """Checks battery status."""
+  related_components = (test_tags.TestCategory.BATTERY, )
   ARGS = [
       Arg('maximum_cycle_count', int,
           'Maximum cycle count allowed to pass test', default=10),

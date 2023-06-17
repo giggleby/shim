@@ -54,6 +54,7 @@ from cros.factory.utils import time_utils
 
 class SimpleBatteryTest(test_case.TestCase):
   """A simple battery test."""
+  related_components = (test_case.TestCategory.BATTERY, )
   ARGS = [
       Arg('charge_duration_secs', type=(int, float), default=5,
           help='the duration in seconds to charge the battery'),

@@ -2,12 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-
 """This test cycles the battery.
 
+Description
+-----------
 It runs for a particular number of cycles or number of hours and records,
 cycling the battery between a minimum charge (e.g., 5%) and a maximum
 charge (e.g., 95%).  Cycle times are logged to event logs.
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+
+Dependency
+----------
+- Device API ``cros.factory.device.power``.
+
+Examples
+--------
+Add this into test list::
+
+  {
+    "pytest_name": "battery_cycle"
+  }
+
 """
 
 import collections
@@ -38,6 +56,7 @@ class Mode(str, enum.Enum):
 
 
 class BatteryCycleTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.BATTERY, )
   ARGS = [
       Arg('num_cycles', int, 'Number of cycles to run', default=None),
       Arg('max_duration_hours', (int, float),
@@ -124,7 +143,7 @@ class BatteryCycleTest(test_case.TestCase):
         ('bc-current-cycle', self.completed_cycles + 1),
         ('bc-cycles-remaining',
          (self.args.num_cycles -
-          self.completed_cycles if self.args.num_cycles else u'\u221e')),
+          self.completed_cycles if self.args.num_cycles else '\u221e')),
         ('bc-target-charge', f'{target_charge_pct:.2f}%')):
       self.ui.SetHTML(content, id=elt_id)
 
@@ -207,7 +226,7 @@ class BatteryCycleTest(test_case.TestCase):
                 if self.args.max_duration_hours else None))):
           self.ui.SetHTML(
               time_utils.FormatElapsedTime(elapsed_time)
-              if elapsed_time else u'\u221e', id=elt_id)
+              if elapsed_time else '\u221e', id=elt_id)
         self.ui.SetHTML(f'{self.dut.power.GetChargePct(get_float=True):.2f}%',
                         id='bc-charge')
         time_cost = self.args.charge_threshold_secs - int(

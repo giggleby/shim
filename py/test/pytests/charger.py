@@ -66,6 +66,7 @@ class ChargerTest(test_case.TestCase):
   Properties:
     _power: The Power object to get AC/Battery info and charge percentage.
   """
+  related_components = (test_case.TestCategory.BATTERY, )
   ARGS = [
       Arg('min_starting_charge_pct', (int, float),
           'minimum starting charge level when testing', default=20.0),

@@ -134,6 +134,7 @@ def _GetGoofyBatteryMinPercentage():
 
 
 class ChargerTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.BATTERY, )
   ARGS = [
       Arg('target_charge_pct',
           (int, enum.Enum('TargetChargePct', ['goofy', 'cutoff'])),

@@ -44,11 +44,13 @@ import logging
 import unittest
 
 from cros.factory.device import device_utils
+from cros.factory.test import test_tags
 from cros.factory.utils.arg_utils import Arg
 
 
 class BatteryCommunicationTest(unittest.TestCase):
   """Tests that DUT can communicate with battery."""
+  related_components = (test_tags.TestCategory.BATTERY, )
   ARGS = [
       Arg('design_capacity_range', list,
           'Expected battery design capacity range in mAh.',
