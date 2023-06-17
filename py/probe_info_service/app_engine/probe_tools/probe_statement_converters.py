@@ -575,6 +575,10 @@ def GetAllConverters() -> Sequence[analyzers.IComponentProbeStatementConverter]:
                                   _ParamValueConverter('int')),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+          'dram', 'memory', [
+              _ProbeFunctionParam('part'),
+          ]),
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'storage', 'mmc_storage', [
               _ProbeFunctionParam(
                   'mmc_manfid', value_converter=_ParamValueConverter(

@@ -32,6 +32,7 @@ class StubbyHandlerTest(unittest.TestCase):
             'camera.mipi_camera',
             'camera.usb_camera',
             'display_panel.edid',
+            'dram.memory',
             'storage.mmc_storage',
             'storage.nvme_storage',
             'storage.ufs_storage',
