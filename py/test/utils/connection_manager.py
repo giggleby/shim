@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -71,8 +72,6 @@ def GetConnectionManagerProxy():
 class ConnectionManagerException(Exception):
 
   class ErrorCode(str, enum.Enum):
-    # shill does not start a service for a device without physical link
-    NO_PHYSICAL_LINK = 'NO_PHYSICAL_LINK'
     INTERFACE_NOT_FOUND = 'INTERFACE_NOT_FOUND'
     # there is no service running on that device
     NO_SELECTED_SERVICE = 'NO_SELECTED_SERVICE'
@@ -253,10 +252,12 @@ class ConnectionManager:
     device.Enable()  # Try to enable the device.
     device_props = device.GetProperties()
     if not device_props.get('Ethernet.LinkUp', False):
-      # There is no physical link.
-      raise ConnectionManagerException(
-          f'No physical link presents on interface {interface}',
-          error_code=ConnectionManagerException.ErrorCode.NO_PHYSICAL_LINK)
+      # There is no physical link. shill did not start a service for a device
+      # without physical link in the past. Make a log in case the behavior
+      # changes back.
+      logging.info(
+          'Trying to set static IP on interface %r without physical '
+          'link', interface)
 
     service_path = device_props['SelectedService']
     if service_path == '/':

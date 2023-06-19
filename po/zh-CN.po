@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-06-12 15:12+CST\n"
+"PO-Revision-Date: 2023-06-19 13:14+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -2438,10 +2438,6 @@ msgstr "<div>按<strong>Enter</strong>继续</div>"
 #: ../py/test/pytests/model_sku.py
 msgid "Please confirm following values"
 msgstr "请确认以下结果"
-
-#: ../py/test/pytests/network_setup/network_setup.py
-msgid "No physical link on {interface}"
-msgstr "{interface} 没有连接网络线"
 
 #: ../py/test/pytests/network_setup/network_setup.py
 msgid "Interface {interface} not found"
