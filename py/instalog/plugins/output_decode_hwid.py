@@ -25,9 +25,7 @@ from cros.factory.utils.arg_utils import Arg
 _CHROMEOS_HWID_SCOPE = 'https://www.googleapis.com/auth/chromeoshwid'
 _HWID_API_URL = 'https://chromeoshwid-pa.googleapis.com/v2/boms:batchGet'
 _DEFAULT_INTERVAL = 10
-# The BatchGetBom feature on HWID service cannot process more than 20 HWID in
-# RPC deadline.
-_DEFAULT_BATCH_SIZE = 20
+_DEFAULT_BATCH_SIZE = 1000
 _ALLOWED_PHASE = ['PVT', 'DVT', 'EVT', 'MP', 'RMA', 'PROTO']
 
 FEATURE_ENABLEMENT_TYPE_MAP = {
@@ -145,7 +143,16 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
     if response and response.get('boms', None):
       for hwid, bom in response['boms'].items():
         if bom:
-          events.append(self.ProcessBom(hwid, bom))
+          if 'error' in bom:
+            self.warning('Failed to decode hwid: %s, error: %s', hwid,
+                         bom['error'])
+            continue
+          try:
+            events.append(self.ProcessBom(hwid, bom))
+          except Exception:
+            self.exception('Failed to decode hwid: %s, bom: %s', hwid, bom)
+        else:
+          self.warning('Failed to decode hwid: %s, no response')
 
     if self.Emit(events):
       self.info('Commit %d events, decode %d HWIDs', event_count, len(events))
