@@ -25,7 +25,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tarfile
 import tempfile
 import textwrap
 import time
@@ -2469,7 +2468,7 @@ class ChromeOSFactoryBundle:
         return info['ro']
       return f"RO: {info['ro']}, RW: {info['rw']}"
 
-    def AddResource(dir_name, resources_glob):
+    def AddResource(dir_name, resources_glob, do_copy=False):
       """Adds resources to specified sub directory under bundle_dir.
 
       Returns the path of last created resource.
@@ -2484,32 +2483,25 @@ class ChromeOSFactoryBundle:
         os.makedirs(resource_dir)
       dest_path = None
       for resource in resources:
-        resource_file_name: str = os.path.basename(resource)
-
-        # Many files downloaded from CPFE or GoldenEye may contain '%2F'
-        # in its name and we want to remove them.
-        strip = resource_file_name.rfind('%2F')
+        dest_name = os.path.basename(resource)
+        # Many files downloaded from CPFE or GoldenEye may contain '%2F' in its
+        # name and we want to remove them.
+        strip = dest_name.rfind('%2F')
         if strip >= 0:
           # 3 as len('%2F')
-          resource_file_name = resource_file_name[strip + 3:]
-        dest_path = os.path.join(resource_dir, resource_file_name)
-        if os.path.isabs(resource):
-          add_tar_files_list.append(
-              (resource, os.path.join(dir_name, resource_file_name)))
+          dest_name = dest_name[strip + 3:]
+        dest_path = os.path.join(resource_dir, dest_name)
+        if do_copy:
+          shutil.copy(resource, dest_path)
         else:
-          add_tar_files_list.append((resource, resource))
+          os.symlink(os.path.abspath(resource), dest_path)
       return dest_path
 
     if timestamp is None:
       timestamp = time.strftime('%Y%m%d')
     bundle_name = f'{self.board}_{timestamp}_{phase}'
-    output_tar_name = f'factory_bundle_{bundle_name}.tar'
-    output_tar_path = os.path.join(output_dir, output_tar_name)
-    output_tar_bz2_name = f'factory_bundle_{bundle_name}.tar.bz2'
-    output_tar_bz2_path = os.path.join(output_dir, output_tar_bz2_name)
+    output_name = f'factory_bundle_{bundle_name}.tar.bz2'
     bundle_dir = os.path.join(self._temp_dir, 'bundle')
-    add_tar_files_list = []
-
     SysUtils.CreateDirectories(bundle_dir)
 
     try:
@@ -2580,7 +2572,7 @@ class ChromeOSFactoryBundle:
               f'{notes}\n')
     Shell(['cat', readme_path])
 
-    add_tar_files_list.append((readme_path, 'README.md'))
+    output_path = os.path.join(output_dir, output_name)
     AddResource('toolkit', self.toolkit)
     AddResource('release_image', self.release_image)
     AddResource('test_image', self.test_image)
@@ -2590,7 +2582,7 @@ class ChromeOSFactoryBundle:
     AddResource('project_config', self.project_config)
 
     if self.server_url:
-      shim_path = AddResource('factory_shim', self.factory_shim)
+      shim_path = AddResource('factory_shim', self.factory_shim, do_copy=True)
       with Partition(shim_path, PART_CROS_STATEFUL).Mount(rw=True) as stateful:
         logging.info('Patching factory_shim lsb-factory file...')
         lsb = LSBFile(os.path.join(stateful, PATH_LSB_FACTORY))
@@ -2610,26 +2602,19 @@ class ChromeOSFactoryBundle:
             netboot_firmware_image,
             os.path.join(bundle_dir, 'netboot',
                          os.path.basename(netboot_firmware_image)))
-      AddResource('netboot', os.path.join(self.netboot, 'image*.net.bin'))
       if has_tftp:
         AddResource('netboot', os.path.join(self.netboot, 'tftp'))
       else:
         AddResource(f'netboot/tftp/chrome-bot/{self.board}', netboot_vmlinuz)
         self.GenerateTFTP(os.path.join(bundle_dir, 'netboot', 'tftp'))
 
-    with tarfile.open(output_tar_path, 'w') as tar:
-      for file_path, arcname in add_tar_files_list:
-        tar.add(file_path, arcname)
-
-    # Python doesn't seem to have "lbzip2" integration in tarfile.
-    # Hence the last step, converting from '.tar' to '.tar.bz2' still requires
-    # an explicit call to lbzip2. Also, the 'w:bz2' write mode would take a
-    # really long time ( ~20 minutes) to compress.
-    Shell([SysUtils.FindBZip2(), output_tar_path])
-
+    Shell([
+        'tar', '-I',
+        SysUtils.FindBZip2(), '-chvf', output_path, '-C', bundle_dir, '.'
+    ])
     # Print final results again since tar may have flood screen output.
     Shell(['cat', readme_path])
-    return output_tar_bz2_path
+    return output_path
 
   @classmethod
   def _ParseCrosConfig(cls, designs, root_path):
