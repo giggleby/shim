@@ -66,7 +66,11 @@ class TestCase(unittest.TestCase):
     return '.'.join(('factory.test_case.next_task_stage', test_id))
 
   def PassTask(self):
-    """Pass current task.
+    """The function for making task passed in pytest.
+
+    Makes current task passed.
+    If there are remaining tasks in self.__tasks, runs the next task.
+    Otherwise, the test pass.
 
     Should only be called in the event callbacks or primary background test
     thread.
@@ -74,7 +78,9 @@ class TestCase(unittest.TestCase):
     raise TaskEndException
 
   def FailTask(self, msg):
-    """Fail current task.
+    """The function for making task failed in pytest.
+
+    Makes current task failed, then stops the test and makes it failed.
 
     Should only be called in the event callbacks or primary background test
     thread.
@@ -84,7 +90,7 @@ class TestCase(unittest.TestCase):
   def WaiveTest(self, msg):
     """The function for making test waived.
 
-    Make current task stopped, then stop the test and make it waived.
+    Makes current task stopped, then stops the test and makes it waived.
 
     Should only be called in the event callbacks or primary background test
     thread.

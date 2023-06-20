@@ -141,22 +141,34 @@ class TestCaseTest(unittest.TestCase):
         'goofy_ui_task_end', mock.ANY)
 
   def testPassTask(self):
-    def _RunTest():
+    call_count = [0]
+
+    def _Task():
+      call_count[0] += 1
       self._test.PassTask()
       self.AssertNotReached()
 
-    self._test.runTest = _RunTest
+    self._test.AddTask(_Task)
+    self._test.AddTask(_Task)
 
     self.AssertRunPass()
+    self.assertEqual([2], call_count)
+    self._mock_event_loop.mock.MockPostNewEvent.assert_called_with(
+        event_type=_EventType.END_EVENT_LOOP, status=state.TestState.PASSED)
 
   def testFailTask(self):
-    def _RunTest():
-      self._test.FailTask('Task fail.')
+
+    def _Task():
+      self._test.FailTask('Test fail.')
       self.AssertNotReached()
 
-    self._test.runTest = _RunTest
+    self._test.AddTask(_Task)
 
     self.AssertRunFailOrWaive()
+    self.assertRaises(pytest_utils.IndirectException)
+    self._mock_event_loop.mock.MockPostNewEvent.assert_called_with(
+        event_type=_EventType.END_EVENT_LOOP, status=state.TestState.FAILED,
+        exception_index=0)
 
   def testWaiveTest(self):
 
