@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import math
 import queue
 import signal
 import threading
@@ -182,6 +183,17 @@ class QueueGetTest(PollingTestBase):
 
     value = sync_utils.QueueGet(local_queue, timeout=None)
     self.assertEqual(value, answer)
+
+  @mock.patch(sync_utils.__name__ + '.GetPollingSleepFunction')
+  def testQueueTimeoutInfRaise(self, get_polling_mock: mock.MagicMock):
+    # pylint: disable=protected-access
+    get_polling_mock.side_effect = (
+        lambda: sync_utils._DEFAULT_POLLING_SLEEP_FUNCTION)
+
+    # Return something in case the underlying implementation accepts math.inf.
+    self._queue.put(123)
+    with self.assertRaises(OverflowError):
+      sync_utils.QueueGet(self._queue, timeout=math.inf)
 
 
 class RetryTest(PollingTestBase):

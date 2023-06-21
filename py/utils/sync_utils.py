@@ -134,9 +134,27 @@ def QueueGet(q: 'queue.Queue[T]',
              enable_logging: bool = False) -> T:
   """Get from a queue.Queue, possibly by polling.
 
-  This is useful when a custom polling sleep function is set.
+  The behavior of this function is expected to be the same as queue.Queue.get
+  but with different default options and a custom polling sleep function set by
+  WithPollingSleepFunction.
+
+  See queue.Queue.get to understand how it works first.
+
+  We use the default implementation if the sleep function is the default one
+  because cpython have a faster implementation. However, the upper limit is
+  implementation defined. The acceptable timeout range is
+  `[-2 ** 63 / 10 ** 9, (2 ** 63 - 1) / 10 ** 9]` for a certain cpython.
+
+  Raises:
+    OverflowError: If the timeout is not in the acceptable range.
   """
   if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
+    # Explicitly raise the exception here because developers don't know the
+    # limitation and may miss this path.
+    if timeout == math.inf:
+      raise OverflowError(
+          'queue.Queue.get may not accept the timeout to be math.inf. '
+          'Use timeout=None to make a blocking QueueGet() call.')
     return q.get(timeout=timeout)
 
   if not timeout:

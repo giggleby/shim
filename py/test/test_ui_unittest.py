@@ -18,6 +18,7 @@ from cros.factory.test import event as test_event
 from cros.factory.test import state
 from cros.factory.test import test_ui
 from cros.factory.unittest_utils import mock_time_utils
+from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
 
@@ -817,10 +818,12 @@ class UIKeyTest(unittest.TestCase):
     self._timeline.AddEvent(
         3, lambda: self._SimulateKeyPress(test_ui.ENTER_KEY))
 
-    self.assertEqual(test_ui.ENTER_KEY,
-                     self._ui.WaitKeysOnce(test_ui.ENTER_KEY))
+    with sync_utils.WithPollingSleepFunction(self._timeline.AdvanceTime):
+      result = self._ui.WaitKeysOnce(test_ui.ENTER_KEY)
+
+    self.assertEqual(test_ui.ENTER_KEY, result)
     self.assertFalse(self.key_callbacks)
-    self._timeline.AssertTimeAt(3)
+    self.assertAlmostEqual(self._timeline.GetTime(), 3, delta=0.1)
 
   def testWaitKeysOnceTimeout(self):
     self._timeline.AddEvent(
@@ -847,9 +850,12 @@ class UIKeyTest(unittest.TestCase):
     self._timeline.AddEvent(
         7, lambda: self._SimulateKeyPress('C'))
 
-    self.assertEqual('B', self._ui.WaitKeysOnce(['A', 'B', 'C']))
+    with sync_utils.WithPollingSleepFunction(self._timeline.AdvanceTime):
+      result = self._ui.WaitKeysOnce(['A', 'B', 'C'])
+
+    self.assertEqual('B', result)
     self.assertFalse(self.key_callbacks)
-    self._timeline.AssertTimeAt(1)
+    self.assertAlmostEqual(self._timeline.GetTime(), 1, delta=0.1)
 
   def testWaitKeysOnceMultipleKeyTimeout(self):
     self._timeline.AddEvent(
