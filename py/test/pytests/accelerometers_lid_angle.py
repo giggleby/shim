@@ -36,6 +36,7 @@ Usage examples::
 
 import logging
 import math
+import threading
 
 from cros.factory.device import accelerometer
 from cros.factory.device import device_utils
@@ -61,7 +62,7 @@ class AccelerometersLidAngleTest(test_case.TestCase):
       Arg('autostart', bool, 'Starts the test automatically without prompting.',
           default=False),
       Arg('sample_rate_hz', int, 'The sample rate in Hz to get raw data from '
-          'accelerometers.', default=20),
+          'accelerometers.', default=200),
   ]
 
   def setUp(self):
@@ -145,11 +146,15 @@ class AccelerometersLidAngleTest(test_case.TestCase):
     return lid_angle
 
   def runTest(self):
+    self.SetImage('chromebook_lid.png', 'chromebook_base.png')
     if not self.args.autostart:
-      self.ui.SetState(
-          _('Please open the lid to {angle} degrees and press SPACE.',
-            angle=self.args.angle))
+      key_pressed = threading.Event()
+      thread = threading.Thread(group=None, target=self.WaitForStartKey,
+                                args=(key_pressed, ))
+      thread.start()
       self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
+      key_pressed.set()
+      thread.join()
     else:
       self.ui.SetState(
           _('Please open the lid to {angle} degrees.', angle=self.args.angle))
@@ -164,3 +169,25 @@ class AccelerometersLidAngleTest(test_case.TestCase):
     if not (self.args.angle - self.args.tolerance <= angle <=
             self.args.angle + self.args.tolerance):
       self.FailTask(f'The lid angle is out of range: {angle:f}')
+
+  def SetImage(self, lid_url, base_url):
+    """Sets the image src."""
+    self.ui.RunJS('document.getElementById("chromebook_lid").src = args.url;',
+                  url=lid_url)
+    self.ui.RunJS('document.getElementById("chromebook_base").src = args.url;',
+                  url=base_url)
+
+  def RotateImage(self, degree):
+    """Rotates the lid image according to the calculated lid degree."""
+    self.ui.RunJS(f'document.getElementById("chromebook_lid").style.transform '
+                  f'="rotateX({-degree+90}deg)";')
+
+  def WaitForStartKey(self, key_pressed):
+    while not key_pressed.is_set():
+      lid_angle = self._CalculateLidAngle()
+      self.ui.SetInstruction(
+          _(
+              'Please open the lid to {angle} degrees and press SPACE.',
+              angle=self.args.angle,
+          ))
+      self.RotateImage(lid_angle)

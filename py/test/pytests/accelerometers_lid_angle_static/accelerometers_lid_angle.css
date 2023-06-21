@@ -1,0 +1,13 @@
+#chromebook_lid {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+  transform-origin: bottom;
+}
+#chromebook_base {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+}
