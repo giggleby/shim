@@ -119,6 +119,7 @@ class HWIDV3SelfServiceActionHelper:
       hwid_bundle_checksum: Optional[str] = None,
       avl_metadata_manager: Optional[
           avl_metadata_util.AVLMetadataManager] = None,
+      device_metadata: Optional[hwid_api_messages_pb2.DeviceMetadata] = None,
   ) -> hwid_action.DBEditableSectionAnalysisReport:
     curr_hwid_db_contents_external = self._preproc_data.raw_database
     curr_hwid_db_contents_internal = self._preproc_data.raw_database_internal
@@ -194,7 +195,7 @@ class HWIDV3SelfServiceActionHelper:
       # with bundle_uuids.
       self._hwid_validator.ValidateChange(
           new_hwid_db_contents, curr_hwid_db_contents,
-          self.PatchFirmwareBundleUUIDs(curr_hwid_db_contents))
+          self.PatchFirmwareBundleUUIDs(curr_hwid_db_contents), device_metadata)
     except hwid_validator.ValidationError as ex:
       return report_factory(ex.errors, [], [], {})
 

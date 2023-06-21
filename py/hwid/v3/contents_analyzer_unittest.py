@@ -6,6 +6,7 @@
 import os.path
 import unittest
 
+from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.utils import file_utils
@@ -29,6 +30,8 @@ DB_COMP_MODIFY_FROM_FACTORY_BUNDLE_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_modify_from_factory_bundle.yaml')
 DB_ADD_COMP_CLS_PVT_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_add_comp_cls_pvt.yaml')
+DB_FORM_FACTOR_COMP_PATH = os.path.join(
+    _TEST_DATA_PATH, 'test_database_db_form_factor_comp.yaml')
 
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _HWIDCompAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
@@ -50,6 +53,15 @@ class ContentsAnalyzerTest(unittest.TestCase):
     expected_error = contents_analyzer.Error(
         contents_analyzer.ErrorCode.CONTENTS_ERROR,
         "'dram_type_256mb_and_real_is_512mb' does not contain size property")
+    self.assertIn(expected_error, report.errors)
+
+  def test_ValidateIntegrity_MissingFormFactorComp(self):
+    db_contents = file_utils.ReadFile(DB_FORM_FACTOR_COMP_PATH)
+    inst = contents_analyzer.ContentsAnalyzer(db_contents, None, None)
+    report = inst.ValidateIntegrity(form_factor=common.FormFactor.CONVERTIBLE)
+    expected_error = contents_analyzer.Error(
+        contents_analyzer.ErrorCode.CONTENTS_ERROR,
+        "Missing component 'touchscreen' for form factor 'CONVERTIBLE'.")
     self.assertIn(expected_error, report.errors)
 
   def test_ValidateChange_GoodCompNameChange(self):

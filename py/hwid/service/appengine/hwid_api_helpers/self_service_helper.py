@@ -1074,7 +1074,8 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
           request.hwid_db_editable_section or None, False,
           require_hwid_db_lines,
           hwid_bundle_checksum=request.hwid_bundle_checksum,
-          avl_metadata_manager=self._avl_metadata_manager)
+          avl_metadata_manager=self._avl_metadata_manager,
+          device_metadata=request.device_metadata)
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     response.validation_token = report.fingerprint

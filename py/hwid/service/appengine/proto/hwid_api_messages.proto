@@ -539,6 +539,23 @@ message BatchGenerateAvlComponentNameResponse {
   repeated string component_names = 1;
 }
 
+message DeviceMetadata {
+
+  enum FormFactor {
+    UNDEFINED_FORM_FACTOR = 0;
+    CLAMSHELL = 1;
+    CONVERTIBLE = 2;
+    DETACHABLE = 3;
+    CHROMEBASE = 4;
+    CHROMEBOX = 5;
+    CHROMESLATE = 6;
+    CHROMEBIT = 7;
+  }
+
+  // Form factor of the project.
+  FormFactor form_factor = 1;
+}
+
 // A request to analyze a HWID config.
 message AnalyzeHwidDbEditableSectionRequest {
   // The project name.
@@ -551,6 +568,8 @@ message AnalyzeHwidDbEditableSectionRequest {
   bool require_hwid_db_lines = 3;
   // Checksum of latest HWID bundle.
   string hwid_bundle_checksum = 4;
+  // Device metadata from DLM.
+  DeviceMetadata device_metadata = 5;
 }
 
 // The response for analyzing the HWID config.

@@ -3,10 +3,12 @@
 # found in the LICENSE file.
 """Validator for HWID configs."""
 
-from typing import List
+from typing import List, Optional
 
 from cros.factory.hwid.service.appengine.data import config_data
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
+from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 
@@ -42,8 +44,10 @@ class HwidValidator:
     if report.errors:
       raise ValidationError(report.errors)
 
-  def ValidateChange(self, hwid_config_contents, prev_hwid_config_contents,
-                     prev_hwid_config_contents_with_bundle_uuid=None):
+  def ValidateChange(
+      self, hwid_config_contents, prev_hwid_config_contents,
+      prev_hwid_config_contents_with_bundle_uuid=None,
+      device_metadata: Optional[hwid_api_messages_pb2.DeviceMetadata] = None):
     """Validates a HWID config change.
 
     This method validates the current config (strict, i.e. including its
@@ -56,6 +60,7 @@ class HwidValidator:
       prev_hwid_config_contents: the previous HWID config as a string.
       prev_hwid_config_contents_with_bundle_uuid: the previous HWID config with
         bundle_uuid as a string.
+      device_metadata: additional metadata to validate HWID change.
     """
     expected_checksum = database.Database.ChecksumForText(hwid_config_contents)
     analyzer = contents_analyzer.ContentsAnalyzer(
@@ -65,7 +70,13 @@ class HwidValidator:
     if report_of_change.errors:
       raise ValidationError(report_of_change.errors)
 
-    report_of_integrity = analyzer.ValidateIntegrity()
+    try:
+      form_factor = device_metadata and common.FormFactor(
+          device_metadata.FormFactor.Name(device_metadata.form_factor))
+    except ValueError:
+      form_factor = None
+
+    report_of_integrity = analyzer.ValidateIntegrity(form_factor=form_factor)
     if report_of_integrity.errors:
       raise ValidationError(report_of_integrity.errors)
 

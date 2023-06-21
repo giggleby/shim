@@ -170,18 +170,46 @@ class ContentsAnalyzer:
   def curr_db_instance(self) -> Optional[database.Database]:
     return self._curr_db.instance
 
-  def ValidateIntegrity(self) -> ValidationReport:
-    """Validates the current HWID DB."""
+  def ValidateIntegrity(
+      self,
+      form_factor: Optional[common.FormFactor] = None) -> ValidationReport:
+    """Validates the current HWID DB.
+
+    Args:
+      kwargs: keyword arguments that will be passed to the validation functions.
+
+    Returns:
+      A ValidationReport instance.
+    """
     report = ValidationReport.CreateEmpty()
     if self._curr_db.load_error:
       report.errors.append(
           Error(ErrorCode.SCHEMA_ERROR, str(self._curr_db.load_error)))
     else:
-      for validation_func in [self._ValidateDramIntegrity]:
+      validate_funcs = [
+          self._ValidateDramIntegrity,
+          functools.partial(self._ValidateComponentIntegrity,
+                            form_factor=form_factor)
+      ]
+      for validation_func in validate_funcs:
         keep_going = validation_func(report, self._curr_db.instance)
         if not keep_going:
           break
     return report
+
+  def _ValidateComponentIntegrity(
+      self, validation_report, db_instance, *,
+      form_factor: Optional[common.FormFactor] = None):
+    if not form_factor:
+      return
+    db_comps = db_instance.GetComponentClasses()
+    essential_comps = set(common.FORM_FACTOR_COMPS[form_factor])
+    for comp_cls in essential_comps - db_comps:
+      validation_report.errors.append(
+          Error(
+              ErrorCode.CONTENTS_ERROR,
+              f'Missing component {comp_cls!r} for form factor '
+              f'{str(form_factor)!r}.'))
 
   def _ValidateDramIntegrity(self, validation_report, db_instance):
     for dram_tag, dram_info in db_instance.GetComponents('dram').items():

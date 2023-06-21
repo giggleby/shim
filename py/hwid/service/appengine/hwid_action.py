@@ -345,7 +345,8 @@ class HWIDAction:
           hwid_api_messages_pb2.HwidDbExternalResource] = None,
       hwid_bundle_checksum: Optional[str] = None,
       avl_metadata_manager: Optional[
-          avl_metadata_util.AVLMetadataManager] = None
+          avl_metadata_util.AVLMetadataManager] = None,
+      device_metadata: Optional[hwid_api_messages_pb2.DeviceMetadata] = None
   ) -> DBEditableSectionAnalysisReport:
     """Deep analyzes the HWID DB editable section.
 

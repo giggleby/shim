@@ -77,12 +77,13 @@ class HWIDV3Action(hwid_action.HWIDAction):
           hwid_api_messages_pb2.HwidDbExternalResource] = None,
       hwid_bundle_checksum: Optional[str] = None,
       avl_metadata_manager: Optional[
-          avl_metadata_util.AVLMetadataManager] = None
+          avl_metadata_util.AVLMetadataManager] = None,
+      device_metadata: Optional[hwid_api_messages_pb2.DeviceMetadata] = None
   ) -> hwid_action.DBEditableSectionAnalysisReport:
     return self._ss_helper.AnalyzeDBEditableSection(
         draft_db_editable_section, derive_fingerprint_only,
         require_hwid_db_lines, internal, avl_converter_manager, avl_resource,
-        hwid_bundle_checksum, avl_metadata_manager)
+        hwid_bundle_checksum, avl_metadata_manager, device_metadata)
 
   def GetHWIDBundleResourceInfo(self, fingerprint_only=False):
     return self._ss_helper.GetHWIDBundleResourceInfo(fingerprint_only)

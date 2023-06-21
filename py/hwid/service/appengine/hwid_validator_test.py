@@ -10,6 +10,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.hwid.service.appengine import hwid_validator
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import file_utils
@@ -42,6 +43,7 @@ GOLDEN_HWIDV3_DATA_FROM_FACTORY_BUNDLE_MODIFIED = file_utils.ReadFile(
     os.path.join(TESTDATA_PATH, 'v3-from-factory-bundle-modified.yaml'))
 
 _ComponentNameInfo = contents_analyzer.ComponentNameInfo
+_DeviceMetadata = hwid_api_messages_pb2.DeviceMetadata
 
 
 @mock.patch('cros.factory.hwid.service.appengine.config.CONFIG.hwid_filesystem',
@@ -57,6 +59,14 @@ class HwidValidatorTest(unittest.TestCase):
     with self.assertRaises(hwid_validator.ValidationError):
       hwid_validator.HwidValidator().ValidateChange(
           GOLDEN_HWIDV3_DATA_AFTER_BAD, GOLDEN_HWIDV3_DATA_BEFORE)
+
+  def testValidateChange_withDeviceMetadata(self):
+    device_metadata = _DeviceMetadata(
+        form_factor=_DeviceMetadata.FormFactor.CONVERTIBLE)
+    with self.assertRaises(hwid_validator.ValidationError):
+      hwid_validator.HwidValidator().ValidateChange(
+          GOLDEN_HWIDV3_DATA_AFTER_GOOD, GOLDEN_HWIDV3_DATA_BEFORE,
+          device_metadata=device_metadata)
 
   def testValidateChange_modifiedFromFactoryBundle(self):
     with self.assertRaises(hwid_validator.ValidationError):

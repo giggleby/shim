@@ -17,6 +17,36 @@ OLDEST_FRAMEWORK_VERSION = 0
 # in HWID DB.
 FRAMEWORK_VERSION = 0
 
+ESSENTIAL_COMPS = ('mainboard', 'region', 'dram', 'cpu', 'storage')
+
+
+class FormFactor(str, enum.Enum):
+  CLAMSHELL = 'CLAMSHELL'
+  CONVERTIBLE = 'CONVERTIBLE'
+  DETACHABLE = 'DETACHABLE'
+  CHROMEBASE = 'CHROMEBASE'
+  CHROMEBOX = 'CHROMEBOX'
+  CHROMESLATE = 'CHROMESLATE'
+
+  def __str__(self):
+    return self.name
+
+
+FORM_FACTOR_COMPS = {
+    FormFactor.CLAMSHELL:
+        ESSENTIAL_COMPS + ('display_panel', 'battery'),
+    FormFactor.CONVERTIBLE:
+        ESSENTIAL_COMPS + ('display_panel', 'touchscreen', 'battery'),
+    FormFactor.DETACHABLE:
+        ESSENTIAL_COMPS + ('display_panel', 'touchscreen', 'battery'),
+    FormFactor.CHROMEBASE:
+        ESSENTIAL_COMPS + ('display_panel', ),
+    FormFactor.CHROMEBOX:
+        ESSENTIAL_COMPS,
+    FormFactor.CHROMESLATE:
+        ESSENTIAL_COMPS + ('display_panel', 'touchscreen', 'battery'),
+}
+
 
 class OperationMode(str, enum.Enum):
   normal = 'normal'

@@ -1,0 +1,55 @@
+board: CHROMEBOOK
+
+
+##### BEGIN CHECKSUM BLOCK
+#
+# WARNING: This checksum is generated and audited by Google. Do not
+# modify it. If you modify it, devices' configurations will be
+# invalid, and the devices may not be sold.
+#
+# 警告：此校验码由 Google 产生及审核，禁止手动修改。
+# 若修改将使设备配置變為无效，并且不得销售此设备。
+#
+#####
+checksum: 87116d38e970e41be6f0012417325044eabba8da
+
+##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
+
+
+encoding_patterns:
+  0: default
+
+image_id:
+  0: TEST
+
+pattern:
+  - image_ids: [0]
+    encoding_scheme: base8192
+    fields:
+    - mainboard_field: 1
+    - region_field: 1
+    - dram_field: 1
+    - cpu_field: 1
+    - storage_field: 1
+    - display_panel_field: 1
+    - battery_field: 1
+
+encoded_fields:
+  mainboard_field:
+    0: { mainboard: null }
+  region_field:
+    0: { region: null }
+  dram_field:
+    0: { dram: null }
+  cpu_field:
+    0: { cpu: null }
+  storage_field:
+    0: { storage: null }
+  display_panel_field:
+    0: { display_panel: null }
+  battery_field:
+    0: { battery: null }
+
+components: {}
+
+rules: []
