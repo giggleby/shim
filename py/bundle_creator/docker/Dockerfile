@@ -41,9 +41,13 @@ RUN cd /usr/src/ && \
   rm "${gcloud_archive_name}" && \
   ln -s /usr/src/google-cloud-sdk/bin/gcloud /usr/bin/gcloud && \
   ln -s /usr/src/google-cloud-sdk/bin/gsutil /usr/bin/gsutil
+
 # The `crcmod` module is required for the `gsutil` command to download composite
 # objects.
 RUN pip install crcmod==1.7
+
+# The `jsonschema` module is required for installing factory toolkit.
+RUN pip install jsonschema==4.17.3
 
 COPY docker/install_factory_toolkit.run /tmp
 # Use `docker/factory.zip*` here to prevent the interruption when the file
