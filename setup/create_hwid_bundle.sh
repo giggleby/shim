@@ -199,6 +199,10 @@ main() {
   # Verify the HWID databases
   if [ -n "${FACTORY_TOOL}" ]; then
     for database_file in "${bundle_dir}"/*; do
+      # Skip the feature requirement spec files.
+      if [[ "${database_file}" = *".feature_requirement_spec.textproto" ]]; then
+        continue
+      fi
       warn "Verify the HWID database: $(basename "${database_file}")"
       "${FACTORY_TOOL}" hwid verify-database \
           --hwid-db-path "$(dirname "${database_file}")" \
