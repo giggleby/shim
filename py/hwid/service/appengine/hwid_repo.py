@@ -404,6 +404,7 @@ HWIDDBCLStatus = git_util.CLStatus
 HWIDDBCLReviewStatus = git_util.CLReviewStatus
 HWIDDBCLCommentThread = git_util.CLCommentThread
 HWIDDBCLComment = git_util.CLComment
+HWIDDBCLMessage = git_util.CLMessage
 
 
 class HWIDRepoManager:
@@ -448,11 +449,15 @@ class HWIDRepoManager:
       HWIDRepoError: Failed to fetch the CL info from Gerrit.
     """
     try:
-      cl_info = git_util.GetCLInfo(INTERNAL_REPO_REVIEW_URL, cl_number,
-                                   auth_cookie=git_util.GetGerritAuthCookie(),
-                                   include_comment_thread=True,
-                                   include_mergeable=True,
-                                   include_review_status=True)
+      cl_info = git_util.GetCLInfo(
+          INTERNAL_REPO_REVIEW_URL,
+          cl_number,
+          auth_cookie=git_util.GetGerritAuthCookie(),
+          include_mergeable=True,
+          include_review_status=True,
+          include_comment_thread=True,
+          include_messages=True,
+      )
       kwargs = cl_info._asdict()
       kwargs['comment_threads'] = list(
           filter(lambda t: t.path, kwargs['comment_threads']))

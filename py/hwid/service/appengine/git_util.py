@@ -35,6 +35,7 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import schema
 from cros.factory.utils import sync_utils
 
+
 # Constants.
 HEAD = b'HEAD'
 DEFAULT_REMOTE_NAME = b'origin'
@@ -713,11 +714,29 @@ class CLCommentThread(NamedTuple):
   comments: Sequence[CLComment]
 
 
+class CLMessage(NamedTuple):
+  """One CL message on Gerrit.
+
+  Attributes:
+    time: The timestamp this message was posted.
+    message: A string of the CL message left by the message author or bot.
+    author_name: (Optional) A string of author name.
+    author_email: (Optional) A string of author email.
+    revision_number: (Optional) An integer of the revision of this CL.
+  """
+  time: datetime.datetime
+  message: str
+  author_name: Optional[str]
+  author_email: Optional[str]
+  revision_number: Optional[int]
+
+
 class CLInfo(NamedTuple):
   change_id: str
   cl_number: int
   subject: str
   status: CLStatus
+  hashtags: Sequence[str]
   review_status: Optional[CLReviewStatus]
   mergeable: Optional[bool]
   created_time: datetime.datetime
@@ -726,9 +745,10 @@ class CLInfo(NamedTuple):
   commit_queue: Optional[bool]
   parent_cl_numbers: Optional[Sequence[int]]
   verified: Optional[bool]
+  messages: Optional[Sequence[CLMessage]]
 
 
-def _ConvertGerritTimestamp(timestamp):
+def _ConvertGerritTimestamp(timestamp) -> datetime.datetime:
   return datetime.datetime.strptime(timestamp[:-3], '%Y-%m-%d %H:%M:%S.%f')
 
 
@@ -737,6 +757,7 @@ _ACCOUNT_INFO_SCHEMA = schema.FixedDict(
         '_account_id': schema.Scalar('_account_id', int),
     }, optional_items={
         'display_name': schema.Scalar('display_name', str),
+        'name': schema.Scalar('name', str),
         'email': schema.Scalar('email', str),
     }, allow_undefined_keys=True)
 _APPROVAL_INFO_SCHEMA = schema.FixedDict(
@@ -766,6 +787,8 @@ _CHANGE_INFO_SCHEMA = schema.FixedDict(
         'labels':
             schema.Dict('labels', schema.Scalar('label_name', str),
                         _LABEL_INFO_SCHEMA),
+        'hashtags':
+            schema.List('hashtags', schema.Scalar('hashtag', str)),
     }, allow_undefined_keys=True)
 _MERGEABLE_INFO = schema.FixedDict(
     'MergeableInfo', items={'mergeable': schema.Scalar('mergeable', bool)},
@@ -804,6 +827,14 @@ _RELATED_CHANGES_INFO = schema.FixedDict(
     'RelatedChangesInfo',
     items={'changes': schema.List('changes', _RELATED_CHANGE_INFO)},
     allow_undefined_keys=True)
+_CL_MESSAGE = schema.FixedDict(
+    'CommitMessage', items={
+        'date': schema.Scalar('date', str),
+        'message': schema.Scalar('message', str),
+    }, optional_items={
+        '_revision_number': schema.Scalar('_revision_number', int),
+        'author': _ACCOUNT_INFO_SCHEMA,
+    }, allow_undefined_keys=True)
 
 
 def _ConvertCodeReviewLabelsToCLReviewStatus(code_review_labels):
@@ -849,8 +880,15 @@ def _ConvertCommentInfoJSONToContext(comment_info_json) -> Optional[str]:
   ])
 
 
-def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
-              include_review_status=False, include_comment_thread=False):
+def GetCLInfo(
+    review_host: str,
+    change_id: Union[int, str],
+    auth_cookie: str = '',
+    include_mergeable: bool = False,
+    include_review_status: bool = False,
+    include_comment_thread: bool = False,
+    include_messages: bool = False,
+) -> CLInfo:
   """Gets the info of the specified CL by querying the Gerrit API.
 
   Args:
@@ -860,6 +898,7 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
     include_mergeable: Whether to pull the mergeable status of the CL.
     include_review_status: Whether to pull the CL review status.
     include_comment_thread: Whether to pull comments of the CL.
+    include_messages: Whether to pull messages of the CL.
 
   Returns:
     An instance of `CLInfo`.  Optional fields might be `None`.
@@ -881,14 +920,16 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
     gerrit_resps.append(resp)
     return resp
 
-  def _GetCLMergeableInfo(cl_status):
+  def _GetCLMergeableInfo(cl_status: CLStatus) -> Optional[bool]:
+    if not include_mergeable:
+      return None
     if cl_status != CLStatus.NEW:
       return False
     cl_mergeable_info_json = _GetChangeInfo('/revisions/current/mergeable', [],
                                             _MERGEABLE_INFO)
     return cl_mergeable_info_json['mergeable']
 
-  def _GetCLReviewStatus(change_info_json):
+  def _GetCLReviewStatus(change_info_json) -> Optional[CLReviewStatus]:
     if not include_review_status:
       return None
     code_review_labels = change_info_json.get('labels', {}).get(_CODE_REVIEW)
@@ -896,7 +937,7 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
       raise GitUtilException('The Code-Review labels are missing.')
     return _ConvertCodeReviewLabelsToCLReviewStatus(code_review_labels)
 
-  def _GetCLVerified(change_info_json):
+  def _GetCLVerified(change_info_json) -> Optional[bool]:
     if not include_review_status:
       return None
     verified_labels = change_info_json.get('labels', {}).get(_VERIFIED, {})
@@ -911,13 +952,13 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
         if vote.get('_account_id') != owner_id)
     return verified and not rejected
 
-  def _GetBotApprovalStatus(change_info_json):
+  def _GetBotApprovalStatus(change_info_json) -> Optional[bool]:
     if not include_review_status:
       return None
     bot_commit_labels = change_info_json.get('labels', {}).get(_BOT_COMMIT, {})
     return bool(bot_commit_labels.get('approved'))
 
-  def _GetCommitQueueStatus(change_info_json):
+  def _GetCommitQueueStatus(change_info_json) -> Optional[bool]:
     if not include_review_status:
       return None
     cq_labels = change_info_json.get('labels', {}).get(_COMMIT_QUEUE, {})
@@ -951,7 +992,9 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
 
     return parent_cl_numbers
 
-  def _GetCLCommentThread():
+  def _GetCLCommentThread() -> Optional[Sequence[CLCommentThread]]:
+    if not include_comment_thread:
+      return None
     comment_json_of_path = _GetChangeInfo(
         '/comments', [('enable-context', 'true')],
         schema.Dict('comment_map', schema.Scalar('path', str),
@@ -1004,35 +1047,111 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
 
     return root_comment_threads
 
+  def _GetCLMessages() -> Optional[Sequence[CLMessage]]:
+    if not include_messages:
+      return None
+    messages_json = _GetChangeInfo('/messages', [],
+                                   schema.List('messages', _CL_MESSAGE))
+    return [
+        CLMessage(
+            time=_ConvertGerritTimestamp(message_json['date']),
+            message=message_json['message'],
+            author_name=message_json.get('author', {}).get('name'),
+            author_email=message_json.get('author', {}).get('email'),
+            revision_number=message_json.get('_revision_number'),
+        ) for message_json in messages_json
+    ]
+
   options = [('o', 'CURRENT_REVISION')]
   if include_review_status:
     options.append(('o', 'LABELS'))
   change_info_json = _GetChangeInfo('', options, _CHANGE_INFO_SCHEMA)
   commit_id = change_info_json['current_revision']
+  hashtags = change_info_json.get('hashtags', [])
 
   try:
     cl_status = _GERRIT_CL_STATUS_TO_CL_STATUS[change_info_json['status']]
-    mergeable_or_none = (
-        _GetCLMergeableInfo(cl_status) if include_mergeable else None)
-    comment_threads_or_none = (
-        _GetCLCommentThread() if include_comment_thread else None)
     return CLInfo(
         change_id=change_info_json['change_id'],
         cl_number=change_info_json['_number'],
-        subject=change_info_json['subject'], status=cl_status,
+        subject=change_info_json['subject'],
+        status=cl_status,
+        hashtags=hashtags,
         review_status=_GetCLReviewStatus(change_info_json),
-        mergeable=mergeable_or_none, created_time=_ConvertGerritTimestamp(
-            change_info_json['created']),
-        comment_threads=comment_threads_or_none,
+        mergeable=_GetCLMergeableInfo(cl_status),
+        created_time=_ConvertGerritTimestamp(change_info_json['created']),
+        comment_threads=_GetCLCommentThread(),
         bot_commit=_GetBotApprovalStatus(change_info_json),
         commit_queue=_GetCommitQueueStatus(change_info_json),
         parent_cl_numbers=_GetParentCLNumbers(commit_id),
-        verified=_GetCLVerified(change_info_json))
+        verified=_GetCLVerified(change_info_json),
+        messages=_GetCLMessages(),
+    )
   except GitUtilException:
     raise
   except Exception as ex:
     logging.debug('Unexpected Gerrit API response for CL: %r.', gerrit_resps)
     raise GitUtilException('Failed to parse the Gerrit API response.') from ex
+
+
+def UpdateHashTags(
+    review_host: str,
+    auth_cookie: str,
+    cl_number: int,
+    add_hashtags: Optional[Sequence[str]] = None,
+    remove_hashtags: Optional[Sequence[str]] = None,
+):
+  """Updates hashtags of a given CL.
+
+  Args:
+    review_host: Base URL to the API endpoint.
+    auth_cookie: Auth cookie if the API is not public.
+    cl_number: The CL number.
+    add_hashtags: An optional list of hashtags to be added.
+    remove_hashtags: An optional list of hashtags to be removed.
+
+  Raises:
+    GitUtilException if error occurs while calling the Gerrit API.
+  """
+  add_hashtags = add_hashtags or []
+  remove_hashtags = remove_hashtags or []
+  try:
+    _InvokeGerritAPIJSON(
+        'POST', f'{review_host}/changes/{cl_number}/hashtags',
+        auth_cookie=auth_cookie, json_body={
+            'add': add_hashtags,
+            'remove': remove_hashtags,
+        })
+  except GitUtilException as ex:
+    raise GitUtilException(
+        f'Add hashtag failed for CL number: {cl_number}.') from ex
+
+
+def AddReviewer(
+    review_host: str,
+    auth_cookie: str,
+    cl_number: int,
+    reviewer: str,
+):
+  """Adds a reviewer to a given CL.
+
+  Args:
+    review_host: Base URL to the API endpoint.
+    auth_cookie: Auth cookie if the API is not public.
+    cl_number: The CL number.
+    reviewer: A string of reviewer's email.
+
+  Raises:
+    GitUtilException if error occurs while calling the Gerrit API.
+  """
+  try:
+    _InvokeGerritAPIJSON('POST', f'{review_host}/changes/{cl_number}/reviewers',
+                         auth_cookie=auth_cookie, json_body={
+                             'reviewer': reviewer,
+                         })
+  except GitUtilException as ex:
+    raise GitUtilException(
+        f'Add hashtag failed for CL number: {cl_number}.') from ex
 
 
 def ReviewCL(review_host: str, auth_cookie: str, cl_number: int,

@@ -800,25 +800,34 @@ class SelfServiceShardTest(unittest.TestCase):
                      protorpc_utils.RPCCanonicalErrorCode.ABORTED)
 
   def _CreateHWIDDBCLWithDefaults(
-      self, cl_number: int, status: hwid_repo.HWIDDBCLStatus,
+      self,
+      cl_number: int,
+      status: hwid_repo.HWIDDBCLStatus,
       subject: str = 'subject',
       review_status: Optional[hwid_repo.HWIDDBCLReviewStatus] = (
-          hwid_repo.HWIDDBCLReviewStatus.NEUTRAL), comment_threads: Optional[
-              Sequence[hwid_repo.HWIDDBCLCommentThread]] = None,
+          hwid_repo.HWIDDBCLReviewStatus.NEUTRAL),
+      comment_threads: Optional[Sequence[
+          hwid_repo.HWIDDBCLCommentThread]] = None,
+      hashtags: Optional[Sequence[str]] = None,
       mergeable: Optional[bool] = None,
       created_time: Optional[datetime.datetime] = None,
-      bot_commit: Optional[bool] = None, commit_queue: Optional[bool] = None,
+      bot_commit: Optional[bool] = None,
+      commit_queue: Optional[bool] = None,
       parent_cl_numbers: Optional[Sequence[int]] = None,
-      verified: Optional[bool] = None) -> hwid_repo.HWIDDBCLInfo:
+      verified: Optional[bool] = None,
+      cl_messages: Optional[Sequence[hwid_repo.HWIDDBCLMessage]] = None,
+  ) -> hwid_repo.HWIDDBCLInfo:
     change_id = str(cl_number)
     if mergeable is None:
       mergeable = status == hwid_repo.HWIDDBCLStatus.NEW
+    hashtags = hashtags or []
     created_time = created_time or datetime.datetime.utcnow()
     comment_threads = comment_threads or []
-    return hwid_repo.HWIDDBCLInfo(change_id, cl_number, subject, status,
-                                  review_status, mergeable, created_time,
-                                  comment_threads, bot_commit, commit_queue,
-                                  parent_cl_numbers, verified)
+    cl_messages = cl_messages or []
+    return hwid_repo.HWIDDBCLInfo(
+        change_id, cl_number, subject, status, hashtags, review_status,
+        mergeable, created_time, comment_threads, bot_commit, commit_queue,
+        parent_cl_numbers, verified, cl_messages)
 
   def testBatchGetHwidDbEditableSectionChangeClInfo(self):
     all_hwid_commit_infos = {

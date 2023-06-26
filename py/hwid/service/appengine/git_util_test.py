@@ -596,6 +596,75 @@ class GetCLInfoTest(unittest.TestCase):
         list(range(cl_number + 1, cl_number + 10)),
         actual_cl_info.parent_cl_numbers)
 
+  def testGetCLInfo_WithHashtags(self):
+    # Arrange.
+    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
+    cl_number = 100
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(
+            cl_number=cl_number, hashtags=['hashtag1', 'hashtag2']),
+    ]
+
+    # Act.
+    actual_cl_info = git_util.GetCLInfo('unused_review_host',
+                                        self._THE_CHANGE_ID)
+
+    # Assert.
+    self.assertEqual(cl_number, actual_cl_info.cl_number)
+    self.assertCountEqual(['hashtag1', 'hashtag2'], actual_cl_info.hashtags)
+
+  def testGetCLInfo_WithCLMessages(self):
+
+    def _CreateCLMessageJSONFromTemplate(numeric_id: int,
+                                         date: datetime.datetime):
+      return {
+          'id': f'id{numeric_id}',
+          'date': date.strftime('%Y-%m-%d %H:%M:%S.%f000'),
+          'message': f'Message {numeric_id}.',
+          'author': {
+              'email': f'author{numeric_id}@not_google.com',
+              'name': f'author{numeric_id}',
+              '_account_id': numeric_id,
+          },
+          '_revision_number': numeric_id,
+      }
+
+    # Arrange.
+    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
+    cl_number = 100
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(
+            cl_number=cl_number,
+        ),
+        self._BuildGerritSuccResponse([
+            _CreateCLMessageJSONFromTemplate(1, datetime.datetime(2023, 1, 1)),
+            _CreateCLMessageJSONFromTemplate(2, datetime.datetime(2023, 1, 2)),
+        ]),
+    ]
+
+    # Act.
+    actual_cl_info = git_util.GetCLInfo(
+        'unused_review_host', self._THE_CHANGE_ID, include_messages=True)
+
+    # Assert.
+    self.assertEqual(cl_number, actual_cl_info.cl_number)
+    self.assertCountEqual([
+        git_util.CLMessage(
+            time=datetime.datetime(2023, 1, 1),
+            message='Message 1.',
+            author_name='author1',
+            author_email='author1@not_google.com',
+            revision_number=1,
+        ),
+        git_util.CLMessage(
+            time=datetime.datetime(2023, 1, 2),
+            message='Message 2.',
+            author_name='author2',
+            author_email='author2@not_google.com',
+            revision_number=2,
+        ),
+    ], actual_cl_info.messages)
+
 
 class CreateCLTest(unittest.TestCase):
 
