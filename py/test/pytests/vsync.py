@@ -9,6 +9,12 @@ Description
 This pytest test if VSync pin is connected to EC and camera can receive VSync
 signal.
 
+Internal References
+^^^^^^^^^^^^^^^^^^^
+- `b/146452722 <http://b/146452722>`_
+- `2021-2H_rfp_announcement <https://chromeos.google.com/partner/dlm/docs/\
+device-rfp/2021-2H_rfp_announcement.html>`_
+
 Test Procedure
 --------------
 This is an automatic test that doesn't need any user interaction.
@@ -44,6 +50,7 @@ DEFAULT_CAPTURE_NUMBER = 10
 
 
 class SpatialSensorCalibration(test_case.TestCase):
+  related_components = (test_case.TestCategory.CAMERA, )
   ARGS = [
       Arg('capture_number', int, 'The number of capture frames.',
           default=DEFAULT_CAPTURE_NUMBER),

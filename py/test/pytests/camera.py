@@ -284,6 +284,10 @@ _RANGE_SCHEMA = schema.JSONSchemaDict(
 
 class CameraTest(test_case.TestCase):
   """Main class for camera test."""
+  related_components = (
+      test_case.TestCategory.CAMERA,
+      test_case.TestCategory.MIPI_CAMERA,
+  )
   ARGS = [
       Arg('mode', TestModes, 'The test mode to test camera.', default='qr'),
       Arg(

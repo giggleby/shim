@@ -51,6 +51,10 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('Audio Jack Codec', 'audio_codec'),
         TestCategory.BATTERY:
             CategoryProperties('Battery', 'battery'),
+        TestCategory.CAMERA:
+            CategoryProperties('Camera - USB', 'camera'),
+        TestCategory.MIPI_CAMERA:
+            CategoryProperties('Camera - MIPI', 'camera'),
     }.get(self, CategoryProperties(None, None))
 
   @property
