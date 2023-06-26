@@ -31,11 +31,12 @@ class OutputBigQueryHWID(output_bigquery.OutputBigQuery):
                 SchemaField('value', 'string', 'NULLABLE', None, ()),
             )),
         )),
-        SchemaField('phase', 'string', 'REQUIRED', None, ()),
+        SchemaField('phase', 'string', 'NULLABLE', None, ()),
         SchemaField('hwid', 'string', 'REQUIRED', None, ()),
         SchemaField('time', 'timestamp', 'REQUIRED', None, ()),
         SchemaField('featureEnablementType', 'integer', 'NULLABLE', None, ()),
-        SchemaField('xVersion', 'integer', 'NULLABLE', None, ())
+        SchemaField('xVersion', 'integer', 'NULLABLE', None, ()),
+        SchemaField('error', 'string', 'NULLABLE', None, ()),
     ]
 
   def ConvertEventToRow(self, event):
@@ -65,9 +66,9 @@ class OutputBigQueryHWID(output_bigquery.OutputBigQuery):
     row['phase'] = event.get('phase')
     row['hwid'] = event.get('hwid')
     row['time'] = event.get('time')
-
     row['featureEnablementType'] = event.get('featureEnablementType')
     row['xVersion'] = event.get('xVersion')
+    row['error'] = event.get('error')
 
     return json.dumps(row, allow_nan=False)
 

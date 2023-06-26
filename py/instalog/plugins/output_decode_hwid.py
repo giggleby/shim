@@ -95,8 +95,13 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
   def ProcessBom(self, hwid, bom):
     """Processes responses from HWID service to Instalog Event."""
     event = datatypes.Event({})
+    event['__hwid__'] = True
     event['hwid'] = hwid
     event['time'] = time.time()
+    if 'error' in bom:
+      self.warning('Failed to decode hwid: %s, error: %s', hwid, bom['error'])
+      event['error'] = bom['error']
+      return event
     event['phase'] = bom['phase']
     # The phase is set by partner, so it may have other prefix or suffix.
     # For example, 'EVT_xxx', 'PVE_2', and 'xxx-PVT'
@@ -107,7 +112,6 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
     x_labels = bom['featureManagementStatus'].split(':')
     event['featureEnablementType'] = FEATURE_ENABLEMENT_TYPE_MAP[x_labels[0]]
     event['xVersion'] = int(x_labels[1])
-    event['__hwid__'] = True
     return event
 
   def DecodeHwid(self):
@@ -143,10 +147,6 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
     if response and response.get('boms', None):
       for hwid, bom in response['boms'].items():
         if bom:
-          if 'error' in bom:
-            self.warning('Failed to decode hwid: %s, error: %s', hwid,
-                         bom['error'])
-            continue
           try:
             events.append(self.ProcessBom(hwid, bom))
           except Exception:
