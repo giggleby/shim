@@ -1,7 +1,6 @@
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Connect to an AP.
 
 Description
@@ -49,6 +48,7 @@ To disconnect to all WiFi services.::
 """
 
 import re
+from typing import List
 
 from cros.factory.device import device_utils
 from cros.factory.goofy.plugins import plugin_controller
@@ -59,25 +59,38 @@ from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
 
+SSID_RE = re.compile('SSID: (.*)$', re.MULTILINE)
+
+
 class WirelessConnectTest(test_case.TestCase):
   """Basic wireless test class."""
   ARGS = [
-      Arg('device_name', str,
-          'The wifi interface',
-          default=None),
+      Arg('device_name', str, 'The wifi interface', default=None),
       Arg('service_name', list,
           'A list of wlan config. See net_utils.WLAN for more information',
           default=[]),
-      Arg('retries', int, 'Times to retry.',
-          default=10),
-      Arg('sleep_interval', int, 'Time to sleep.',
-          default=3)]
+      Arg('retries', int, 'Times to retry.', default=10),
+      Arg('sleep_interval', int, 'Time to sleep.', default=3)
+  ]
 
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
     self._device_name = None
     self._connection_manager = plugin_controller.GetPluginRPCProxy(
         'connection_manager')
+
+  def _CheckConnected(self, ssid_list: List[str]) -> bool:
+    result = self._dut.CheckOutput(['iw', 'dev', self._device_name, 'link'],
+                                   log=True)
+    match = SSID_RE.search(result)
+    if match and match.group(1) in ssid_list:
+      return True
+    return False
+
+  def _CheckNotConnected(self):
+    result: str = self._dut.CheckOutput(
+        ['iw', 'dev', self._device_name, 'link'], log=True)
+    return result.startswith('Not connected.')
 
   def runTest(self):
     self._device_name = self._dut.wifi.SelectInterface(self.args.device_name)
@@ -87,25 +100,17 @@ class WirelessConnectTest(test_case.TestCase):
     if not self._connection_manager:
       self.FailTask('No connection_manager exists.')
     self._connection_manager.Reconnect(services)
-    SSID_RE = re.compile('SSID: (.*)$', re.MULTILINE)
     ssid_list = [service.get('ssid') for service in services]
 
-    @sync_utils.RetryDecorator(max_attempt_count=self.args.retries,
-                               interval_sec=self.args.sleep_interval,
-                               target_condition=bool)
-    def _CheckOutput():
-      result = self._dut.CheckOutput(['iw', 'dev', self._device_name, 'link'],
-                                     log=True)
-      if ssid_list:
-        match = SSID_RE.search(result)
-        if match and match.group(1) in ssid_list:
-          return True
-      if result.startswith('Not connected.'):
-        return True
-      return False
+    retry_wrapper = sync_utils.RetryDecorator(
+        max_attempt_count=self.args.retries,
+        interval_sec=self.args.sleep_interval, target_condition=bool)
 
     try:
-      _CheckOutput()
+      if ssid_list:
+        retry_wrapper(self._CheckConnected)(ssid_list)
+      else:
+        retry_wrapper(self._CheckNotConnected)()
     except type_utils.MaxRetryError:
       self.FailTask('Reach maximum retries.')
     else:
