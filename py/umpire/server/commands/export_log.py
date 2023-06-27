@@ -144,12 +144,10 @@ class LogExporter:
         end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d').date()
         root_dir = os.path.join(umpire_data_dir, sub_dir)
         tar_files_list = []
-        no_logs = True
         if os.path.isdir(root_dir) and os.listdir(root_dir):
-          no_logs = False
           tar_files_list = self.CompressFilesLimitedMaxSize(
               start_date, end_date, root_dir, dst_dir, split_bytes)
-        if no_logs:
+        if len(tar_files_list) == 0:
           messages.append(f'no {log_type}s for {start_date} ~ {end_date}')
         return {
             'messages': messages,
