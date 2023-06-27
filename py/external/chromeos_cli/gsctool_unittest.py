@@ -218,6 +218,13 @@ class GSCToolTest(unittest.TestCase):
     mock_decode_func.assert_called_with(mock.ANY)
     self.assertEqual(feature_flags, expected_result)
 
+  def testSetAddressingMode3byte(self):
+    self.gsctool.SetAddressingMode(0x1000000)
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-C', '3byte'])
+
+  def testSetAddressingMode4byte(self):
+    self.gsctool.SetAddressingMode(0x1000001)
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-C', '4byte'])
 
 if __name__ == '__main__':
   unittest.main()
