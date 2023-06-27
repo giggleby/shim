@@ -68,7 +68,7 @@ class _DeprecatedAPIShard(common_helper.HWIDServiceShardBase):
 
 
 def GetAllHWIDServiceShards(
-    config) -> Collection[common_helper.HWIDServiceShardBase]:
+    config, config_data) -> Collection[common_helper.HWIDServiceShardBase]:
   project_info_shard = project_info_apis.ProjectInfoShard(
       config.hwid_action_manager, config.hwid_db_data_manager)
 
@@ -91,7 +91,8 @@ def GetAllHWIDServiceShards(
       config.hwid_action_manager, config.hwid_repo_manager,
       config.hwid_db_data_manager, config.avl_converter_manager,
       session_cache_adapter, config.avl_metadata_manager,
-      ss_helper.FeatureMatcherBuilderImpl)
+      ss_helper.FeatureMatcherBuilderImpl,
+      config_data.cq_count_over_limit_cl_reviewers)
 
   return [
       project_info_shard,

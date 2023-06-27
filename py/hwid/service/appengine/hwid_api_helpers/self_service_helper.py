@@ -355,6 +355,21 @@ def _IsCLReadyForCQ(cl_info: hwid_repo.HWIDDBCLInfo) -> bool:
                                 == hwid_repo.HWIDDBCLReviewStatus.APPROVED)
 
 
+CQ_COUNT_LIMIT = 3
+CQ_COUNT_OVER_LIMIT_HASHTAG = 'cros-hwid-cq-count-over-limit'
+
+
+def _IsCQCountOverLimit(cl_info: hwid_repo.HWIDDBCLInfo) -> bool:
+  if not cl_info.messages:
+    return False
+  return sum(1 for cl_message in cl_info.messages
+             if 'Commit-Queue+2' in cl_message.message) > CQ_COUNT_LIMIT
+
+
+def _HasCQCountOverLimitHashtag(cl_info: hwid_repo.HWIDDBCLInfo) -> bool:
+  return CQ_COUNT_OVER_LIMIT_HASHTAG in cl_info.hashtags
+
+
 class FeatureMatcherBuildResult(NamedTuple):
   has_warnings: bool
   commit_message: str
@@ -628,14 +643,17 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
 
 class SelfServiceShard(common_helper.HWIDServiceShardBase):
 
-  def __init__(self,
-               hwid_action_manager_inst: hwid_action_manager.HWIDActionManager,
-               hwid_repo_manager: hwid_repo.HWIDRepoManager,
-               hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
-               avl_converter_manager: converter_utils.ConverterManager,
-               session_cache_adapter: memcache_adapter.MemcacheAdapter,
-               avl_metadata_manager: avl_metadata_util.AVLMetadataManager,
-               feature_matcher_builder_class: Type[FeatureMatcherBuilder]):
+  def __init__(
+      self,
+      hwid_action_manager_inst: hwid_action_manager.HWIDActionManager,
+      hwid_repo_manager: hwid_repo.HWIDRepoManager,
+      hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
+      avl_converter_manager: converter_utils.ConverterManager,
+      session_cache_adapter: memcache_adapter.MemcacheAdapter,
+      avl_metadata_manager: avl_metadata_util.AVLMetadataManager,
+      feature_matcher_builder_class: Type[FeatureMatcherBuilder],
+      cq_count_over_limit_cl_reviewers: Optional[Sequence[str]] = None,
+  ):
     self._hwid_action_manager = hwid_action_manager_inst
     self._hwid_repo_manager = hwid_repo_manager
     self._hwid_db_data_manager = hwid_db_data_manager
@@ -643,6 +661,8 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
     self._session_cache_adapter = session_cache_adapter
     self._avl_metadata_manager = avl_metadata_manager
     self._feature_matcher_builder_class = feature_matcher_builder_class
+    self._cq_count_over_limit_cl_reviewers = (
+        cq_count_over_limit_cl_reviewers or [])
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -942,6 +962,10 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
       logging.error('Failed to load the HWID DB CL info: %r.', ex)
       return None
 
+    if _HasCQCountOverLimitHashtag(cl_info):
+      # Simply returns and waits for the retry-loop fix.
+      return cl_info
+
     is_cl_expired, cl_expiration_reason = False, None
 
     # Auto rebase metadata when bot commit merge conflict.
@@ -977,6 +1001,9 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
         return cl_info
 
     if not is_cl_expired and not merge_conflict:
+      if _IsCQCountOverLimit(cl_info):
+        self._HandleCQCountOverLimit(cl_info)
+        return cl_info
       self._TryPutCLChainIntoCQ(cl_info)
       return cl_info
 
@@ -992,6 +1019,19 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
                     'refetched CL info are not changed.')
       return None
     return cl_info
+
+  def _HandleCQCountOverLimit(self, cl_info: hwid_repo.HWIDDBCLInfo):
+    try:
+      git_util.UpdateHashTags(hwid_repo.INTERNAL_REPO_REVIEW_URL,
+                              git_util.GetGerritAuthCookie(), cl_info.cl_number,
+                              add_hashtags=[CQ_COUNT_OVER_LIMIT_HASHTAG])
+      for reviewer in self._cq_count_over_limit_cl_reviewers:
+        git_util.AddReviewer(hwid_repo.INTERNAL_REPO_REVIEW_URL,
+                             git_util.GetGerritAuthCookie(), cl_info.cl_number,
+                             reviewer=reviewer)
+    except git_util.GitUtilException as ex:
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from ex
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck

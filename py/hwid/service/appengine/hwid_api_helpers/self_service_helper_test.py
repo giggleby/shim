@@ -120,6 +120,7 @@ def _CreateFakeSelfServiceShard(
     avl_metadata_manager: Optional[avl_metadata_util.AVLMetadataManager] = None,
     feature_matcher_builder_class: (
         Optional[Type[ss_helper_module.FeatureMatcherBuilder]]) = None,
+    cq_count_over_limit_cl_reviewers: Optional[Sequence[str]] = None,
 ) -> ss_helper_module.SelfServiceShard:
   avl_metadata_manager = (
       avl_metadata_manager or avl_metadata_util.AVLMetadataManager(
@@ -134,7 +135,8 @@ def _CreateFakeSelfServiceShard(
       modules.fake_avl_converter_manager, session_cache_adapter or
       modules.fake_session_cache_adapter, avl_metadata_manager,
       (feature_matcher_builder_class or
-       ss_helper_module.FeatureMatcherBuilderImpl))
+       ss_helper_module.FeatureMatcherBuilderImpl),
+      cq_count_over_limit_cl_reviewers)
 
 
 def _AnalyzeHwidDbEditableSection(shard: ss_helper_module.SelfServiceShard,
@@ -2571,6 +2573,69 @@ class SelfServiceShardTest(unittest.TestCase):
         resp,
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
+
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.UpdateHashTags')
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.AddReviewer')
+  @mock.patch(
+      'cros.factory.hwid.service.appengine.git_util.GetGerritAuthCookie')
+  def testBatchGetHwidDbEditableSectionChangeClInfo_HandleCQRetryCountOverLimit(
+      self, mock_auth_cookie, mock_add_reviewer, mock_update_hashtags):
+
+    def _CreateCQCLMessageFromTemplate(
+        numeric_id: int,
+    ) -> hwid_repo.HWIDDBCLMessage:
+      return hwid_repo.HWIDDBCLMessage(
+          time=datetime.datetime.utcnow(),
+          message='PatchSet 1: Commit-Queue+2',
+          author_name=f'author{numeric_id}',
+          author_email=f'author{numeric_id}@notgoogle.com',
+          revision_number=numeric_id,
+      )
+
+    del mock_auth_cookie
+
+    # Arrange.
+    now = datetime.datetime.utcnow()
+    cl_info = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.NEW, created_time=now,
+        review_status=hwid_repo.HWIDDBCLReviewStatus.APPROVED,
+        parent_cl_numbers=[], verified=False, cl_messages=[
+            _CreateCQCLMessageFromTemplate(1),
+            _CreateCQCLMessageFromTemplate(2),
+            _CreateCQCLMessageFromTemplate(3),
+            _CreateCQCLMessageFromTemplate(4),
+        ])
+    self._mock_hwid_repo_manager.GetHWIDDBCLInfo.side_effect = [cl_info]
+
+    shard = _CreateFakeSelfServiceShard(
+        self._modules,
+        self._mock_hwid_repo_manager,
+        cq_count_over_limit_cl_reviewers=[
+            'reviewer1@notgoogle.com',
+            'reviewer2@notgoogle.com',
+        ],
+    )
+
+    # Act.
+    req = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
+            cl_numbers=[2]))
+    resp = shard.BatchGetHwidDbEditableSectionChangeClInfo(req)
+
+    # Assert.
+    mock_add_reviewer.assert_any_call(mock.ANY, mock.ANY, 2,
+                                      reviewer='reviewer1@notgoogle.com')
+    mock_add_reviewer.assert_any_call(mock.ANY, mock.ANY, 2,
+                                      reviewer='reviewer2@notgoogle.com')
+    mock_update_hashtags.assert_called_once_with(
+        mock.ANY, mock.ANY, 2,
+        add_hashtags=[ss_helper_module.CQ_COUNT_OVER_LIMIT_HASHTAG])
+    expected_resp = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
+        ))
+    cl_status = expected_resp.cl_status.get_or_create(2)
+    cl_status.status = cl_status.PENDING
+    self.assertEqual(resp, expected_resp)
 
   def testBatchGenerateAvlComponentName_Empty(self):
     resp = self.service.BatchGenerateAvlComponentName(

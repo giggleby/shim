@@ -60,7 +60,8 @@ def _CreateApp():
   app.route('/_ah/warmup', methods=('GET', ))(_WarmupHandler)
 
   protorpc_utils.RegisterProtoRPCServiceShardsToFlaskApp(
-      app, '/_ah/stubby', hwid_api.GetAllHWIDServiceShards(_CONFIG))
+      app, '/_ah/stubby', hwid_api.GetAllHWIDServiceShards(
+          _CONFIG, _CONFIG_DATA))
   protorpc_utils.RegisterProtoRPCServiceShardsToFlaskApp(
       app, '/_ah/stubby', [
           ingestion.SyncNameMappingRPCProvider.CreateInstance(_CONFIG),

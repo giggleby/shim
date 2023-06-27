@@ -153,6 +153,8 @@ class Config:
     self.unverified_cl_ccs = conf.get('unverified_cl_ccs', [])
     self.client_allowlist = conf.get('client_allowlist', [])
     self.hwid_api_endpoint = conf['hwid_api_endpoint']
+    self.cq_count_over_limit_cl_reviewers = conf.get(
+        'cq_count_over_limit_cl_reviewers', [])
 
 
 CONFIG = type_utils.LazyObject(Config)
