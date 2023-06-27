@@ -13,3 +13,4 @@ setup/cert.pem
 setup/ovl_password
 **/proto/*.py
 jsconfig.json
+.vscode
