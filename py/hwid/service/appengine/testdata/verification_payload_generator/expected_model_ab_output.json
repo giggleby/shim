@@ -379,7 +379,7 @@
           "manufacturer": [
             true,
             "str",
-            "!re mfr-567.*"
+            "!re mfr\\-567.*"
           ],
           "model_name": [
             true,

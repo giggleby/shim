@@ -682,6 +682,8 @@ def GetAllComponentVerificationPayloadPieces(
   Args:
     db: An instance of HWID database.
     vpg_config: Config for the generator.
+    skip_comp_names: A set of component names to skip generating probe
+        statements for.
 
   Returns:
     A dictionary that maps the HWID component to the corresponding material.
@@ -732,20 +734,25 @@ def GetAllComponentVerificationPayloadPieces(
 
     return True
 
-  def _PreprocessComponents(hwid_comp_category: str,
-                            components: Mapping[str, database.ComponentInfo]):
-    for skip_comp_name in skip_comp_names:
-      components.pop(skip_comp_name, None)
+  def _GetPreprocessedComponents(
+      hwid_comp_category: str, components: Mapping[str, database.ComponentInfo]
+  ) -> Mapping[str, database.ComponentInfo]:
+    preprocessed = {}
+    for comp_name, comp_info in components.items():
+      if comp_name in skip_comp_names:
+        continue
+      val = collections.OrderedDict(comp_info.values)
+      preprocessed[comp_name] = comp_info.Replace(values=val)
 
     if hwid_comp_category == 'battery':
-      for comp_name, comp_info in components.items():
-        if _BatteryShouldApplyPrefixMatch(comp_name, components):
-          new_comp_values = comp_info.values.copy()
+      for comp_name, comp_info in preprocessed.items():
+        if _BatteryShouldApplyPrefixMatch(comp_name, preprocessed):
           for field in ['model_name', 'manufacturer']:
-            val = new_comp_values[field]
-            new_comp_values[field] = hwid_rule.Value(f'{val}.*', is_re=True)
-          new_comp_info = comp_info.Replace(values=new_comp_values)
-          components[comp_name] = new_comp_info
+            val = comp_info.values[field]
+            comp_info.values[field] = hwid_rule.Value(f'{re.escape(val)}.*',
+                                                      is_re=True)
+
+    return preprocessed
 
   skip_comp_names = skip_comp_names or set()
   ret = {}
@@ -757,7 +764,7 @@ def GetAllComponentVerificationPayloadPieces(
     if hwid_comp_category in vpg_config.waived_comp_categories:
       continue
     comps = db.GetComponents(hwid_comp_category, include_default=False)
-    _PreprocessComponents(hwid_comp_category, comps)
+    comps = _GetPreprocessedComponents(hwid_comp_category, comps)
     for comp_name, comp_info in comps.items():
       unique_comp_name = model_prefix + '_' + comp_name
       vp_piece = GenerateProbeStatement(ps_gens, unique_comp_name, comp_info)
