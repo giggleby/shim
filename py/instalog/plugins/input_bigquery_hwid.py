@@ -22,6 +22,8 @@ class InputBigQueryHWID(input_bigquery.InputBigQuery):
         DISTINCT hwid
       FROM
         `chromeos-factory.factory_report.report_events`
+      ORDER BY
+        hwid
     """
 
   def ProcessRow(self, row):
