@@ -883,7 +883,11 @@ class Bundle:
       A list of all bundles.
     """
     project = Project.GetProjectByName(project_name)
-    config = project.GetActiveConfig()
+    try:
+      config = project.GetActiveConfig()
+    except (ConnectionRefusedError, ConnectionResetError) as e:
+      logger.exception('Failed to get umpire config')
+      raise DomeServerException(detail=traceback.format_exc()) from e
 
     return [Bundle._FromUmpireBundle(project_name, b, config)
             for b in config['bundles']]
@@ -1107,7 +1111,11 @@ class FactoryDriveComponent:
   @classmethod
   def ListAll(cls, project_name):
     umpire_server = GetUmpireServer(project_name)
-    factory_drives = umpire_server.GetFactoryDriveInfo()
+    try:
+      factory_drives = umpire_server.GetFactoryDriveInfo()
+    except (ConnectionRefusedError, ConnectionResetError) as e:
+      logger.exception('Failed to get factory dirve info')
+      raise DomeServerException(detail=traceback.format_exc()) from e
     return [FactoryDriveComponent(**p) for p in factory_drives['files']]
 
 
