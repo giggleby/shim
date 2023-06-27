@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-06-19 13:14+CST\n"
+"PO-Revision-Date: 2023-06-27 14:06+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3629,10 +3629,6 @@ msgid "Check Display Connection"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Check EOM NVAR"
-msgstr ""
-
-#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Fingerprint Firmware"
 msgstr ""
 
@@ -3835,10 +3831,6 @@ msgid "Set Cr50 AP RO Hash"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Set EOM NVAR"
-msgstr ""
-
-#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Set Widevine Keybox"
 msgstr ""
 
@@ -3864,10 +3856,6 @@ msgstr "Loa / micrô"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Speaker/Microphone Conformance"
-msgstr ""
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "Start PSR Log"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
@@ -4180,6 +4168,18 @@ msgstr "Test List for Tast Tests"
 
 #: ../py/test/test_lists/generic_unprovisioned.test_list.json
 msgid "Provision Chromebook with SKU ID"
+msgstr ""
+
+#: ../py/test/test_lists/intel_common.test_list.json
+msgid "Check EOM NVAR"
+msgstr ""
+
+#: ../py/test/test_lists/intel_common.test_list.json
+msgid "Set EOM NVAR"
+msgstr ""
+
+#: ../py/test/test_lists/intel_common.test_list.json
+msgid "Start PSR Log"
 msgstr ""
 
 #: ../py/test/test_lists/main_wipe.test_list.json

@@ -1,0 +1,70 @@
+{
+  "inherit": [
+    "generic_common.test_list"
+  ],
+  "definitions": {
+    "CheckEOMNVAR": {
+      "pytest_name": "setup_psr_feature",
+      "label": "Check EOM NVAR",
+      "args": {
+        "action": "check"
+      }
+    },
+    "LockIntelDescriptor": {
+      "pytest_name": "lock_intel_descriptor"
+    },
+    "LockIntelDescriptorGroup": {
+      "run_if": "constants.grt.force_write_protect or constants.phase == 'PVT'",
+      "subtests": [
+        "LockIntelDescriptor",
+        {
+          "inherit": "FullRebootStep",
+          "run_if": "device.factory.desc_update_need_reboot"
+        },
+        {
+          "inherit": "LockIntelDescriptor",
+          "run_if": "device.factory.desc_update_need_reboot",
+          "args": {
+            "mode": "verify"
+          }
+        }
+      ]
+    },
+    "SetEOMNVAR": {
+      "pytest_name": "setup_psr_feature",
+      "label": "Set EOM NVAR",
+      "args": {
+        "action": "set"
+      }
+    },
+    "StartPSRLog": {
+      "pytest_name": "setup_psr_feature",
+      "label": "Start PSR Log",
+      "args": {
+        "action": "start"
+      }
+    },
+    "StartPSRLogGroup": {
+      "__comment": "Put this test right before GRTFinalize to minimize logging",
+      "subtests": [
+        "SetEOMNVAR",
+        "FullRebootStep",
+        "SyncFactoryServer",
+        "CheckEOMNVAR",
+        "StartPSRLog"
+      ]
+    },
+    "UpdatePSROEMData": {
+      "pytest_name": "update_psr_oem_data",
+      "args": {
+        "update_from_config": false,
+        "oem_data_value": {
+          "OEM Name": "Google",
+          "OEM Make": "ChromeOS",
+          "OEM Model": "MTL vPro",
+          "Country of Manufacturer": "TW"
+        }
+      }
+    }
+  }
+}

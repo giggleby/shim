@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-06-19 13:14+CST\n"
+"PO-Revision-Date: 2023-06-27 14:06+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3562,10 +3562,6 @@ msgid "Check Display Connection"
 msgstr "确认显示链接"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Check EOM NVAR"
-msgstr "确认 EOM NVAR"
-
-#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Fingerprint Firmware"
 msgstr "确认指纹韧体"
 
@@ -3768,10 +3764,6 @@ msgid "Set Cr50 AP RO Hash"
 msgstr "写入 Cr50 AP RO Hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Set EOM NVAR"
-msgstr "设定 EOM NVAR"
-
-#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Set Widevine Keybox"
 msgstr "写入 Widevine Keybox"
 
@@ -3798,10 +3790,6 @@ msgstr "喇叭/麦克风"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Speaker/Microphone Conformance"
 msgstr "喇叭/麦克风符合性"
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "Start PSR Log"
-msgstr "开始 PSR 记录"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Stress App Test"
@@ -4114,6 +4102,18 @@ msgstr "Test List for Tast Tests"
 #: ../py/test/test_lists/generic_unprovisioned.test_list.json
 msgid "Provision Chromebook with SKU ID"
 msgstr "供应 Chromebook 样式 ID"
+
+#: ../py/test/test_lists/intel_common.test_list.json
+msgid "Check EOM NVAR"
+msgstr "确认 EOM NVAR"
+
+#: ../py/test/test_lists/intel_common.test_list.json
+msgid "Set EOM NVAR"
+msgstr "设定 EOM NVAR"
+
+#: ../py/test/test_lists/intel_common.test_list.json
+msgid "Start PSR Log"
+msgstr "开始 PSR 记录"
 
 #: ../py/test/test_lists/main_wipe.test_list.json
 msgid "Execute Wipe Test-List"

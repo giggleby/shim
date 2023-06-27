@@ -186,7 +186,7 @@ def CheckTestList(manager_: manager.Manager,
       # The list of header test list. For header test lists in private overlay,
       # we should name them with prefix 'generic'.
       header_list = ('main', 'common', 'base', 'disable_factory_server', 'smt',
-                     'fat', 'runin', 'run_in', 'fft', 'grt')
+                     'fat', 'runin', 'run_in', 'fft', 'grt', 'intel_common')
       if not (test_list_id in header_list or
               test_list_id.startswith('generic')):
         logging.warning(
