@@ -1467,7 +1467,7 @@ class Gooftool:
         device_data.KEY_FM_CHASSIS_BRANDED)
     hw_compliance_version = device_data.GetDeviceData(
         device_data.KEY_FM_HW_COMPLIANCE_VERSION)
-    gsctool = gsctool_module.GSCTool(self._util.shell)
+    gsctool = gsctool_module.GSCTool()
     feature_flags = gsctool.GetFeatureManagementFlags()
 
     # In RMA scene, in cases where the feature flags unchanged,
