@@ -48,6 +48,7 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 
 from cros.factory.external.chromeos_cli import cros_config as cros_config_module
+from cros.factory.external.chromeos_cli import futility as futility_module
 from cros.factory.external.chromeos_cli import gsctool as gsctool_module
 from cros.factory.external.chromeos_cli import vpd
 
@@ -1867,27 +1868,28 @@ class Gooftool:
     return smart_amp_utils.GetSmartAmpInfo()
 
   def Ti50SetAddressingMode(self):
-    cmd = ['flashrom', '--flash-size']
-    proc = self._CheckCall(cmd)
+    """Sets addressing mode for ap ro verification on Ti50."""
 
-    try:
-      size = int(proc.stdout.splitlines()[-1])
-    except (IndexError, ValueError) as parsing_error:
-      raise Error('Unknown format on flashrom --flash-size') from parsing_error
-    if size <= 0x1000000:  # 2^24
-      cmd = ['gsctool', '-a', '-C', '3byte']
-    else:
-      cmd = ['gsctool', '-a', '-C', '4byte']
-    self._CheckCall(cmd)
+    futility = futility_module.Futility()
+    gsctool = gsctool_module.GSCTool()
+    gsctool.SetAddressingMode(futility.GetFlashSize())
 
   def Ti50SetSWWPRegister(self, no_write_protect):
+    """Sets wpsr for ap ro verification on Ti50.
+
+    If write protect is enabled, the wpsr should be derived from ap_wpsr.
+    Otherwise, set zero to ask Ti50 to ignore the write protect status.
+    """
+    gsctool = gsctool_module.GSCTool()
+    futility = futility_module.Futility()
     if no_write_protect:
       wpsr = '0 0'
     else:
-      (flash_name, wp_region_start, wp_region_length) = self._CollectWPSRInfo()
+      wp_conf = futility.GetWriteProtectInfo()
+      flash_name = self.GetFlashName()
       res = self._CheckCall([
-          'ap_wpsr', f'--name={flash_name}', f'--start={wp_region_start}',
-          f'--length={wp_region_length}'
+          'ap_wpsr', f'--name={flash_name}', f'--start={wp_conf["start"]}',
+          f'--length={wp_conf["length"]}'
       ]).stdout
       logging.info('WPSR: %s', res)
       match = re.search(r'SR Value\/Mask = (.+)', res)
@@ -1895,30 +1897,23 @@ class Gooftool:
         wpsr = match[1]
       else:
         raise Error(f'Fail to parse the wpsr from ap_wpsr tool {res}')
-    self._CheckCall(['gsctool', '-a', '-E', wpsr])
+    gsctool.SetWpsr(wpsr)
 
-  def _CollectWPSRInfo(self):
+  def GetFlashName(self):
+    """Probes the flash chip for ap_wpsr tool to derive wpsr.
 
-    def GetFlashName():
-      probe_result = flash_chip.FlashChipFunction.ProbeDevices('host')
-      flash_name = probe_result['name']
+    If there's any ambiguity, we need to config a mapping in
+    spi_flash_transform manually.
+    """
+    probe_result = flash_chip.FlashChipFunction.ProbeDevices('host')
+    flash_name = probe_result['name']
 
-      sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
-      if 'spi_flash_transform' in sku_config and flash_name in sku_config[
-          'spi_flash_transform']:
-        flash_name = sku_config['spi_flash_transform'][flash_name]
-      logging.info('Flash name: %s', flash_name)
-      return flash_name
-
-    result = self._CheckCall(['futility', 'flash', '--flash-info']).stdout
-
-    wp_conf = re.search(r'\(start = (?P<start>\w+), length = (?P<length>\w+)\)',
-                        result)
-    if not wp_conf:
-      raise Error(f'Fail to parse the wp region {result}')
-
-    return (GetFlashName(), wp_conf['start'], wp_conf['length'])
-
+    sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
+    if 'spi_flash_transform' in sku_config and flash_name in sku_config[
+        'spi_flash_transform']:
+      flash_name = sku_config['spi_flash_transform'][flash_name]
+    logging.info('Flash name: %s', flash_name)
+    return flash_name
 
   def _CheckCall(self, cmd):
     proc = self._util.shell(cmd)
