@@ -154,8 +154,10 @@ def CheckValidDeviceDataKey(key, key_prefix=None):
   """
   prefix, dot, postfix = key.partition('.')
   if key_prefix and prefix != key_prefix:
-    raise KeyError('Key %s must start with %s.' % (key, key_prefix))
-  top_level_keys = [KEY_SERIALS, KEY_HWID, KEY_VPD, KEY_COMPONENT, KEY_FACTORY]
+    raise KeyError(f'Key {key} must start with {key_prefix}.')
+  top_level_keys = [
+      KEY_SERIALS, KEY_HWID, KEY_VPD, KEY_COMPONENT, KEY_FACTORY, KEY_FM
+  ]
   if prefix not in top_level_keys:
     raise KeyError('Key %s must start with one of %r' % (key, top_level_keys))
   if prefix == KEY_SERIALS:

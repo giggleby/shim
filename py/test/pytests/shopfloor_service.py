@@ -160,6 +160,7 @@ class ShopfloorService(test_case.TestCase):
   DOMAIN_VPD = device_data.KEY_VPD
   DOMAIN_COMPONENT = device_data.KEY_COMPONENT
   KEY_HWID = device_data.KEY_HWID
+  KEY_FM = device_data.KEY_FM
 
   KEY_VPD_USER_ECHO = device_data.KEY_VPD_USER_REGCODE
   KEY_VPD_GROUP_ECHO = device_data.KEY_VPD_GROUP_REGCODE
@@ -211,8 +212,10 @@ class ShopfloorService(test_case.TestCase):
 
   def UpdateDeviceData(self, data):
     """Updates system device data according to the given data."""
-    prefixes = [self.DOMAIN_SERIALS, self.DOMAIN_VPD, self.DOMAIN_COMPONENT,
-                self.DOMAIN_FACTORY, self.KEY_HWID]
+    prefixes = [
+        self.DOMAIN_SERIALS, self.DOMAIN_VPD, self.DOMAIN_COMPONENT,
+        self.DOMAIN_FACTORY, self.KEY_HWID, self.KEY_FM
+    ]
     illegal_keys = [k for k in data if k.partition('.')[0] not in prefixes]
     if illegal_keys:
       raise ValueError('Invalid response keys: %r' % illegal_keys)
