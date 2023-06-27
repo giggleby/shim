@@ -238,13 +238,18 @@ class HWIDSelectionPayloadManager:
     for board, hwid_actions in self._GetPayloadDBLists(limit_models).items():
       payloads = {}
       for hwid_action in hwid_actions:
-        payload = hwid_action.GetFeatureMatcher().GenerateLegacyPayload()
-        if payload:
-          db = hwid_action.GetDBV3()
-          model_name = db.project.lower()
-          pathname = (f'feature-management/{model_name}/'
-                      'device_selection.textproto')
-          payloads[pathname] = payload
+        try:
+          payload = hwid_action.GetFeatureMatcher().GenerateLegacyPayload()
+          if payload:
+            db = hwid_action.GetDBV3()
+            model_name = db.project.lower()
+            pathname = (f'feature-management/{model_name}/'
+                        'device_selection.textproto')
+            payloads[pathname] = payload
+        except (KeyError, ValueError, RuntimeError) as ex:
+          logging.error('Cannot get model data: %r', ex)
+          continue
+
       if payloads:
         results[board] = feature_matching.HWIDSelectionPayloadResult(
             payloads, self._JsonHash(payloads))
