@@ -5,6 +5,7 @@
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 . "${SCRIPT_DIR}/common.sh" || exit 1
+. "${SCRIPT_DIR}/venv_common.sh" || exit 1
 
 : "${PYTHONPATH:=py_pkg:py:setup}"
 : "${PYLINT_MSG_TEMPLATE:="[{path}]:{line}: {symbol}: {msg}"}"
@@ -38,46 +39,12 @@ do_lint() {
   fi
 }
 
-remove_py2_venv() {
-  if [[ -d "${PYLINT_VENV}" && -f "${PYLINT_VENV}/bin/python2" ]]; then
-    echo "Outdated Python2 venv detected, removing ${PYLINT_VENV}..."
-    rm -rf "${PYLINT_VENV}"
-  fi
-}
-
-load_venv() {
-  if ! [ -d "${PYLINT_VENV}" ]; then
-    echo "Cannot find '${PYLINT_VENV}', install virtualvenv"
-    mkdir -p "${PYLINT_VENV}"
-    # Include system site packages for packages like "yaml", "mox".
-    virtualenv --system-site-package -p python3 "${PYLINT_VENV}"
-  fi
-
-  source "${PYLINT_VENV}/bin/activate"
-
-  # pip freeze --local -r REQUIREMENTS.txt outputs something like:
-  #   required_package_1==A.a
-  #   required_package_2==B.b
-  #   ## The following requirements were added by pip freeze:
-  #   added_package_1==C.c
-  #   added_package_2==D.d
-  #   ...
-  #
-  #   required_pacakge_x are packages listed in REQUIREMENTS.txt,
-  #   which are packages we really care about.
-  if ! diff <(pip freeze --local -r "${PYLINT_REQUIREMENTS}" | \
-      sed -n '/^##/,$ !p') "${PYLINT_REQUIREMENTS}" ; then
-    pip install --force-reinstall -r "${PYLINT_REQUIREMENTS}"
-  fi
-}
-
 main(){
   set -o pipefail
   local out="$(mktemp)"
   add_temp "${out}"
 
-  remove_py2_venv
-  load_venv
+  load_venv "${PYLINT_VENV}" "${PYLINT_REQUIREMENTS}" || exit 1
 
   echo "Linting $(echo "$@" | wc -w) files..."
   if [ -n "$*" ]; then

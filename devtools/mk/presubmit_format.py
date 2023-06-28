@@ -19,9 +19,7 @@ import presubmit_common
 
 # Paths of venv and yapf.
 SCRIPT_DIR = os.path.dirname(__file__)
-VENV_DIR = os.path.join(SCRIPT_DIR, 'yapf.venv')
-VENV_REQUIREMNTS_FILE = os.path.join(SCRIPT_DIR, 'yapf.requirements.txt')
-VENV_BIN = os.path.join(VENV_DIR, 'bin')
+YAPF_VENV_SCRIPT = os.path.join(SCRIPT_DIR, 'yapf.sh')
 YAPF_STYLE_PATH = os.path.join(SCRIPT_DIR, 'style.yapf')
 
 
@@ -31,40 +29,11 @@ class CheckFormatResult(enum.Enum):
   FAIL = 2
 
 
-def InstallRequirements():
-  subprocess.check_call([
-      os.path.join(VENV_BIN, 'pip'), 'install', '--force-reinstall', '-r',
-      VENV_REQUIREMNTS_FILE
-  ])
-
-
-def MakeVirtualEnv():
-  os.mkdir(VENV_DIR)
-  subprocess.check_call(
-      ['virtualenv', '--system-site-package', '-p', 'python3', VENV_DIR])
-  InstallRequirements()
-
-
-def CheckVirtualEnv():
-  if not os.path.exists(VENV_DIR):
-    MakeVirtualEnv()
-
-  current_version = subprocess.check_output([
-      os.path.join(VENV_BIN, 'pip'), 'freeze', '--local', '-r',
-      VENV_REQUIREMNTS_FILE
-  ],
-                                            encoding='utf-8')
-  with open(VENV_REQUIREMNTS_FILE, encoding='utf8') as f:
-    expected_version = f.read()
-  if current_version[:current_version.find('\n##') + 1] != expected_version:
-    InstallRequirements()
-
-
 def _PassByYapf(fix, file_path, ranges, work_tree):
   range_args = []
   base_cmd = [
-      os.path.join(VENV_BIN, 'yapf'), '--in-place' if fix else '--quiet',
-      '--style', YAPF_STYLE_PATH
+      YAPF_VENV_SCRIPT, 'yapf', '--in-place' if fix else '--quiet', '--style',
+      YAPF_STYLE_PATH
   ]
   has_formattable_lines = False
   for diff_start, diff_len in ranges:
@@ -124,8 +93,6 @@ def main():
   parser.add_argument(
       'files', metavar='FILE', nargs='*', help='File or directory to check.')
   args = parser.parse_args()
-
-  CheckVirtualEnv()
 
   with open(args.rules_file, encoding='utf8') as f:
     rules = json.load(f)
