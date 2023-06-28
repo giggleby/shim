@@ -121,7 +121,6 @@ class StubbyHandlerTest(unittest.TestCase):
     base_timestamp_sec = 1672750600
     base_datetime = DatetimeWithNanoseconds(2023, 1, 3, 12, 56, 40,
                                             tzinfo=pytz.UTC)
-    error_message = 'Fake error message.'
     self._mock_storage_connector.GetBundleInfosByProject.return_value = [
         self._CreateStorageBundleInfo(
             'doc_1', 'foo@bar', 'fake_bundle_1.tar.bz2', base_timestamp_sec),
@@ -147,7 +146,7 @@ class StubbyHandlerTest(unittest.TestCase):
             base_datetime + datetime.timedelta(seconds=400),
             start_time=base_datetime + datetime.timedelta(seconds=401),
             end_time=base_datetime + datetime.timedelta(seconds=402),
-            error_message=error_message),
+            error_message='Fake error message.'),
     ]
 
     response = self._stubby_handler.GetBundleInfo(self._get_bundle_info_request)
@@ -158,8 +157,7 @@ class StubbyHandlerTest(unittest.TestCase):
                                firestore_connector.UserRequestStatus.FAILED,
                                request_time_sec=base_timestamp_sec + 400,
                                request_start_time_sec=base_timestamp_sec + 401,
-                               request_end_time_sec=base_timestamp_sec + 402,
-                               error_message=error_message))
+                               request_end_time_sec=base_timestamp_sec + 402))
     expected_response.bundle_infos.append(
         self._CreateBundleInfo(
             'doc_4', 'foo@bar',
@@ -354,8 +352,6 @@ class StubbyHandlerTest(unittest.TestCase):
       info.request_end_time_sec = kwargs['request_end_time_sec']
     if 'bundle_created_timestamp_sec' in kwargs:
       info.bundle_created_timestamp_sec = kwargs['bundle_created_timestamp_sec']
-    if 'error_message' in kwargs:
-      info.error_message = kwargs['error_message']
     return info
 
 

@@ -12,6 +12,8 @@ message BundleMetadata {
 }
 
 message BundleInfo {
+  reserved 10;
+
   BundleMetadata metadata = 1;
   string creator = 2;
   string status = 3;
@@ -21,7 +23,6 @@ message BundleInfo {
   double request_start_time_sec = 7;
   double request_end_time_sec = 8;
   double bundle_created_timestamp_sec = 9;
-  string error_message = 10;
   string doc_id = 11;
 }
 

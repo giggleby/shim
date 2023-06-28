@@ -93,7 +93,6 @@ class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
       bundle_info.doc_id = snapshot.get('id', '')
       bundle_info.creator = snapshot.get('email', '')
       bundle_info.status = status
-      bundle_info.error_message = snapshot.get('error_message', '')
       # The fields with suffix `_time` are `DatetimeWithNanoseconds` objects.
       if 'request_time' in snapshot:
         bundle_info.request_time_sec = datetime.datetime.timestamp(
