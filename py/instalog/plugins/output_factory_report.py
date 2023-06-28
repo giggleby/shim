@@ -554,7 +554,7 @@ class ReportParser(log_utils.LoggerMixin):
       if not tarfile.is_tarfile(report_path):
         SetProcessEventStatus(ERROR_CODE.ReportInvalidFormat, process_event)
         return
-      with tarfile.open(report_path, 'r|xz') as report_tar:
+      with tarfile.open(report_path, 'r:xz', ignore_zeros=True) as report_tar:
         report_tar.extractall(report_dir)
       process_event['decompressEndTime'] = time.time()
 
@@ -563,6 +563,7 @@ class ReportParser(log_utils.LoggerMixin):
         metadata_dict = json.loads(file_utils.ReadFile(metadata_path))
         report_event['reportIndex'] = metadata_dict.get('report_index', None)
         report_event['serverUuid'] = metadata_dict.get('server_uuid', None)
+        report_event['domeVersion'] = metadata_dict.get('dome_version', None)
 
       eventlog_path = os.path.join(report_dir, 'events')
       if os.path.exists(eventlog_path):
