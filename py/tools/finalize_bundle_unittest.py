@@ -59,6 +59,10 @@ class PrepareNetbootTest(FinalizeBundleTestBase):
     # Set by AddFirmwareUpdaterAndImages
     bundle_builder.firmware_bios_names = ['randomName']
 
+    patcher = mock.patch(finalize_bundle.__name__ + '.gsutil.GSUtil.LS')
+    patcher.start().side_effect = lambda url: [url]
+    self.addCleanup(patcher.stop)
+
   @mock.patch(finalize_bundle.__name__ + '.Spawn', mock.Mock())
   def testPrepareNetboot_fromFactoryArchive_verifyFinalLayout(self):
     bundle_builder = finalize_bundle.FinalizeBundle(
@@ -365,6 +369,32 @@ class DownloadResourcesTest(FinalizeBundleTestBase):
     bundle_builder.DownloadResources()
 
     self.assertIsNone(bundle_builder.firmware_image_source)
+
+
+class CreateFirmwareArchiveFallbackListTest(FinalizeBundleTestBase):
+
+  def testResult(self):
+    bundle_builder = finalize_bundle.FinalizeBundle(
+        manifest={
+            'board': 'brya',
+            'project': 'brya',
+            'bundle_name': '20210107_evt',
+            'toolkit': '15003.0.0',
+            'test_image': '14909.124.0',
+            'release_image': '15003.0.0',
+            'firmware': 'local',
+            'netboot_firmware': '12345.67.89',
+            'designs': finalize_bundle.BOXSTER_DESIGNS,
+        }, work_dir=self.temp_dir)
+    bundle_builder.ProcessManifest()
+    result = bundle_builder.CreateFirmwareArchiveFallbackList()
+
+    prefix = 'gs://chromeos-releases/dev-channel/brya/'
+    self.assertListEqual(result, [
+        f'{prefix}12345.67.89/ChromeOS-firmware-*.tar.bz2',
+        f'{prefix}12345.67.*/ChromeOS-firmware-*.tar.bz2',
+        f'{prefix}12345.*.*/ChromeOS-firmware-*.tar.bz2'
+    ])
 
 
 class ExtractFirmwareInfoTest(FinalizeBundleTestBase):

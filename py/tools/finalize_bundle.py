@@ -88,6 +88,9 @@ FIRMWARE_MANIFEST_MAP = {
 
 PROJECT_TOOLKIT_PACKAGES = 'factory_project_toolkits.tar.gz'
 
+README_URL = ('https://chromium.googlesource.com/chromiumos/'
+              'platform/factory/+/main/setup/BUNDLE.md')
+
 
 class FinalizeBundleException(Exception):
   pass
@@ -293,8 +296,7 @@ class FinalizeBundle:
       logging.error(str(e))
       raise FinalizeBundleException(
           'Invalid manifest content. '
-          'Please refer to setup/BUNDLE.md (https://chromium.googlesource.com/chromiumos/platform/factory/+/main/setup/BUNDLE.md)'
-      ) from None
+          f'Please refer to setup/BUNDLE.md ({README_URL})') from None
 
     self.build_board = cros_board_utils.BuildBoard(self.manifest['board'])
     self.board = self.build_board.full_name
@@ -1019,6 +1021,27 @@ class FinalizeBundle:
       for f in glob.glob(os.path.join(netboot_backup_dir, '*')):
         shutil.move(f, netboot_dir)
 
+  def CreateFirmwareArchiveFallbackList(self):
+    """Returns the fallback list for a firmware archive version.
+
+    The archive may be deleted before AUE so we need to give the users some
+    fallback.
+
+    If the version is 12345.67.89, we will try 12345.67.89, 12345.67.*, and
+    12345.*.* in order.
+    """
+    urls = []
+    netboot_firmware_source_version = [
+        str(k) for k in self.netboot_firmware_source.version
+    ]
+    for index in reversed(range(len(self.netboot_firmware_source.version))):
+      version_str = '.'.join(netboot_firmware_source_version)
+      url_prefix = gsutil.BuildResourceBaseURL(
+          gsutil.GSUtil.Channels.dev, self.build_board.gsutil_name, version_str)
+      urls.append(f'{url_prefix}/ChromeOS-firmware-*.tar.bz2')
+      netboot_firmware_source_version[index] = '*'
+    return urls
+
   def DownloadNetbootFromFirmwareArchive(self):
     """Downloads netboot firmware from the firmware archive.
 
@@ -1030,15 +1053,30 @@ class FinalizeBundle:
 
     netboot_kernel = os.path.join(orig_netboot_dir, 'vmlinuz')
     if os.path.exists(netboot_kernel):
-      shutil.move(netboot_kernel, netboot_dir)
-    netboot_firmware_source_version = [
-        str(k) for k in self.netboot_firmware_source.version
-    ]
-    version_str = '.'.join(netboot_firmware_source_version)
+      shutil.move(netboot_kernel, os.path.join(netboot_dir, 'vmlinuz'))
+
     resource_name = 'unsigned_firmware_archive'
-    url_prefix = gsutil.BuildResourceBaseURL(
-        gsutil.GSUtil.Channels.dev, self.build_board.gsutil_name, version_str)
-    urls = [f'{url_prefix}/ChromeOS-firmware-*.tar.bz2']
+    urls = self.CreateFirmwareArchiveFallbackList()
+    url = self.ResolvePossibleUrls(urls, resource_name, choose_one_matched=True)
+    if url is None:
+      logging.info(
+          'There is a high chance that the requested netboot firmware is '
+          'deleted. Skip the download.')
+      return
+
+    pattern = re.compile(r'.*/(\d+\.\d+\.\d+)/ChromeOS-firmware-.*\.tar\.bz2')
+    match = pattern.fullmatch(url)
+    if not match:
+      raise FinalizeBundleException(
+          f'{url!r} matches one of {urls!r} but does not match '
+          f'{pattern.pattern!r}.')
+
+    found_version = version_module.StrictVersion(match.group(1))
+    if found_version != self.netboot_firmware_source:
+      logging.info(
+          'Netboot firmware fallback to %r because the target version'
+          ' is not found.', found_version)
+      self.netboot_firmware_source = found_version
 
     netboot_firmware_set = self.GetNetbootFirmwareSet()
     missing_netboot_firmware_list = []
@@ -1065,8 +1103,9 @@ class FinalizeBundle:
       # Skip download if there is no missing files.
       return
 
-    with self._DownloadResource(urls, resource_name,
-                                version_str) as (downloaded_path, unused_url):
+    with self._DownloadResource(
+        url, resource_name,
+        self.netboot_firmware_source) as (downloaded_path, unused_url):
       file_utils.ExtractFile(downloaded_path, netboot_dir,
                              only_extracts=missing_netboot_firmware_list,
                              use_parallel=True, ignore_errors=True)
@@ -1469,8 +1508,35 @@ class FinalizeBundle:
       file_utils.WriteFile(self.bundle_record, record)
       logging.info('bundle record save in %s', self.bundle_record)
 
+  def ResolvePossibleUrls(self, possible_urls: List[str], resource_name, *,
+                          choose_one_matched=False):
+    """Finds a url to download.
+
+    Args:
+      possible_urls: a single or a list of possible GS URLs to search.
+      resource_name: a human readable name of the resource, just for logging,
+          won't affect the behavior of downloading.
+      choose_one_matched: Download one of resources if multiple are matched.
+
+    Returns:
+      The selected url. None if no url found.
+    """
+    for url in possible_urls:
+      try:
+        logging.info('Looking for %s at %s', resource_name, url)
+        output = self.gsutil.LS(url)
+      except gsutil.NoSuchKey:
+        continue
+
+      if not choose_one_matched and len(output) != 1:
+        raise FinalizeBundleException(
+            f'Expected {url!r} to matched 1 files, but it matched {output!r}')
+
+      return sorted(output)[0].strip()
+    return None
+
   @contextlib.contextmanager
-  def _DownloadResource(self, possible_urls, resource_name=None, version=None):
+  def _DownloadResource(self, possible_urls, resource_name, version):
     """Downloads a resource file from given URLs.
 
     This function downloads a resource from a list of possible URLs (only the
@@ -1483,27 +1549,10 @@ class FinalizeBundle:
           won't affect the behavior of downloading.
       version: version of the resource, just for logging.
     """
-    resource_name = resource_name or 'resource'
-
     if not isinstance(possible_urls, list):
       possible_urls = [possible_urls]
 
-    found_url = None
-    # ls to see if a given URL exists.
-    for url in possible_urls:
-      try:
-        logging.info('Looking for %s at %s', resource_name, url)
-        output = self.gsutil.LS(url)
-      except gsutil.NoSuchKey:  # Not found; try next
-        continue
-
-      assert len(output) == 1, (
-          'Expected %r to matched 1 files, but it matched %r', url, output)
-
-      # Found. Download it!
-      found_url = output[0].strip()
-      break
-
+    found_url = self.ResolvePossibleUrls(possible_urls, resource_name)
     if found_url is None:
       raise FinalizeBundleException(
           f'No {resource_name} found for version {version}')
@@ -1672,9 +1721,7 @@ class FinalizeBundle:
       manifest = yaml.safe_load(file_utils.ReadFile(manifest_path))
     except Exception:
       logging.exception('Failed to load manifest: %s', manifest_path)
-      logging.error(
-          'Please refer to setup/BUNDLE.md (https://chromium.googlesource.com/chromiumos/platform/factory/+/main/setup/BUNDLE.md)'
-      )
+      logging.error('Please refer to setup/BUNDLE.md (%s)', README_URL)
       raise
     work_dir = args.dir or os.path.dirname(os.path.realpath(manifest_path))
     return cls(manifest, work_dir, args.download, args.archive,
