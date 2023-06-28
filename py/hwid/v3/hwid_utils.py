@@ -431,6 +431,28 @@ def ProbeBrandCode():
   return cros_config_cli.GetBrandCode()
 
 
+def ProbeFormFactor():
+  """Probes the form factor.
+
+  This function will run the command
+  `cros_config /hardware-properties form-factor` to get the form factor.
+
+  Returns:
+    The probed form factor as a string.
+  """
+  from cros.factory.utils import sys_utils
+
+  from cros.factory.external.chromeos_cli import cros_config
+
+  if sys_utils.InChroot():
+    raise ValueError('Cannot probe form factor in chroot. Please use '
+                     '--form-factor to specify form factor.')
+
+  cros_config_cli = cros_config.CrosConfig()
+
+  return cros_config_cli.GetFormFactor()
+
+
 _HWID_REPO_PATH = None
 
 
@@ -480,6 +502,11 @@ def GetHWIDBundleName(project=None):
 def GetBrandCode(brand_code=None):
   brand_code = brand_code or ProbeBrandCode()
   return brand_code.upper()
+
+
+def GetFormFactor(form_factor=None):
+  form_factor = form_factor or ProbeFormFactor()
+  return form_factor.upper()
 
 
 def GetProbeStatementPath(project=None):

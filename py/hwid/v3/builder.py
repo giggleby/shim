@@ -18,10 +18,6 @@ from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import json_utils
 
 
-# The components that are always be created at the front of the pattern,
-# even if they don't exist in the probe results.
-ESSENTIAL_COMPS = ['mainboard', 'region', 'dram', 'cpu', 'storage']
-
 # The components that are added in order if they exist in the probe results.
 PRIORITY_COMPS = collections.OrderedDict(
     [(common.FirmwareComps.RO_MAIN_FIRMWARE, 5),
@@ -449,7 +445,8 @@ class DatabaseBuilder:
   def UpdateByProbedResults(self, probed_results: Mapping, device_info: Mapping,
                             vpd: Mapping, sku_ids: Optional[Sequence[str]],
                             image_name: Optional[str] = None,
-                            skip_firmware_components: bool = False):
+                            skip_firmware_components: bool = False,
+                            form_factor: Optional[str] = None):
     """Updates the database by a real probed results.
 
     Args:
@@ -459,6 +456,7 @@ class DatabaseBuilder:
       sku_ids: A list of sku IDs
       image_name: image name to be updated
       skip_firmware_components: Skip update firmware components if True
+      form_factor: Form factor of the device.
     """
     if self._from_empty_database and image_name:
       logging.warning('The argument `image_name` will be ignored when '
@@ -466,11 +464,11 @@ class DatabaseBuilder:
                       'updating an existed database.')
 
     bom = self._UpdateComponents(probed_results, device_info, vpd, sku_ids,
-                                 skip_firmware_components)
+                                 skip_firmware_components, form_factor)
     self._UpdateEncodedFields(bom)
     if not self._from_empty_database:
       self._MayAddNewPatternAndImage(image_name)
-    self._UpdatePattern()
+    self._UpdatePattern(form_factor=form_factor)
 
   def Render(self, database_path):
     """Renders the database to a yaml file.
@@ -720,7 +718,7 @@ class DatabaseBuilder:
             field_name, bit_length - curr_bit_length, pattern_idx=pattern_idx)
 
   def _UpdateComponents(self, probed_results, device_info, vpd, sku_ids,
-                        skip_firmware_components):
+                        skip_firmware_components, form_factor):
     """Updates the component part of the database.
 
     This function update the database by trying to generate the BOM object
@@ -732,6 +730,7 @@ class DatabaseBuilder:
       vpd: A dict stores the vpd values.
       sku_ids: A list of sku IDs
       skip_firmware_components: Skip update firmware components if True
+      form_factor: Form factor of the device.
     """
     # Add SKU IDs first.  If sku_ids is non-empty, it should contain the probed
     # SKU ID in probed_results.
@@ -788,7 +787,9 @@ class DatabaseBuilder:
           common.OperationMode.normal, False)[0]
 
     # Ensure all essential components are recorded in the database.
-    for comp_cls in ESSENTIAL_COMPS:
+    essential_comps = common.FORM_FACTOR_COMPS.get(form_factor,
+                                                   common.ESSENTIAL_COMPS)
+    for comp_cls in essential_comps:
       if comp_cls == 'region':
         # Skip checking the region because it's acceptable to have a null
         # region component.
@@ -940,7 +941,7 @@ class DatabaseBuilder:
   def _GetMinBitLength(self, field_name: str) -> int:
     return max(self._database.GetEncodedField(field_name)).bit_length()
 
-  def _UpdatePattern(self):
+  def _UpdatePattern(self, form_factor=None):
     """Updates the pattern so that it includes all encoded fields."""
 
     handled_comp_classes = set()
@@ -951,7 +952,9 @@ class DatabaseBuilder:
       # Put the essential field first, and align the 5-3-5 bit field.
       bit_iter = itertools.cycle([5, 3, 5])
       next(bit_iter)  # Skip the first field, which is for image_id.
-      for comp_cls in ESSENTIAL_COMPS:
+      essential_comps = common.FORM_FACTOR_COMPS.get(form_factor,
+                                                     common.ESSENTIAL_COMPS)
+      for comp_cls in essential_comps:
         if comp_cls in handled_comp_classes:
           continue
 

@@ -100,6 +100,8 @@ _HWID_MATERIAL_FIELD_COMMON_ARGS = [
         help=('The config.yaml to load. This is the config file behind '
               'cros_config command. It contains the definition of all possible '
               'SKUs.')),
+    CmdArg('--form-factor', default=None, metavar='FORMFACTOR',
+           help='Form factor to validate the HWID materials.')
 ]
 
 _HWID_MATERIAL_COMMON_ARGS = [
@@ -186,6 +188,7 @@ class HWIDMaterial(NamedTuple):
   device_info: Dict  # An object records the device info.
   vpd: Dict  # An object records the vpd data.
   sku_ids: Optional[List[int]] = None
+  form_factor: Optional[str] = None
 
   def DumpStr(self):
     return yaml.safe_dump(self.ConvertToDict())
@@ -315,6 +318,8 @@ def ObtainHWIDMaterial(options):
     if options.config_yaml or sys_utils.InCrOSDevice():
       kwargs['sku_ids'] = hwid_utils.GetSkuIdsFromCrosConfig(
           project=options.project, config_yaml_path=options.config_yaml)
+  if base_hwid_material_file is None or options.form_factor:
+    kwargs['form_factor'] = hwid_utils.GetFormFactor(options.form_factor)
 
   hwid_material = HWIDMaterial(**kwargs)
   logging.debug(hwid_material.DumpStr())
@@ -369,7 +374,8 @@ def RunDatabaseBuilder(database_builder, options):
       database_builder.UpdateByProbedResults(
           hwid_material.probed_results, hwid_material.device_info,
           hwid_material.vpd, hwid_material.sku_ids, image_name=options.image_id,
-          skip_firmware_components=not options.add_firmware_components)
+          skip_firmware_components=not options.add_firmware_components,
+          form_factor=hwid_material.form_factor)
 
     for request in options.fill_combinations:
       database_builder.ExtendEncodedFieldToFullCombination(

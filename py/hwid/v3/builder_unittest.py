@@ -459,27 +459,34 @@ class DatabaseBuilderTest(unittest.TestCase):
   # TODO (b/212216855)
   @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
-  def testUpdateByProbedResultsMissingEssentialComponents(self,
-                                                          prompt_and_ask_mock):
+  def testUpdateByProbedResultsMissingEssentialComponentsAddNull(
+      self, prompt_and_ask_mock):
     # If the user answer "N", the null component will be added.
     prompt_and_ask_mock.return_value = False
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
-      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE',
+                                       form_factor='CONVERTIBLE')
     db = db_builder.Build()
-    for comp_cls in builder.ESSENTIAL_COMPS:
+    for comp_cls in common.FORM_FACTOR_COMPS['CONVERTIBLE']:
       self.assertIn({comp_cls: []},
                     list(db.GetEncodedField(comp_cls + '_field').values()))
 
+  # TODO (b/212216855)
+  @label_utils.Informational
+  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
+  def testUpdateByProbedResultsMissingEssentialComponentsAddDefault(
+      self, prompt_and_ask_mock):
     # If the user answer "Y", the default component will be added if no null
     # component is recorded.
     prompt_and_ask_mock.return_value = True
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
-      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE',
+                                       form_factor='CONVERTIBLE')
 
     db = db_builder.Build()
-    for comp_cls in builder.ESSENTIAL_COMPS:
+    for comp_cls in common.FORM_FACTOR_COMPS['CONVERTIBLE']:
       if {
           comp_cls: []
       } in db.GetEncodedField(comp_cls + '_field').values():
@@ -493,7 +500,7 @@ class DatabaseBuilderTest(unittest.TestCase):
   def testUpdateByProbedResultsNoEssentialComponentsWithAutoDecline(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH,
-        auto_decline_essential_prompt=builder.ESSENTIAL_COMPS) as db_builder:
+        auto_decline_essential_prompt=common.ESSENTIAL_COMPS) as db_builder:
       db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
       # The test will fail due to timeout without adding unittest assertion.
 
@@ -505,7 +512,7 @@ class DatabaseBuilderTest(unittest.TestCase):
     prompt_and_ask_mock.return_value = True
     no_auto_decline_components = set(('mainboard', 'dram'))
     auto_decline_components = set(
-        builder.ESSENTIAL_COMPS) - no_auto_decline_components
+        common.ESSENTIAL_COMPS) - no_auto_decline_components
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH, auto_decline_essential_prompt=list(
             auto_decline_components)) as db_builder:

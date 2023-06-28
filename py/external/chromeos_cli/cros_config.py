@@ -4,6 +4,7 @@
 
 from cros.factory.external.chromeos_cli import shell
 
+
 # Path to the product name and sku id of the device.
 # ARM devices: DEVICE_TREE_COMPATIBLE_PATH and DEVICE_TREE_SKU_ID_PATH
 # x86 devices: PRODUCT_NAME_PATH and PRODUCT_SKU_ID_PATH
@@ -82,6 +83,10 @@ class CrosConfig:
 
   def GetBrandCode(self):
     result = self.GetValue('/', 'brand-code')
+    return result.stdout.strip() if result.stdout else ''
+
+  def GetFormFactor(self):
+    result = self.GetValue('/hardware-properties', 'form-factor')
     return result.stdout.strip() if result.stdout else ''
 
   def GetAmplifier(self):

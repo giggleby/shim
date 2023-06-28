@@ -122,9 +122,9 @@ class ObtainHWIDMaterialTest(unittest.TestCase):
             probed_results={}, device_info={}, vpd={},
             framework_version=common.OLDEST_FRAMEWORK_VERSION).DumpStr())
 
-    self._options = type_utils.Obj(project='test_project',
-                                   device_info_file=None, vpd_data_file=None,
-                                   run_vpd=False, config_yaml=None)
+    self._options = type_utils.Obj(
+        project='test_project', device_info_file=None, vpd_data_file=None,
+        run_vpd=False, config_yaml=None, form_factor=None)
 
   def testSpecifyBothRunVPDAndVPDDataFile(self):
     self._options.vpd_data_file = 'a_vpd_data_file'
@@ -180,6 +180,7 @@ class ObtainHWIDMaterialTest(unittest.TestCase):
     self._mock_get_sku_ids_from_cros_config.return_value = [11, 22, 33, 44]
     self._options.device_info_file = 'a_device_info_file'
     self._options.run_vpd = True
+    self._options.form_factor = 'CONVERTIBLE'
 
     ret = hwid_cmdline.ObtainHWIDMaterial(self._options)
 
@@ -193,7 +194,7 @@ class ObtainHWIDMaterialTest(unittest.TestCase):
         device_info=self._mock_get_device_info.return_value,
         vpd=self._mock_get_vpd_data.return_value,
         sku_ids=self._mock_get_sku_ids_from_cros_config.return_value,
-        framework_version=common.FRAMEWORK_VERSION)
+        framework_version=common.FRAMEWORK_VERSION, form_factor='CONVERTIBLE')
     self.assertEqual(ret, expected_ret)
 
   def testHasBaseHWIDMaterialOverrideSucceed(self):
@@ -273,7 +274,8 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           obtain_hwid_material_mock.return_value.device_info,
           obtain_hwid_material_mock.return_value.vpd,
           obtain_hwid_material_mock.return_value.sku_ids,
-          image_name=options.image_id, skip_firmware_components=True)
+          image_name=options.image_id, skip_firmware_components=True,
+          form_factor=obtain_hwid_material_mock.return_value.form_factor)
 
   def testBuildMinimalHWIDDBConflictOptions(self):
     with file_utils.TempDirectory() as path:
@@ -381,7 +383,8 @@ class UpdateDatabaseWrapperTest(unittest.TestCase):
           obtain_hwid_material_mock.return_value.device_info,
           obtain_hwid_material_mock.return_value.vpd,
           obtain_hwid_material_mock.return_value.sku_ids,
-          image_name=options.image_id, skip_firmware_components=True)
+          image_name=options.image_id, skip_firmware_components=True,
+          form_factor=obtain_hwid_material_mock.return_value.form_factor)
 
       # Extend full component combination in specified encoded fields.
       instance.ExtendEncodedFieldToFullCombination.assert_called_with(
