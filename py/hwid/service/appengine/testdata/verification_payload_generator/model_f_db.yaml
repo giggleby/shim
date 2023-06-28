@@ -19,12 +19,14 @@ encoded_fields:
     2: {battery: battery_0_2_supported}
     3: {battery: battery_1_0_special_chemistry}
     4: {battery: battery_1_1_special_chemistry}
+    5: {battery: battery_2_0_common_technology}
+    6: {battery: battery_2_1_special_chemistry}
 
 components:
   battery:
     items:
       # ===================================================================== #
-      battery_0_0_unsupported: # Skipped due to qualification status.
+      battery_0_0_unsupported: # Skipped (grouped) due to qualification status.
         status: unsupported
         values:
           manufacturer: mfr
@@ -36,14 +38,14 @@ components:
           manufacturer: mfr
           model_name: S
           technology: Li-poly
-      battery_0_2_supported: # Skipped due to lexicographically larger component name.
+      battery_0_2_supported: # Skipped (grouped) due to lexicographically larger component name.
         status: supported
         values:
           manufacturer: mfr
           model_name: S
           technology: LIP
       # ===================================================================== #
-      # No component is skipped because their technologies are special.
+      # No component is skipped / grouped because their technologies are special.
       battery_1_0_special_chemistry:
         status: unsupported
         values:
@@ -55,6 +57,19 @@ components:
         values:
           manufacturer: mfr
           model_name: L
+          technology: O1E0
+      # ===================================================================== #
+      battery_2_0_common_technology: # Skipped due to qualification status.
+        status: unsupported
+        values:
+          manufacturer: mfr
+          model_name: M
+          technology: Li-ion
+      battery_2_1_special_chemistry:
+        status: supported
+        values:
+          manufacturer: mfr
+          model_name: M
           technology: O1E0
 
 rules: []

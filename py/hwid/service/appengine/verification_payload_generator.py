@@ -7,9 +7,10 @@
 import abc
 import collections
 import hashlib
+import itertools
 import logging
 import re
-from typing import DefaultDict, Dict, List, Mapping, NamedTuple, Optional, Set, Union
+from typing import DefaultDict, Dict, List, Mapping, NamedTuple, Optional, Set, Tuple, Union
 
 from google.protobuf import text_format
 import hardware_verifier_pb2  # pylint: disable=import-error
@@ -882,6 +883,67 @@ def GenerateVerificationPayload(dbs):
 
       probe_config.AddComponentProbeStatement(vp_piece.probe_statement)
 
+  def _CheckShouldSkipBattery(battery_lhs: Mapping[str, str],
+                              battery_rhs: Mapping[str, str]):
+    """Check if we should skip generating probe statements for either
+    `battery_lhs` or `battery_rhs`.
+
+    Return True if the following are satisfied:
+    1. `model_name` and `manufacturer` of the two batteries are the same.
+    2. `technology` of one battery is going to be ignored when generating probe
+        statements, while `technology` of the other is not.
+    """
+
+    for field in ['model_name', 'manufacturer']:
+      field_lhs = battery_lhs.get(field)
+      field_rhs = battery_rhs.get(field)
+      if field_lhs != field_rhs:
+        return False
+
+    lhs_technology = battery_lhs.get('technology')
+    rhs_technology = battery_rhs.get('technology')
+
+    return (lhs_technology in COMMON_HWID_TECHNOLOGY) != (
+        rhs_technology in COMMON_HWID_TECHNOLOGY)
+
+  def _CollectSkipCompNames(db: database.Database) -> Set[str]:
+    """Collect a set of component names for which we should skip generating
+    probe statements.
+
+    This function checks all components in `db` and collect those for which we
+    should skip generating probe statements. Currently it only checks battery
+    components.
+    """
+    skip_comp_names = set()
+
+    batteries = db.GetComponents('battery', include_default=False)
+
+    def BatteryKeyFunc(comp_name: str) -> Tuple[int, str]:
+      """Key function for deciding which battery to skip.
+
+      The battery with larger key returned by this function is going to be
+      skipped, in the order:
+      1. Qualification status.
+      2. Component name (skip the lexicographically larger one).
+      """
+      component = batteries[comp_name]
+      status = _STATUS_MAP.get(component.status)
+      qual = _QUAL_STATUS_PREFERENCE.get(status, 3)
+
+      return (qual, comp_name)
+
+    for comp_name_1, comp_name_2 in itertools.combinations(batteries, 2):
+      if comp_name_1 in skip_comp_names or comp_name_2 in skip_comp_names:
+        continue
+
+      comp_1 = batteries[comp_name_1].values
+      comp_2 = batteries[comp_name_2].values
+
+      if _CheckShouldSkipBattery(comp_1, comp_2):
+        skip_comp_names.add(max(comp_name_1, comp_name_2, key=BatteryKeyFunc))
+
+    return skip_comp_names
+
   error_msgs = []
   generated_file_contents = {}
 
@@ -894,7 +956,13 @@ def GenerateVerificationPayload(dbs):
     model_prefix = db.project.lower()
     probe_config = probe_config_types.ProbeConfigPayload()
 
-    all_pieces = GetAllComponentVerificationPayloadPieces(db, vpg_config)
+    skip_comp_names = _CollectSkipCompNames(db)
+    if skip_comp_names:
+      logging.info('Skip generating payload for components: %s',
+                   skip_comp_names)
+
+    all_pieces = GetAllComponentVerificationPayloadPieces(
+        db, vpg_config, skip_comp_names)
     grouped_comp_vp_piece = collections.defaultdict(list)
     grouped_primary_comp_name = {}
     grouped_merge_vp_piece = collections.defaultdict(list)

@@ -61,6 +61,11 @@
         "qualificationStatus": "QUALIFIED"
       },
       {
+        "componentCategory": "battery",
+        "componentUuid": "model_f_battery_2_1_special_chemistry",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
         "componentCategory": "storage",
         "componentUuid": "model_a_storage_0_unsupported",
         "qualificationStatus": "REJECTED"
@@ -3075,6 +3080,28 @@
             true,
             "str",
             "!re L.*"
+          ]
+        }
+      },
+      "model_f_battery_2_1_special_chemistry": {
+        "eval": {
+          "generic_battery": {}
+        },
+        "expect": {
+          "chemistry": [
+            true,
+            "str",
+            "!eq O1E0"
+          ],
+          "manufacturer": [
+            true,
+            "str",
+            "!re mfr.*"
+          ],
+          "model_name": [
+            true,
+            "str",
+            "!re M.*"
           ]
         }
       }
