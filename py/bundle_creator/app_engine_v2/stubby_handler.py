@@ -125,6 +125,20 @@ class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
     return response
 
   @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
+  def GetBundleErrorMessage(
+      self, request: factorybundle_v2_pb2.GetBundleErrorMessageRequest
+  ) -> factorybundle_v2_pb2.GetBundleErrorMessageResponse:
+    response = factorybundle_v2_pb2.GetBundleErrorMessageResponse()
+    snapshot = self._firestore_connector.GetUserRequestDocument(request.doc_id)
+    if not snapshot:
+      response.content = 'Document doesn\'t exist.'
+    elif snapshot.get('project', '') != request.project:
+      response.content = 'Permission denied.'
+    else:
+      response.content = snapshot.get('error_message', '')
+    return response
+
+  @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
   def ExtractFirmwareInfo(
       self, request: factorybundle_v2_pb2.ExtractFirmwareInfoRequest
   ) -> factorybundle_v2_pb2.ExtractFirmwareInfoResponse:

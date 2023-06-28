@@ -404,6 +404,21 @@ class FirestoreConnectorTest(unittest.TestCase):
     self.assertNotIn('hwid_cl_url', doc)
     self.assertNotIn('hwid_cl_error_msg', doc)
 
+  def testGetUserRequestDocument_exists_returnsExpectedDocument(self):
+    doc_id = 'doc'
+    project = 'project'
+    self._user_requests_col.document(doc_id).set({'project': project})
+
+    doc = self._connector.GetUserRequestDocument(doc_id)
+
+    self.assertEqual(doc, {
+        'id': doc_id,
+        'project': project,
+    })
+
+  def testGetUserRequestDocument_notExists_returnsNone(self):
+    self.assertIsNone(self._connector.GetUserRequestDocument('doc'))
+
 
 if __name__ == '__main__':
   unittest.main()

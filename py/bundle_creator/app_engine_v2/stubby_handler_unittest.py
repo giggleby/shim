@@ -41,6 +41,11 @@ class StubbyHandlerTest(unittest.TestCase):
     self._download_bundle_request.email = 'foo@bar'
     self._download_bundle_request.blob_path = 'board/project/fake.tar.bz2'
 
+    self._get_bundle_error_message_request = (
+        factorybundle_v2_pb2.GetBundleErrorMessageRequest())
+    self._get_bundle_error_message_request.project = 'project'
+    self._get_bundle_error_message_request.doc_id = 'error-doc-id'
+
     self._extract_fw_info_request = (
         factorybundle_v2_pb2.ExtractFirmwareInfoRequest())
     self._extract_fw_info_request.project = 'project'
@@ -197,6 +202,50 @@ class StubbyHandlerTest(unittest.TestCase):
     method = self._mock_storage_connector.GrantReadPermissionToBlob
     method.assert_called_once_with(self._download_bundle_request.email,
                                    self._download_bundle_request.blob_path)
+
+  def testGetBundleErrorMessage_succeed_returnsExpectedResponse(self):
+    error_message = 'A fake erorr message.'
+    self._mock_firestore_connector.GetUserRequestDocument.return_value = {
+        'project': 'project',
+        'error_message': error_message,
+    }
+
+    response = self._stubby_handler.GetBundleErrorMessage(
+        self._get_bundle_error_message_request)
+
+    expected_response = factorybundle_v2_pb2.GetBundleErrorMessageResponse()
+    expected_response.content = error_message
+    self.assertEqual(response, expected_response)
+
+  def testGetBundleErrorMessage_succeed_verifiesCallingConnector(self):
+    self._mock_firestore_connector.GetUserRequestDocument.return_value = None
+
+    self._stubby_handler.GetBundleErrorMessage(
+        self._get_bundle_error_message_request)
+    method = self._mock_firestore_connector.GetUserRequestDocument
+    method.assert_called_once_with('error-doc-id')
+
+  def testGetBundleErrorMessage_permissionDenied_returnsExpectedResponse(self):
+    self._mock_firestore_connector.GetUserRequestDocument.return_value = {
+        'project': 'different-project',
+    }
+
+    response = self._stubby_handler.GetBundleErrorMessage(
+        self._get_bundle_error_message_request)
+
+    expected_response = factorybundle_v2_pb2.GetBundleErrorMessageResponse()
+    expected_response.content = 'Permission denied.'
+    self.assertEqual(response, expected_response)
+
+  def testGetBundleErrorMessage_documentNotExists_returnsExpectedResponse(self):
+    self._mock_firestore_connector.GetUserRequestDocument.return_value = None
+
+    response = self._stubby_handler.GetBundleErrorMessage(
+        self._get_bundle_error_message_request)
+
+    expected_response = factorybundle_v2_pb2.GetBundleErrorMessageResponse()
+    expected_response.content = 'Document doesn\'t exist.'
+    self.assertEqual(response, expected_response)
 
   def testExtractFirmwareInfo_succeed_returnsExpectedResponse(self):
     response = self._stubby_handler.ExtractFirmwareInfo(

@@ -293,14 +293,19 @@ class FirestoreConnector:
     for doc_ref in col_ref.list_documents():
       doc_ref.delete()
 
-  def GetUserRequestDocument(self, doc_id: str) -> Dict[str, Any]:
-    """Testing purpose.  Gets the specific document.
+  def GetUserRequestDocument(self, doc_id: str) -> Optional[Dict[str, Any]]:
+    """Gets the specific user request document.
 
     Args:
       doc_id: The document id of the document to be fetched.
+
+    Returns:
+      A dictionary which represents the specific user request if it exists.
+      Otherwise `None` is returned.
     """
+    doc_snapshot = self._GetUserRequestDocRef(doc_id).get()
     return self._ConvertSnapshotToDictionary(
-        self._GetUserRequestDocRef(doc_id).get())
+        doc_snapshot) if doc_snapshot.exists else None
 
   def _UpdateUserRequestWithCurrentTime(self, doc_id: str, field_name: str):
     self._TryUpdateUserRequestDocRef(doc_id, {field_name: datetime.now()})
