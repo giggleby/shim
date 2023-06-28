@@ -1026,8 +1026,8 @@ class Gooftool:
     match = list(re.finditer(r'[1-9]: (?P<value>\w+) & (?P<mask>\w+)', res))
     if not match:
       raise Exception(f'Unexpected output from {res}')
-    if len(match) == 1 and int(match[0]['value']) == 0 and int(
-        match[0]['mask']) == 0:
+    if len(match) == 1 and int(match[0]['value'], 16) == 0 and int(
+        match[0]['mask'], 16) == 0:
       raise Exception(
           'Should set a non-zero wpsr when write protect is enabled.')
 
