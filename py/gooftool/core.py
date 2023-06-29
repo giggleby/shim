@@ -1090,21 +1090,6 @@ class Gooftool:
       if 'BoardID is set' in stdout:
         logging.warning('SN Bits cannot be set anymore.')
 
-  def VerifyWPSR(self):
-    """Verifies wpsr when write protect is enabled.
-
-    To avoid setting 0 0 accidentally. Example output from gsctool:
-    "expected values: 1: ff & 0f, 2: 00 & ff, 3: f0 & f0"
-    """
-    res = self._util.shell('gsctool -a -E').stdout
-    match = list(re.finditer(r'[1-9]: (?P<value>\w+) & (?P<mask>\w+)', res))
-    if not match:
-      raise Exception(f'Unexpected output from {res}')
-    if len(match) == 1 and int(match[0]['value'], 16) == 0 and int(
-        match[0]['mask'], 16) == 0:
-      raise Exception(
-          'Should set a non-zero wpsr when write protect is enabled.')
-
   def VerifyCBIEEPROMWPStatus(self, cbi_eeprom_wp_status):
     """Verifies CBI EEPROM write protection status."""
 
