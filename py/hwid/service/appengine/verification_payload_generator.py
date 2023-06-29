@@ -746,12 +746,17 @@ def GetAllComponentVerificationPayloadPieces(
       preprocessed[comp_name] = comp_info.Replace(values=val)
 
     if hwid_comp_category == 'battery':
+      update_comp_names = set()
       for comp_name, comp_info in preprocessed.items():
         if _BatteryShouldApplyPrefixMatch(comp_name, preprocessed):
-          for field in ['model_name', 'manufacturer']:
-            val = comp_info.values[field]
-            comp_info.values[field] = hwid_rule.Value(f'{re.escape(val)}.*',
-                                                      is_re=True)
+          update_comp_names.add(comp_name)
+
+      for comp_name in update_comp_names:
+        comp_info = preprocessed[comp_name]
+        for field in ['model_name', 'manufacturer']:
+          val = comp_info.values[field]
+          comp_info.values[field] = hwid_rule.Value(f'{re.escape(val)}.*',
+                                                    is_re=True)
 
     return preprocessed
 
@@ -883,8 +888,9 @@ def GenerateVerificationPayload(dbs):
 
       probe_config.AddComponentProbeStatement(vp_piece.probe_statement)
 
-  def _CheckShouldSkipBattery(battery_lhs: Mapping[str, str],
-                              battery_rhs: Mapping[str, str]):
+  def _CheckShouldSkipBattery(
+      battery_lhs: Mapping[str, Union[str, hwid_rule.Value]],
+      battery_rhs: Mapping[str, Union[str, hwid_rule.Value]]):
     """Check if we should skip generating probe statements for either
     `battery_lhs` or `battery_rhs`.
 
