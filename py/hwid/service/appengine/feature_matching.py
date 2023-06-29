@@ -201,10 +201,9 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
             hwid_feature_requirement_pb2.HwidProfile.EncodingRequirement(
                 bit_locations=encoding_requirement.bit_positions,
                 required_values=encoding_requirement.required_values))
-      # TODO(b/273883217): Support multiple brand codes in single profile.
-      for brand_code in self._spec.legacy_brands:
-        profile.prefix = f'{db_project}-{brand_code}'
-        payload_msg.hwid_profiles.append(profile)
+      profile.prefixes.extend(f'{db_project}-{brand_code}'
+                              for brand_code in self._spec.legacy_brands)
+      payload_msg.hwid_profiles.append(profile)
     return text_format.MessageToString(payload_msg)
 
   def _BuildFeatureManagementFlagChecker(

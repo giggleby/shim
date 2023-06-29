@@ -351,7 +351,7 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
         textwrap.dedent("""\
             feature_level: 1
             hwid_profiles {
-              prefix: "THEPROJ-ABCD"
+              prefixes: "THEPROJ-ABCD"
               encoding_requirements {
                 bit_locations: 4
                 bit_locations: 3
@@ -363,7 +363,7 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
               }
             }
             hwid_profiles {
-              prefix: "THEPROJ-ABCD"
+              prefixes: "THEPROJ-ABCD"
               encoding_requirements {
                 bit_locations: 4
                 bit_locations: 3
@@ -413,13 +413,13 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
-    # TODO(b/273883217): Support multiple brand codes in single profile.
     self.assertEqual(
         actual,
         textwrap.dedent("""\
             feature_level: 1
             hwid_profiles {
-              prefix: "THEPROJ-ABCD"
+              prefixes: "THEPROJ-ABCD"
+              prefixes: "THEPROJ-EFGH"
               encoding_requirements {
                 bit_locations: 4
                 bit_locations: 3
@@ -431,37 +431,8 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
               }
             }
             hwid_profiles {
-              prefix: "THEPROJ-EFGH"
-              encoding_requirements {
-                bit_locations: 4
-                bit_locations: 3
-                bit_locations: 2
-                bit_locations: 1
-                bit_locations: 0
-                required_values: "00000"
-                required_values: "10000"
-              }
-            }
-            hwid_profiles {
-              prefix: "THEPROJ-ABCD"
-              encoding_requirements {
-                bit_locations: 4
-                bit_locations: 3
-                bit_locations: 2
-                bit_locations: 1
-                bit_locations: 0
-                required_values: "01000"
-              }
-              encoding_requirements {
-                bit_locations: 5
-                bit_locations: 6
-                bit_locations: 7
-                required_values: "100"
-                required_values: "111"
-              }
-            }
-            hwid_profiles {
-              prefix: "THEPROJ-EFGH"
+              prefixes: "THEPROJ-ABCD"
+              prefixes: "THEPROJ-EFGH"
               encoding_requirements {
                 bit_locations: 4
                 bit_locations: 3
