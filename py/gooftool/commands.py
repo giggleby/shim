@@ -464,10 +464,6 @@ def VerifySnBits(options):
     GetGooftool(options).VerifySnBits()
 
 
-@Command('verify_wpsr', *GetGooftool.__args__)
-def VerifyWPSR(options):
-  GetGooftool(options).VerifyWPSR()
-
 @Command(
     'verify_cbi_eeprom_wp_status',
     _cbi_eeprom_wp_status_cmd_arg,  # this
@@ -875,7 +871,6 @@ def VerifyBeforeCr50Finalize(options):
     *GetGooftool.__args__,
     *VerifySnBits.__args__,
     *VerifyWPSwitch.__args__,
-    *VerifyWPSR.__args__,
 )
 def VerifyAfterCr50Finalize(options):
   """Verifies if the device is ready for finalization after Cr50Finalize.
@@ -885,7 +880,6 @@ def VerifyAfterCr50Finalize(options):
   """
   if not options.no_write_protect:
     VerifyWPSwitch(options)
-    VerifyWPSR(options)
   VerifySnBits(options)
 
 
