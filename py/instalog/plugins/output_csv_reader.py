@@ -70,45 +70,53 @@ class OutputCSVReader(plugin_base.OutputPlugin):
     csv_events = []
     for event in event_stream.iter(count=self.args.batch_size):
       object_id = event.get('objectId', '')
-      if not object_id.endswith('.csv'):
+      if not object_id.lower().endswith('.csv'):
         continue
+      self.info('Parsing CSV file: %s', object_id)
       csv_path = os.path.join(self.GetDataDir(), 'temp.csv')
       try:
         self.gcs.DownloadFile(object_id, csv_path, overwrite=True)
-        csv_events.extend(self.ReadCSV(csv_path))
+        csv_events.extend(self.ReadCSV(csv_path, object_id))
       finally:
         if os.path.exists(csv_path):
           os.unlink(csv_path)
 
     if self.Emit(csv_events):
-      self.info('Commit %d events', len(csv_events))
+      if csv_events:
+        self.info('Commit %d events', len(csv_events))
       event_stream.Commit()
       return True
     event_stream.Abort()
     return False
 
-  def ReadCSV(self, csv_path):
+  def ReadCSV(self, csv_path, object_id):
     """Reads CSV files and converts to events."""
     csv_events = []
-    with open(csv_path, 'r', encoding='utf-8') as f:
+    # Some CSV files have byte order mark, so we use 'utf-8-sig' here
+    with open(csv_path, 'r', encoding='utf-8-sig') as f:
       reader = csv.reader(f)
       for row in reader:
         if len(row) != 3:
+          self.warning('Doesn\'t have exactly 3 columns (%d)', len(row))
           return []
         if row == ['serial_number', 'hwid', 'timestamp']:
           continue
         try:
-          timestamp = datetime.datetime.fromisoformat(row[2])
+          # To parse no leading zeros format, we don't use fromisoformat()
+          timestamp = datetime.datetime.strptime(row[2], '%Y-%m-%dT%H:%M:%S%z')
         except ValueError:
+          self.exception('Failed to parse the timestamp: \'%s\'', row[2])
           return []
         unixtime = time_utils.DatetimeToUnixtime(timestamp)
         event = datatypes.Event({
             '__csv__': True,
+            'objectId': object_id,
             'serialNumber': row[0],
             'hwid': row[1],
             'time': unixtime
         })
         csv_events.append(event)
+    self.info('Found %d data', len(csv_events))
     return csv_events
 
 

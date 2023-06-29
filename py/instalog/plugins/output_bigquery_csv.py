@@ -21,6 +21,7 @@ class OutputBigQueryCSV(output_bigquery.OutputBigQuery):
   def GetTableSchema(self):
     """Returns a list of fields in the table schema."""
     return [
+        SchemaField('objectId', 'string', 'REQUIRED', None, ()),
         SchemaField('serialNumber', 'string', 'REQUIRED', None, ()),
         SchemaField('hwid', 'string', 'REQUIRED', None, ()),
         SchemaField('time', 'timestamp', 'REQUIRED', None, ()),
@@ -33,6 +34,7 @@ class OutputBigQueryCSV(output_bigquery.OutputBigQuery):
 
     row = {}
 
+    row['objectId'] = event.get('objectId')
     row['serialNumber'] = event.get('serialNumber')
     row['hwid'] = event.get('hwid')
     row['time'] = event.get('time')
