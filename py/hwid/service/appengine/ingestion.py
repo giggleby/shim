@@ -110,9 +110,9 @@ def _TryCreateCL(dryrun_upload: bool, abandon_cl: bool,
   else:
     auth_cookie = git_util.GetGerritAuthCookie()
     try:
-      change_id, _ = git_util.CreateCL(git_url, auth_cookie, branch, git_files,
-                                       author, author, commit_msg, reviewers,
-                                       ccs)
+      change_id, _ = git_util.CreateCL(
+          git_url, auth_cookie, branch, git_files, author, author, commit_msg,
+          reviewers, ccs, topic=setting.topic, hashtags=setting.hashtags)
       if abandon_cl:  # Abandon the test CL to prevent confusion
         try:
           git_util.AbandonCL(setting.review_host, auth_cookie, change_id)

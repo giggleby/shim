@@ -44,7 +44,9 @@ class CLSetting(NamedTuple):
   repo_host: str
   project: str
   prefix: str
-  branch: Optional[str]
+  branch: Optional[str] = None
+  topic: Optional[str] = None
+  hashtags: Optional[Sequence[str]] = None
 
 
 class AVLMetadataSetting(NamedTuple):
@@ -81,7 +83,7 @@ class AVLMetadataSetting(NamedTuple):
     )
 
 
-def CreateVerificationPayloadSettings(board) -> CLSetting:
+def CreateVerificationPayloadSettings(board: str) -> CLSetting:
   """Create a repo setting for specific board.
 
   Args:
@@ -94,8 +96,9 @@ def CreateVerificationPayloadSettings(board) -> CLSetting:
                    repo_host=hwid_repo.INTERNAL_REPO_URL,
                    project=f'chromeos/overlays/overlay-{board.lower()}-private',
                    prefix=f'chromeos-base/racc-config-{board.lower()}/files/',
-                   branch=None)
-
+                   branch=None,
+                   topic='racc-verification-payload-automated-sync',
+                   hashtags=[f'racc-verification-payload-{board.lower()}'])
 
 def CreateHWIDSelectionPayloadSettings(board: str) -> CLSetting:
   """Create a repo setting of HWID selection payload for specific board.
@@ -110,7 +113,8 @@ def CreateHWIDSelectionPayloadSettings(board: str) -> CLSetting:
                    repo_host=hwid_repo.INTERNAL_REPO_URL,
                    project=f'chromeos/overlays/overlay-{board.lower()}-private',
                    prefix='chromeos-base/feature-management-bsp/files/',
-                   branch=None)
+                   branch=None, topic='hwid-selection-payload-automated-sync',
+                   hashtags=[f'hwid-selection-payload-{board.lower()}'])
 
 
 class Config:
