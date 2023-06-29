@@ -10,7 +10,7 @@ ARG gcloud_archive_name="google-cloud-sdk-426.0.0-linux-x86_64.tar.gz"
 RUN cd "${workdir}" && \
   wget "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/${gcloud_archive_name}" && \
   tar xvf "${gcloud_archive_name}" && \
-  apt update && apt install -y redis-server openjdk-11-jre && \
+  apt update && apt install -y redis-server openjdk-17-jre && \
   google-cloud-sdk/install.sh \
     --rc-path /root/.bashrc \
     --additional-components app-engine-python app-engine-python-extras beta \
