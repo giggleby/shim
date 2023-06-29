@@ -9,6 +9,7 @@ import unittest
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
@@ -216,8 +217,9 @@ class ContentsAnalyzerTest(unittest.TestCase):
     self.assertCountEqual([
         _HWIDCompAnalysisResult(
             comp_cls='cls3', comp_name='comp4', support_status='supported',
-            is_newly_added=True, comp_name_info=None, seq_no=1,
-            comp_name_with_correct_seq_no=None, null_values=False,
+            is_newly_added=True,
+            comp_name_info=name_pattern_adapter.LegacyNameInfo('comp4'),
+            seq_no=1, comp_name_with_correct_seq_no=None, null_values=False,
             diff_prev=None, link_avl=False,
             probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
             skip_avl_check=True)
@@ -238,8 +240,9 @@ class ContentsAnalyzerTest(unittest.TestCase):
     self.assertIn(
         _HWIDCompAnalysisResult(
             comp_cls='cls1', comp_name='comp1', support_status='supported',
-            is_newly_added=False, comp_name_info=None, seq_no=1,
-            comp_name_with_correct_seq_no=None, null_values=False,
+            is_newly_added=False,
+            comp_name_info=name_pattern_adapter.LegacyNameInfo('comp1'),
+            seq_no=1, comp_name_with_correct_seq_no=None, null_values=False,
             diff_prev=_DiffStatus(
                 unchanged=False, name_changed=False,
                 support_status_changed=False, values_changed=False,
@@ -254,8 +257,9 @@ class ContentsAnalyzerTest(unittest.TestCase):
     self.assertIn(
         _HWIDCompAnalysisResult(
             comp_cls='cls1', comp_name='comp2', support_status='supported',
-            is_newly_added=False, comp_name_info=None, seq_no=2,
-            comp_name_with_correct_seq_no=None, null_values=False,
+            is_newly_added=False,
+            comp_name_info=name_pattern_adapter.LegacyNameInfo('comp2'),
+            seq_no=2, comp_name_with_correct_seq_no=None, null_values=False,
             diff_prev=_DiffStatus(
                 unchanged=True, name_changed=False,
                 support_status_changed=False, values_changed=False,
@@ -271,8 +275,11 @@ class ContentsAnalyzerTest(unittest.TestCase):
     return file_utils.ReadFile(os.path.join(_TEST_DATA_PATH, test_data_name))
 
   def _DumpRecordClass(self, inst) -> str:
-    serializer = json_utils.Serializer(
-        [json_utils.ConvertEnumToStr, json_utils.ConvertNamedTupleToDict])
+    serializer = json_utils.Serializer([
+        json_utils.ConvertEnumToStr,
+        json_utils.ConvertNamedTupleToDict,
+        name_pattern_adapter.ConvertNameInfoToDict,
+    ])
     return json_utils.DumpStr(
         serializer.Serialize(inst), pretty=True, sort_keys=False)
 

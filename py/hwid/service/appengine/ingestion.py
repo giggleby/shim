@@ -434,6 +434,7 @@ class SyncNameMappingRPCProvider(_HWIDIngestionProtoRPCShardBase):
     self.decoder_data_manager = config.decoder_data_manager
     self.hwid_api_connector = hwid_api_connector
     self.hwid_data_cachers = config.hwid_data_cachers
+    self._get_cid_acceptor = name_pattern_adapter.GetCIDAcceptor()
 
   def _ListComponentIDs(self) -> Mapping[int, Collection[str]]:
     """Lists all component IDs in HWID database.
@@ -449,8 +450,9 @@ class SyncNameMappingRPCProvider(_HWIDIngestionProtoRPCShardBase):
       pattern = np_adapter.GetNamePattern(comp_cls)
       for comp_name in comps:
         name_info = pattern.Matches(comp_name)
-        if name_info:
-          comp_ids.add(name_info.cid)
+        cid = name_info.Provide(self._get_cid_acceptor)
+        if cid is not None:
+          comp_ids.add(cid)
       return comp_ids
 
     cid_proj_mapping = collections.defaultdict(set)

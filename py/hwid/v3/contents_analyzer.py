@@ -118,7 +118,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   comp_name: str
   support_status: str
   is_newly_added: bool
-  comp_name_info: Optional[ComponentNameInfo]
+  comp_name_info: ComponentNameInfo
   seq_no: int
   comp_name_with_correct_seq_no: Optional[str]
   null_values: bool
@@ -266,7 +266,6 @@ class ContentsAnalyzer:
                   'legacy HWID bundle?'))
     return report
 
-
   def _ValidateChangeOfNewCreation(self, report: ValidationReport) -> bool:
     """Checks if the newly created HWID DB applies up-to-date styles.
 
@@ -350,7 +349,6 @@ class ContentsAnalyzer:
                   f'New component class field(s)({added_fields}) should not be '
                   f'appended in the existing pattern(#{pattern_id}) except in '
                   'early phases. Please create a new pattern instead.'))
-
 
     old_reg_field_legacy_info = self._prev_db.instance.region_field_legacy_info
     new_reg_field_legacy_info = self._curr_db.instance.region_field_legacy_info
@@ -595,7 +593,7 @@ class ContentsAnalyzer:
     status: str
     extracted_noseq_comp_name: str
     extracted_seq_no: Optional[str]
-    extracted_name_info: Optional[ComponentNameInfo]
+    extracted_name_info: ComponentNameInfo
     expected_seq_no: int
     is_newly_added: bool
     null_values: bool
@@ -664,11 +662,17 @@ class ContentsAnalyzer:
               probe_value_alignment_status_changed,
               converter_changed,
           ])
-          diffstatus = DiffStatus(unchanged, name_changed,
-                                  support_status_changed, values_changed,
-                                  prev_comp_name, prev_support_status,
-                                  probe_value_alignment_status_changed,
-                                  prev_alignment_status, converter_changed)
+          diffstatus = DiffStatus(
+              unchanged,
+              name_changed,
+              support_status_changed,
+              values_changed,
+              prev_comp_name,
+              prev_support_status,
+              probe_value_alignment_status_changed,
+              prev_alignment_status,
+              converter_changed,
+          )
           from_factory_bundle = bool(prev_comp_info.bundle_uuids)
           is_newly_added = False
         else:

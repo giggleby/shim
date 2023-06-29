@@ -39,6 +39,7 @@ class DecoderDataManager:
 
   def __init__(self, ndb_connector: ndbc_module.NDBConnector):
     self._ndb_connector = ndb_connector
+    self._get_cid_acceptor = name_pattern_adapter.GetCIDAcceptor()
 
   def SyncAVLNameMapping(self, mapping) -> Collection[int]:
     """Sync the set of AVL name mapping to be exactly the mapping provided.
@@ -93,12 +94,12 @@ class DecoderDataManager:
     np_adapter = name_pattern_adapter.NamePatternAdapter()
     name_pattern = np_adapter.GetNamePattern(category)
     name_info = name_pattern.Matches(comp_name)
-    if not name_info:
+    cid = name_info.Provide(self._get_cid_acceptor)
+    if cid is None:
       return comp_name if fallback else ''
 
     with self._ndb_connector.CreateClientContextWithGlobalCache():
-      entry = AVLNameMapping.query(
-          AVLNameMapping.component_id == name_info.cid).get()
+      entry = AVLNameMapping.query(AVLNameMapping.component_id == cid).get()
     if entry is None:
       logging.error(
           'mapping not found for category "%s" and component name "%s"',

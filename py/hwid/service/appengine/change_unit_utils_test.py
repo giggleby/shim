@@ -13,6 +13,7 @@ from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.v3 import builder
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import rule as v3_rule
 from cros.factory.utils import file_utils
 
@@ -72,7 +73,8 @@ def _GenerateNewComponentAnalysis(seq_no: int, comp_cls: str = 'comp_cls_1',
                                   comp_name_prefix: str = 'new_comp'):
   return _HWIDComponentAnalysisResult(
       comp_cls=comp_cls, comp_name=f'{comp_name_prefix}#{seq_no}',
-      support_status='supported', is_newly_added=True, comp_name_info=None,
+      support_status='supported', is_newly_added=True,
+      comp_name_info=name_pattern_adapter.LegacyNameInfo('unused'),
       seq_no=seq_no, comp_name_with_correct_seq_no=None, null_values=None,
       diff_prev=None, link_avl=False,
       probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
@@ -90,6 +92,12 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
 
   null_values = comp_info.value_is_none
   support_status = comp_info.status
+  if comp_name_info is None:
+    comp_name_info = name_pattern_adapter.LegacyNameInfo('legacy_comp_name')
+  link_avl = isinstance(comp_name_info, (
+      name_pattern_adapter.LinkAVLNameRegularInfo,
+      name_pattern_adapter.LinkAVLNameSubcompInfo,
+  ))
   if is_newly_added:
     if diff_prev:
       raise ValueError('Newly added component must not have DiffStatus.')
@@ -105,7 +113,7 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
   return _HWIDComponentAnalysisResult(
       comp_cls=comp_cls, comp_name=comp_name, seq_no=seq_no,
       support_status=support_status, is_newly_added=is_newly_added,
-      link_avl=bool(comp_name_info), comp_name_info=comp_name_info,
+      link_avl=link_avl, comp_name_info=comp_name_info,
       comp_name_with_correct_seq_no=comp_name_with_correct_seq_no,
       null_values=null_values,
       probe_value_alignment_status=probe_value_alignment_status,

@@ -33,6 +33,26 @@ def _GenerateCacheKey(hwid: str, verbose: bool, no_avl_name: bool) -> str:
   return f'{hwid},verbose={verbose},no_avl_name={no_avl_name}'
 
 
+class _GenerateAVLInfoAcceptor(name_pattern_adapter.NameInfoAcceptor[Optional[
+    hwid_api_messages_pb2.AvlInfo]]):
+  """An acceptor to generate an AvlInfo proto message."""
+
+  def AcceptRegularComp(
+      self, cid: int,
+      qid: Optional[int]) -> Optional[hwid_api_messages_pb2.AvlInfo]:
+    """See base class."""
+    return hwid_api_messages_pb2.AvlInfo(cid=cid, qid=qid)
+
+  def AcceptSubcomp(self, cid: int) -> Optional[hwid_api_messages_pb2.AvlInfo]:
+    """See base class."""
+    return hwid_api_messages_pb2.AvlInfo(cid=cid, is_subcomp=True)
+
+  def AcceptLegacy(
+      self, raw_comp_name: str) -> Optional[hwid_api_messages_pb2.AvlInfo]:
+    """See base class."""
+    return None
+
+
 class BOMAndConfigless(NamedTuple):
   """A class to collect bom and configless obtained from decoded HWID string."""
 
@@ -94,6 +114,7 @@ class BOMAndConfiglessHelper:
     self._vpg_targets = _CONFIG_DATA.vpg_targets
     self._decoder_data_manager = decoder_data_manager
     self._bom_data_cacher = bom_data_cacher
+    self._generate_avl_info_acceptor = _GenerateAVLInfoAcceptor()
 
   def BatchGetBOMAndConfigless(
       self,
@@ -198,13 +219,10 @@ class BOMAndConfiglessHelper:
 
         name_pattern = np_adapter.GetNamePattern(component.cls)
         name_info = name_pattern.Matches(component.name)
-        if name_info:
-          qid = 0 if name_info.is_subcomp else name_info.qid
-          avl_info = hwid_api_messages_pb2.AvlInfo(
-              cid=name_info.cid, qid=qid, avl_name=avl_name,
-              is_subcomp=name_info.is_subcomp)
-        else:
-          avl_info = None
+        avl_info = name_info.Provide(self._generate_avl_info_acceptor)
+
+        if avl_info is not None:
+          avl_info.avl_name = avl_name
 
         components.append(
             hwid_api_messages_pb2.Component(

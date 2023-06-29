@@ -33,6 +33,7 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 from cros.factory.utils import file_utils
@@ -653,7 +654,8 @@ class SelfServiceShardTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',
                         support_status='unqualified', is_newly_added=False,
-                        comp_name_info=None, seq_no=2,
+                        comp_name_info=name_pattern_adapter.LegacyNameInfo(
+                            'comp_name1'), seq_no=2,
                         comp_name_with_correct_seq_no=None, null_values=False,
                         diff_prev=_DiffStatus(
                             unchanged=True, name_changed=False,
@@ -672,8 +674,8 @@ class SelfServiceShardTest(unittest.TestCase):
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
                         support_status='unqualified', is_newly_added=True,
                         comp_name_info=(
-                            hwid_action.DBHWIDComponentNameInfo.from_comp(
-                                111, 222)), seq_no=1,
+                            name_pattern_adapter.LinkAVLNameRegularInfo(
+                                cid=111, qid=222)), seq_no=1,
                         comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                         null_values=False, diff_prev=_DiffStatus(
                             unchanged=False, name_changed=True,
@@ -690,7 +692,8 @@ class SelfServiceShardTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_name3',
                         support_status='unqualified', is_newly_added=True,
-                        comp_name_info=None, seq_no=2,
+                        comp_name_info=name_pattern_adapter.LegacyNameInfo(
+                            'comp_name3'), seq_no=2,
                         comp_name_with_correct_seq_no=None, null_values=True,
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
@@ -1175,7 +1178,8 @@ class SelfServiceShardTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',
                         support_status='unqualified', is_newly_added=False,
-                        comp_name_info=None, seq_no=2,
+                        comp_name_info=name_pattern_adapter.LegacyNameInfo(
+                            'comp_name1'), seq_no=2,
                         comp_name_with_correct_seq_no=None, null_values=True,
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
@@ -1186,8 +1190,8 @@ class SelfServiceShardTest(unittest.TestCase):
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
                         support_status='unqualified', is_newly_added=True,
                         comp_name_info=(
-                            hwid_action.DBHWIDComponentNameInfo.from_comp(
-                                111, 222)), seq_no=1,
+                            name_pattern_adapter.LinkAVLNameRegularInfo(
+                                cid=111, qid=222)), seq_no=1,
                         comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                         null_values=False, diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
@@ -1331,7 +1335,8 @@ class SelfServiceShardTest(unittest.TestCase):
                       hwid_action.DBHWIDComponentAnalysisResult(
                           comp_cls='comp_cls1', comp_name='comp_name1',
                           support_status='unqualified', is_newly_added=False,
-                          comp_name_info=None, seq_no=2,
+                          comp_name_info=name_pattern_adapter.LegacyNameInfo(
+                              'comp_name1'), seq_no=2,
                           comp_name_with_correct_seq_no=None, null_values=True,
                           diff_prev=None, link_avl=False,
                           probe_value_alignment_status=(
@@ -1342,8 +1347,8 @@ class SelfServiceShardTest(unittest.TestCase):
                           comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
                           support_status='unqualified', is_newly_added=False,
                           comp_name_info=(
-                              hwid_action.DBHWIDComponentNameInfo.from_comp(
-                                  111, 222)), seq_no=1,
+                              name_pattern_adapter.LinkAVLNameRegularInfo(
+                                  cid=111, qid=222)), seq_no=1,
                           comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                           null_values=True, diff_prev=None, link_avl=True,
                           probe_value_alignment_status=(
@@ -1413,7 +1418,8 @@ class SelfServiceShardTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',
                         support_status='unqualified', is_newly_added=False,
-                        comp_name_info=None, seq_no=2,
+                        comp_name_info=name_pattern_adapter.LegacyNameInfo(
+                            'comp_name1'), seq_no=2,
                         comp_name_with_correct_seq_no=None, null_values=False,
                         diff_prev=_DiffStatus(
                             unchanged=True, name_changed=False,
@@ -1432,8 +1438,8 @@ class SelfServiceShardTest(unittest.TestCase):
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
                         support_status='unqualified', is_newly_added=True,
                         comp_name_info=(
-                            hwid_action.DBHWIDComponentNameInfo.from_comp(
-                                111, 222)), seq_no=1,
+                            name_pattern_adapter.LinkAVLNameRegularInfo(
+                                cid=111, qid=222)), seq_no=1,
                         comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                         null_values=False, diff_prev=_DiffStatus(
                             unchanged=False, name_changed=True,
@@ -1450,7 +1456,8 @@ class SelfServiceShardTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_name3',
                         support_status='unqualified', is_newly_added=True,
-                        comp_name_info=None, seq_no=2,
+                        comp_name_info=name_pattern_adapter.LegacyNameInfo(
+                            'comp_name3'), seq_no=2,
                         comp_name_with_correct_seq_no=None, null_values=True,
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(

@@ -570,7 +570,12 @@
       "comp_name": "display_panel_A",
       "support_status": "deprecated",
       "is_newly_added": false,
-      "comp_name_info": null,
+      "comp_name_info": {
+        "cid": null,
+        "qid": null,
+        "is_subcomp": false,
+        "legacy_comp_name": "display_panel_A"
+      },
       "seq_no": 1,
       "comp_name_with_correct_seq_no": null,
       "null_values": false,
@@ -594,7 +599,12 @@
       "comp_name": "display_panel_B_both_null",
       "support_status": "unqualified",
       "is_newly_added": false,
-      "comp_name_info": null,
+      "comp_name_info": {
+        "cid": null,
+        "qid": null,
+        "is_subcomp": false,
+        "legacy_comp_name": "display_panel_B_both_null"
+      },
       "seq_no": 2,
       "comp_name_with_correct_seq_no": null,
       "null_values": true,
@@ -618,7 +628,12 @@
       "comp_name": "display_panel_B_prev_null",
       "support_status": "unqualified",
       "is_newly_added": false,
-      "comp_name_info": null,
+      "comp_name_info": {
+        "cid": null,
+        "qid": null,
+        "is_subcomp": false,
+        "legacy_comp_name": "display_panel_B_prev_null"
+      },
       "seq_no": 3,
       "comp_name_with_correct_seq_no": null,
       "null_values": false,
@@ -642,7 +657,12 @@
       "comp_name": "display_panel_B_next_null",
       "support_status": "unqualified",
       "is_newly_added": false,
-      "comp_name_info": null,
+      "comp_name_info": {
+        "cid": null,
+        "qid": null,
+        "is_subcomp": false,
+        "legacy_comp_name": "display_panel_B_next_null"
+      },
       "seq_no": 4,
       "comp_name_with_correct_seq_no": null,
       "null_values": true,
@@ -669,7 +689,8 @@
       "comp_name_info": {
         "cid": 123,
         "qid": 456,
-        "is_subcomp": false
+        "is_subcomp": false,
+        "legacy_comp_name": null
       },
       "seq_no": 5,
       "comp_name_with_correct_seq_no": "display_panel_123_456#5",
@@ -687,7 +708,8 @@
       "comp_name_info": {
         "cid": 234,
         "qid": null,
-        "is_subcomp": true
+        "is_subcomp": true,
+        "legacy_comp_name": null
       },
       "seq_no": 6,
       "comp_name_with_correct_seq_no": null,

@@ -480,6 +480,24 @@ class HWIDRequirementResolver:
     return all_requirements
 
 
+class CreateDLMCompEntryAcceptor(
+    npa_module.NameInfoAcceptor[Optional[DLMComponentEntryID]]):
+  """An acceptor to provide a DLMComponentEntryID instance."""
+
+  def AcceptRegularComp(self, cid: int,
+                        qid: Optional[int]) -> Optional[DLMComponentEntryID]:
+    """See base class."""
+    return DLMComponentEntryID(cid, qid)
+
+  def AcceptSubcomp(self, cid: int) -> Optional[DLMComponentEntryID]:
+    """See base class."""
+    return DLMComponentEntryID(cid, None)
+
+  def AcceptLegacy(self, raw_comp_name: str) -> Optional[DLMComponentEntryID]:
+    """See base class."""
+    return None
+
+
 class _SatisfiedEncodedValueResolver(abc.ABC):
   """A class method to help find all satisfied encoded values for a spec."""
 
@@ -490,6 +508,7 @@ class _SatisfiedEncodedValueResolver(abc.ABC):
     self._compatibility_of_dlm_id = {}
     self._name_pattern_adapter = npa_module.NamePatternAdapter()
     self._name_patterns = {}
+    self._create_dlm_comp_entry_acceptor = CreateDLMCompEntryAcceptor()
 
   @abc.abstractmethod
   def _IdentifyDLMComponentCompatibility(self,
@@ -530,10 +549,10 @@ class _SatisfiedEncodedValueResolver(abc.ABC):
       self._name_patterns[component_type] = (
           self._name_pattern_adapter.GetNamePattern(component_type))
     name_info = self._name_patterns[component_type].Matches(component_name)
-    if not name_info:
+    dlm_id = name_info.Provide(self._create_dlm_comp_entry_acceptor)
+    if dlm_id is None:
       is_compatible = False
     else:
-      dlm_id = DLMComponentEntryID(cid=name_info.cid, qid=name_info.qid or None)
       is_compatible = self._IsDLMComponentCompatible(dlm_id)
     self._compatibility_of_hwid_component[cache_key] = is_compatible
     return is_compatible
@@ -605,6 +624,7 @@ class MemoryV1Spec(HWIDSpec):
   def __init__(self):
     self._name_pattern = npa_module.NamePatternAdapter().GetNamePattern(
         self._DRAM_COMPONENT_TYPE)
+    self._create_dlm_comp_entry_acceptor = CreateDLMCompEntryAcceptor()
 
   def _GetVirtualDIMMSizeInMBIfValid(
       self, hwid_component_name: str, db: db_module.Database,
@@ -625,9 +645,9 @@ class MemoryV1Spec(HWIDSpec):
       invalid.
     """
     name_info = self._name_pattern.Matches(hwid_component_name)
-    if not name_info:
+    dlm_id = name_info.Provide(self._create_dlm_comp_entry_acceptor)
+    if dlm_id is None:
       return None
-    dlm_id = DLMComponentEntryID(name_info.cid, name_info.qid or None)
     if dlm_id not in dlm_db or not dlm_db[dlm_id].virtual_dimm_property:
       return None
     comp_info = db.GetComponents(self._DRAM_COMPONENT_TYPE)[hwid_component_name]

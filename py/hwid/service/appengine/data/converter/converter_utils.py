@@ -38,6 +38,7 @@ class ConverterManager:
   def __init__(self, collection_map: Mapping[str,
                                              converter.ConverterCollection]):
     self._collection_map = collection_map
+    self._get_cid_acceptor = name_pattern_adapter.GetCIDAcceptor()
 
   @classmethod
   def FromDefault(cls):
@@ -66,9 +67,10 @@ class ConverterManager:
         name_pattern = adapter.GetNamePattern(comp_cls)
         for comp_name, comp_info in db_builder.GetComponents(comp_cls).items():
           name_info = name_pattern.Matches(comp_name)
-          if not name_info:
+          cid = name_info.Provide(self._get_cid_acceptor)
+          if cid is None:
             continue
-          probe_info = probe_info_map.get(name_info.cid)
+          probe_info = probe_info_map.get(cid)
           if not probe_info:
             continue
           match_result = converter_collection.Match(comp_info.values,

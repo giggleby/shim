@@ -81,6 +81,7 @@ _MAX_OPENED_HWID_DB_CL_AGE = datetime.timedelta(
 _MAX_MERGE_CONFLICT_HWID_DB_CL_AGE = datetime.timedelta(days=7)
 
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
+_AvlInfo = hwid_api_messages_pb2.AvlInfo
 _PROBE_VALUE_ALIGNMENT_STATUS = {
     hwid_action.DBHWIDPVAlignmentStatus.NO_PROBE_INFO:
         hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case.NO_PROBE_INFO,
@@ -194,6 +195,28 @@ def _ConvertSupportStatsCase(
         f'Unrecognizable HWID support status value: {hwid_value!r}.') from ex
 
 
+class _GenerateCompInfoMsgAcceptor(
+    name_pattern_adapter.NameInfoAcceptor[_AnalysisReportMsg.ComponentInfo]):
+  """An acceptor to generate a ComponentInfo proto message."""
+
+  def AcceptRegularComp(self, cid: int,
+                        qid: Optional[int]) -> _AnalysisReportMsg.ComponentInfo:
+    """See base class."""
+    return _AnalysisReportMsg.ComponentInfo(
+        avl_info=_AvlInfo(cid=cid, qid=qid), has_avl=True)
+
+  def AcceptSubcomp(self, cid: int) -> _AnalysisReportMsg.ComponentInfo:
+    """See base class."""
+    return _AnalysisReportMsg.ComponentInfo(
+        avl_info=_AvlInfo(cid=cid, is_subcomp=True), has_avl=True)
+
+  def AcceptLegacy(self,
+                   raw_comp_name: str) -> _AnalysisReportMsg.ComponentInfo:
+    """See base class."""
+    del raw_comp_name
+    return _AnalysisReportMsg.ComponentInfo()
+
+
 def _ConvertCompInfoToMsg(
     comp_info: hwid_action.DBHWIDComponentAnalysisResult
 ) -> _AnalysisReportMsg.ComponentInfo:
@@ -205,13 +228,9 @@ def _ConvertCompInfoToMsg(
   comp_info_msg.support_status_case = _ConvertSupportStatsCase(
       comp_info.support_status)
   comp_info_msg.is_newly_added = comp_info.is_newly_added
-  if comp_info.comp_name_info is not None:
-    comp_info_msg.avl_info.cid = comp_info.comp_name_info.cid
-    comp_info_msg.avl_info.qid = comp_info.comp_name_info.qid or 0
-    comp_info_msg.avl_info.is_subcomp = comp_info.comp_name_info.is_subcomp
-    comp_info_msg.has_avl = True
-  else:
-    comp_info_msg.has_avl = False
+  comp_info_msg.MergeFrom(
+      comp_info.comp_name_info.Provide(_GenerateCompInfoMsgAcceptor()))
+
   comp_info_msg.seq_no = comp_info.seq_no
   if comp_info.comp_name_with_correct_seq_no is not None:
     comp_info_msg.component_name_with_correct_seq_no = (
@@ -426,6 +445,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
     self._extra_resource = extra_resource
     self._warnings = []
     self._npa = name_pattern_adapter.NamePatternAdapter()
+    self._create_dlm_comp_entry_acceptor = features.CreateDLMCompEntryAcceptor()
 
   @classmethod
   def Create(
@@ -460,8 +480,8 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
     for db_comp_name, db_comp_info in self._db.GetComponents(
         component_type, include_default=False).items():
       name_info = np.Matches(db_comp_name)
-      if (name_info and name_info.cid == dlm_id.cid and
-          (name_info.qid or None) == dlm_id.qid):
+      generated_dlm_id = name_info.Provide(self._create_dlm_comp_entry_acceptor)
+      if generated_dlm_id == dlm_id:
         yield db_comp_name, db_comp_info
 
   def _GetVirtualDIMMProperty(
@@ -1142,12 +1162,13 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
             mat.component_class)
 
       if mat.is_subcomp:
-        name_info = name_pattern_adapter.NameInfo.from_subcomp(mat.avl_cid)
+        name_info = name_pattern_adapter.LinkAVLNameSubcompInfo(cid=mat.avl_cid)
       else:
-        name_info = name_pattern_adapter.NameInfo.from_comp(
-            mat.avl_cid, qid=mat.avl_qid)
+        qid = None if mat.avl_qid == 0 else mat.avl_qid
+        name_info = name_pattern_adapter.LinkAVLNameRegularInfo(
+            cid=mat.avl_cid, qid=qid)
       response.component_names.append(
-          np.GenerateAVLName(name_info, seq=str(mat.seq_no)))
+          np.GenerateAVLName(name_info, seq=mat.seq_no))
     return response
 
   @protorpc_utils.ProtoRPCServiceMethod

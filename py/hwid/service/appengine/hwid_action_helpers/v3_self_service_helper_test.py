@@ -23,6 +23,7 @@ from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import feature_compliance
+from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
@@ -258,7 +259,8 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
             comp_name='avl_skipped_comp',
             support_status='supported',
             is_newly_added=False,
-            comp_name_info=None,
+            comp_name_info=name_pattern_adapter.LegacyNameInfo(
+                'avl_skipped_comp'),
             seq_no=5,
             comp_name_with_correct_seq_no=None,
             null_values=False,
