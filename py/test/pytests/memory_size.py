@@ -87,6 +87,7 @@ from cros.factory.utils import process_utils
 
 
 class MemorySize(test_case.TestCase):
+  related_components = (test_case.TestCategory.DRAM, )
   ARGS = [
       Arg('device_data_key', str,
           'Device data key for getting memory size in GB.', default=None),

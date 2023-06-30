@@ -59,6 +59,7 @@ import enum
 import unittest
 
 from cros.factory.device import device_utils
+from cros.factory.test import test_tags
 from cros.factory.tools import mrc_cache
 from cros.factory.utils.arg_utils import Arg
 
@@ -69,6 +70,7 @@ class TestMode(str, enum.Enum):
   verify_no_update = 'verify_no_update'
 
 class MrcCacheTest(unittest.TestCase):
+  related_components = (test_tags.TestCategory.DRAM, )
   ARGS = [
       Arg(
           'mode', str, 'Specify the phase of the test, valid values are:\n'

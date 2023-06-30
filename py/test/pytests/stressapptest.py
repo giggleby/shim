@@ -85,6 +85,7 @@ import unittest
 from cros.factory.device import device_utils
 from cros.factory.goofy.plugins import plugin_controller
 from cros.factory.test import state
+from cros.factory.test import test_tags
 from cros.factory.test.utils import stress_manager
 from cros.factory.utils.arg_utils import Arg
 
@@ -92,6 +93,7 @@ from cros.factory.utils.arg_utils import Arg
 class StressAppTest(unittest.TestCase):
   """Run stressapptest to test the memory and disk is fine."""
 
+  related_components = (test_tags.TestCategory.DRAM, )
   ARGS = [
       Arg('seconds', int, 'Time to execute the stressapptest.', default=60),
       Arg('memory_ratio', float, 'Radio of memory to be used by stressapptest.',

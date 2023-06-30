@@ -111,6 +111,8 @@ class ConfigSource(str, enum.Enum):
 
 class UpdateCBITest(test_case.TestCase):
   """A test to set CBI fields from device data to EEPROM."""
+
+  related_components = (test_case.TestCategory.DRAM, )
   ARGS = [
       Arg('cbi_data_names', list, 'List of CBI data names to update',
           schema=_ARG_CBI_DATA_NAMES_SCHEMA),
