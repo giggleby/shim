@@ -350,7 +350,6 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
         actual,
         textwrap.dedent("""\
             feature_level: 1
-            scope: SCOPE_DEVICES_0
             hwid_profiles {
               prefix: "THEPROJ-ABCD"
               encoding_requirements {
@@ -419,7 +418,6 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
         actual,
         textwrap.dedent("""\
             feature_level: 1
-            scope: SCOPE_DEVICES_0
             hwid_profiles {
               prefix: "THEPROJ-ABCD"
               encoding_requirements {
