@@ -1619,7 +1619,7 @@ class Gooftool:
     # Setting the feature management flags to GSC is a write-once operation,
     # so we should set these flags right before Cr50SetBoardId.
     if not skip_feature_tiering_steps:
-      self.Cr50SetFeatureManagementFlags()
+      self._Cr50SetFeatureManagementFlags()
 
     if not rma_mode:
       self.Cr50SetBoardId(
