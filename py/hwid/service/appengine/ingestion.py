@@ -56,8 +56,8 @@ def _GetHWIDMainCommitIfChanged(
   latest_commit = payload_data_manager.GetLatestHWIDMainCommit()
 
   if latest_commit == hwid_main_commit and not force_update:
-    logging.debug('The HWID main commit %s is already processed, skipped',
-                  hwid_main_commit)
+    logging.info('The HWID main commit %s is already processed, skipped',
+                 hwid_main_commit)
     return None
   return hwid_main_commit
 
@@ -162,10 +162,13 @@ class HWIDSelectionPayloadManager:
         unlimited.  A model will be ignored if it is not vpg-enabled.
     """
 
+    logging.info('HWIDSelectionPayloadManager start syncing')
     hwid_main_commit = _GetHWIDMainCommitIfChanged(
         self._hwid_repo_manager, self._hsp_data_manager, force_update)
     if not hwid_main_commit:
       return {}
+    logging.info('HWIDSelectionPayloadManager sync with HWID commit %s',
+                 hwid_main_commit)
     self._hsp_data_manager.SetLatestHWIDMainCommit(hwid_main_commit)
     boards_payloads = self._GeneratePayloads(limit_models)
     payload_hash_mapping = {}
@@ -188,6 +191,7 @@ class HWIDSelectionPayloadManager:
         self._hsp_data_manager.SetLatestPayloadHash(board,
                                                     payloads.payload_hash)
 
+    logging.info('HWIDSelectionPayloadManager sync successfully')
     return payload_hash_mapping
 
   @classmethod
@@ -270,12 +274,14 @@ class HWIDSelectionPayloadManager:
     """
 
     if force_update:
-      logging.info('Forcing an update as hash %s', result.payload_hash)
+      logging.info('Forcing update on %s as hash %s', board,
+                   result.payload_hash)
       return True
 
     latest_hash = self._hsp_data_manager.GetLatestPayloadHash(board)
     if latest_hash == result.payload_hash:
-      logging.debug('Payload is not changed as %s, skipped', latest_hash)
+      logging.info('%s payload is not changed as hash %s, skipped', board,
+                   latest_hash)
       return False
     return True
 
@@ -322,10 +328,13 @@ class VerificationPayloadManager:
         unlimited.  A model will be ignored if it is not vpg-enabled.
     """
 
+    logging.info('VerificationPayloadManager start syncing')
     hwid_main_commit = _GetHWIDMainCommitIfChanged(
         self._hwid_repo_manager, self._vp_data_manager, force_update)
     if not hwid_main_commit:
       return {}
+    logging.info('VerificationPayloadManager sync with HWID commit %s',
+                 hwid_main_commit)
     self._vp_data_manager.SetLatestHWIDMainCommit(hwid_main_commit)
     payload_hash_mapping = {}
     service_account_name, unused_token = git_util.GetGerritCredentials()
@@ -354,6 +363,7 @@ class VerificationPayloadManager:
 
     for board, payload_hash in payload_hash_mapping.items():
       self._vp_data_manager.SetLatestPayloadHash(board, payload_hash)
+    logging.info('VerificationPayloadManager sync successfully')
     return payload_hash_mapping
 
   def _GetPayloadDBLists(self, limit_models: Set[str]):
@@ -398,12 +408,14 @@ class VerificationPayloadManager:
     """
 
     if force_update:
-      logging.info('Forcing an update as hash %s', result.payload_hash)
+      logging.info('Forcing update on %s as hash %s', board,
+                   result.payload_hash)
       return True
 
     latest_hash = self._vp_data_manager.GetLatestPayloadHash(board)
     if latest_hash == result.payload_hash:
-      logging.debug('Payload is not changed as %s, skipped', latest_hash)
+      logging.info('%s payload is not changed as hash %s, skipped', board,
+                   latest_hash)
       return False
     return True
 
