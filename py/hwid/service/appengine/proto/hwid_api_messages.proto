@@ -882,12 +882,17 @@ message ChangeUnit {
   // information is required.
   message ReplaceRules {}
 
+  // The information of renaming images.  Currently no extra information is
+  // required.
+  message RenameImages {}
+
   // The information of change unit.
   oneof change_unit_type {
     HwidDbEditableSectionAnalysisReport.ComponentInfo comp_change = 1;
     AddEncodingCombination add_encoding_combination = 2;
     NewImageId new_image_id = 3;
     ReplaceRules replace_rules = 4;
+    RenameImages rename_images = 5;
   }
 }
 
