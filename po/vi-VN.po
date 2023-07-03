@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-06-27 14:06+CST\n"
+"PO-Revision-Date: 2023-07-03 16:56+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -1335,16 +1335,16 @@ msgstr ""
 "trình hiệu chuẩn."
 
 #: ../py/test/pytests/accelerometers_lid_angle.py
-msgid "Please open the lid to {angle} degrees and press SPACE."
-msgstr "Vui lòng mở nắp trên lên  {angle} và nhấn nút trống."
-
-#: ../py/test/pytests/accelerometers_lid_angle.py
 msgid "Please open the lid to {angle} degrees."
 msgstr ""
 
 #: ../py/test/pytests/accelerometers_lid_angle.py
 msgid "Checking angle..."
 msgstr "Góc được xác nhận"
+
+#: ../py/test/pytests/accelerometers_lid_angle.py
+msgid "Please open the lid to {angle} degrees and press SPACE."
+msgstr "Vui lòng mở nắp trên lên  {angle} và nhấn nút trống."
 
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"

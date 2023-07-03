@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-06-27 14:06+CST\n"
+"PO-Revision-Date: 2023-07-03 16:56+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -1318,16 +1318,16 @@ msgid "Calibration is in progress, please do not move device."
 msgstr "校准程序进行中，请勿移动待测物。"
 
 #: ../py/test/pytests/accelerometers_lid_angle.py
-msgid "Please open the lid to {angle} degrees and press SPACE."
-msgstr "请将上盖掀开到 {angle} 度并按空白键。"
-
-#: ../py/test/pytests/accelerometers_lid_angle.py
 msgid "Please open the lid to {angle} degrees."
 msgstr "请将上盖掀开到 {angle} 度。"
 
 #: ../py/test/pytests/accelerometers_lid_angle.py
 msgid "Checking angle..."
 msgstr "正在确认角度……"
+
+#: ../py/test/pytests/accelerometers_lid_angle.py
+msgid "Please open the lid to {angle} degrees and press SPACE."
+msgstr "请将上盖掀开到 {angle} 度并按空白键。"
 
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
