@@ -1755,6 +1755,14 @@ msgid ""
 "Camera assemble: {camera_well_assembled}, QR code: {qr_code_scan_success}"
 msgstr "相机组装：{camera_well_assembled}，QR 码：{qr_code_scan_success}"
 
+#: ../py/test/pytests/camera_static/camera.js
+msgid ""
+"Muted frame count: {count}\n"
+"Total frame count: {total}"
+msgstr ""
+"静音帧数: {count}\n"
+"总帧数: {total}"
+
 #: ../py/test/pytests/cellular_switch_firmware.py
 msgid "Switching firmware to {target!r}"
 msgstr "切换数据机至{target!r}韧体"

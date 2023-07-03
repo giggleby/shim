@@ -1787,6 +1787,12 @@ msgid ""
 "Camera assemble: {camera_well_assembled}, QR code: {qr_code_scan_success}"
 msgstr ""
 
+#: ../py/test/pytests/camera_static/camera.js
+msgid ""
+"Muted frame count: {count}\n"
+"Total frame count: {total}"
+msgstr ""
+
 #: ../py/test/pytests/cellular_switch_firmware.py
 msgid "Switching firmware to {target!r}"
 msgstr "máy cưa số lần đổi cắt đến {target!r}"
