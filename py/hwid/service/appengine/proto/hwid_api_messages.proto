@@ -226,7 +226,8 @@ message ComponentSupportStatus {
 message DiffStatus {
   // True if the component is unchanged.  This value should be equals to
   // not (name_changed or support_status_changed or values_changed or
-  // probe_value_alignment_status_changed or converter_changed).
+  // probe_value_alignment_status_changed or converter_changed or
+  // skip_avl_check_changed or marked_untracked_changed).
   bool unchanged = 1;
   // True if the name is changed.
   bool name_changed = 2;
@@ -247,6 +248,10 @@ message DiffStatus {
   ComponentSupportStatus.Case prev_support_status_case = 9;
   // True if the converter changes.
   bool converter_changed = 10;
+  // True if the skip_avl_check changes.
+  bool skip_avl_check_changed = 11;
+  // True if the marked_untracked changes.
+  bool marked_untracked_changed = 12;
 }
 
 message NameChangedComponent {
@@ -644,6 +649,8 @@ message HwidDbEditableSectionAnalysisReport {
     // True if this component is a known exception which does not require AVL
     // validation even for the name pattern.
     bool skip_avl_check = 13;
+    // True if the component name is marked '{comp_type}_untracked'.
+    bool marked_untracked = 14;
   }
 
   // A list of support status values that is available no matter the AVL entry
