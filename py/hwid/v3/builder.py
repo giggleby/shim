@@ -717,6 +717,10 @@ class DatabaseBuilder:
         self._database.AppendEncodedFieldBit(
             field_name, bit_length - curr_bit_length, pattern_idx=pattern_idx)
 
+  def RenameImages(self, image_name_mapping: Mapping[int, str]):
+    """See database.WritableDatabase.RenameImages."""
+    return self._database.RenameImages(image_name_mapping)
+
   def _UpdateComponents(self, probed_results, device_info, vpd, sku_ids,
                         skip_firmware_components, form_factor):
     """Updates the component part of the database.

@@ -285,6 +285,8 @@ def _ConvertChangeUnitToMsg(
     msg.new_image_id.with_new_encoding_pattern = True
   elif isinstance(change_unit, change_unit_utils.ReplaceRules):
     msg.replace_rules.CopyFrom(_ChangeUnitMsg.ReplaceRules())
+  elif isinstance(change_unit, change_unit_utils.RenameImages):
+    msg.rename_images.CopyFrom(_ChangeUnitMsg.RenameImages())
   else:
     raise ValueError('Invalid change unit {change_unit!r}.')
   return msg
@@ -1382,7 +1384,10 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
           avl_resource)
       new_db = database.Database.LoadData(new_hwid_db_contents_internal)
 
-    change_unit_manager = change_unit_utils.ChangeUnitManager(old_db, new_db)
+    try:
+      change_unit_manager = change_unit_utils.ChangeUnitManager(old_db, new_db)
+    except _SplitChangeUnitException as ex:
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     self._session_cache_adapter.Put(
         request.session_token,
         session_cache._replace(change_unit_manager=change_unit_manager,

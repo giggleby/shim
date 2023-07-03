@@ -762,6 +762,25 @@ class WritableDatabase(Database):
     """
     self._rules = Rules(rule_expr_list)
 
+  def RenameImages(self, image_name_mapping: Mapping[int, str]):
+    """Renames images according to the given mapping.
+
+    This method renames images according to image_name_mapping.
+
+    Args:
+      image_name_mapping: The mapping of image IDs to desired image names.
+
+    Raises:
+      common.HWIDException if the given image ids does not exist.
+    """
+    unexpected_image_ids = set(image_name_mapping) - set(self._image_id)
+    if unexpected_image_ids:
+      raise common.HWIDException(
+          f'Images ID(s) do not exist: {unexpected_image_ids}.')
+    renamed = dict(self._image_id)
+    renamed.update(image_name_mapping)
+    self._image_id = ImageId(renamed)
+
   @property
   def raw_encoding_patterns(self):
     return self._encoding_patterns

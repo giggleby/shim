@@ -17,6 +17,7 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
 
+
 # Shorter identifiers.
 _HWIDComponentAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
 
@@ -300,6 +301,7 @@ class NewImageIdToExistingEncodingPattern(ChangeUnit):
                         new_pattern=False, pattern_idx=self._pattern_idx)
 
   def GetDependedSpecs(self) -> Iterable[ChangeUnitDepSpec]:
+    yield RenameImages.CreateDepSpec()
     if self._last:
       # The max image ID (except RMA) will be used as the default image to
       # perform encoding process.
@@ -389,6 +391,10 @@ class AssignBitMappingToEncodingPattern(ChangeUnit):
           pattern_field.name, pattern_field.bit_length, pattern_idx=pattern_idx)
 
   def GetDependedSpecs(self) -> Iterable[ChangeUnitDepSpec]:
+    if self._reused_pattern_idx is None:
+      # The RenameImages change unit should be applied before new image names
+      # are added into DB to avoid name collision.
+      yield RenameImages.CreateDepSpec()
     if self._contains_last:
       # The max image ID (except RMA) will be used as the default image to
       # perform encoding process.
@@ -402,7 +408,7 @@ class AssignBitMappingToEncodingPattern(ChangeUnit):
 
 
 class ReplaceRules(ChangeUnit):
-  """A change unit to replacing rules section."""
+  """A change unit to replace rules section."""
 
   def __init__(self, rule_expr_list: Mapping[str, Any]):
     super().__init__(self.CreateDepSpec())
@@ -422,6 +428,27 @@ class ReplaceRules(ChangeUnit):
     # Rules must be patched last.  Note that the self-reference will be skipped
     # in ChangeUnitManager._SetDependency().
     yield _ALL_OTHER_CHANGE_UNIT_DEP_SPEC
+
+
+class RenameImages(ChangeUnit):
+  """A change unit to rename a image."""
+
+  def __init__(self, target_image_mapping: Mapping[int, str]):
+    super().__init__(self.CreateDepSpec())
+    self._target_image_mapping = target_image_mapping
+
+  @classmethod
+  def CreateDepSpec(cls) -> ChangeUnitDepSpec:
+    return ChangeUnitDepSpec(cls)
+
+  @_UnifyException
+  def Patch(self, db_builder: builder.DatabaseBuilder):
+    """See base class."""
+    db_builder.RenameImages(self._target_image_mapping)
+
+  def GetDependedSpecs(self) -> Iterable[ChangeUnitDepSpec]:
+    # Rename all existing image names does not depend on other change units.
+    yield from ()
 
 
 def _ExtractCompChanges(analysis_mapping: MutableMapping[Tuple[
@@ -532,13 +559,24 @@ def _ExtractAddEncodingCombination(
                                      comp_analyses)
 
 
+def _ExtractRenameImages(old_db: database.Database,
+                         new_db: database.Database) -> Iterable[ChangeUnit]:
+  if old_db.raw_image_id.items() <= new_db.raw_image_id.items():
+    return
+  removed_image_ids = set(old_db.image_ids) - set(new_db.image_ids)
+  if removed_image_ids:
+    raise SplitChangeUnitException(
+        f'Image IDs are removed: {removed_image_ids}')
+  yield RenameImages({
+      image_id: new_db.GetImageName(image_id)
+      for image_id in old_db.image_ids
+  })
+
+
 def _ExtractNewImageIds(old_db: database.Database,
                         new_db: database.Database) -> Iterable[ChangeUnit]:
 
   new_images: MutableMapping[int, _NewImage] = {}
-
-  if not old_db.raw_image_id.items() <= new_db.raw_image_id.items():
-    raise SplitChangeUnitException('Only image id/name addition is supported.')
 
   old_image_ids = set(old_db.image_ids)
   new_image_ids = set(new_db.image_ids)
@@ -661,6 +699,11 @@ class ChangeUnitManager:
   """Supports topological sort of change units and splitting the HWID change."""
 
   def __init__(self, old_db: database.Database, new_db: database.Database):
+    """Initializer.
+
+    Raises:
+      SplitChangeUnitException: If the DB change cannot be splitted.
+    """
     self._old_db = old_db
     self._new_db = new_db
     self._change_units: MutableMapping[ChangeUnitIdentity, ChangeUnit] = {}
@@ -672,8 +715,14 @@ class ChangeUnitManager:
     self._BuildDependencies(change_units)
 
   def ExtractChangeUnits(self) -> Iterable[ChangeUnit]:
-    """Extracts change units from two HWID DBs."""
+    """Extracts change units from two HWID DBs.
 
+    Returns:
+      An iterable of change units.
+
+    Raises:
+      SplitChangeUnitException: If the DB change cannot be splitted.
+    """
     analyzer = contents_analyzer.ContentsAnalyzer(
         self._new_db.DumpDataWithoutChecksum(internal=True), None,
         self._old_db.DumpDataWithoutChecksum(internal=True))
@@ -688,6 +737,7 @@ class ChangeUnitManager:
         _ExtractCompChanges(analysis_mapping, self._new_db),
         _ExtractAddEncodingCombination(analysis_mapping, self._old_db,
                                        self._new_db),
+        _ExtractRenameImages(self._old_db, self._new_db),
         _ExtractNewImageIds(self._old_db, self._new_db),
         _ExtractReplaceRules(self._old_db, self._new_db))
 

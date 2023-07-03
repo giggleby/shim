@@ -23,6 +23,7 @@ _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _DiffStatus = contents_analyzer.DiffStatus
 _ComponentNameInfo = contents_analyzer.ComponentNameInfo
 _ApplyChangeUnitException = change_unit_utils.ApplyChangeUnitException
+_SplitChangeUnitException = change_unit_utils.SplitChangeUnitException
 _ChangeUnit = change_unit_utils.ChangeUnit
 _CompChange = change_unit_utils.CompChange
 _AddEncodingCombination = change_unit_utils.AddEncodingCombination
@@ -31,6 +32,7 @@ _NewImageIdToExistingEncodingPattern = (
     change_unit_utils.NewImageIdToExistingEncodingPattern)
 _AssignBitMappingToEncodingPattern = (
     change_unit_utils.AssignBitMappingToEncodingPattern)
+_RenameImages = change_unit_utils.RenameImages
 _ReplaceRules = change_unit_utils.ReplaceRules
 _ChangeUnitManager = change_unit_utils.ChangeUnitManager
 _ApprovalStatus = change_unit_utils.ApprovalStatus
@@ -265,7 +267,7 @@ class CompChangeTest(ChangeUnitTestBase):
              comp_cls_1: comp_1_2
          comp_cls_23_field:
       @@ -91,9 +91,13 @@
-                 hash": '0'
+                 hash: '0'
          comp_cls_1:
            items:
       -      comp_1_1:
@@ -597,6 +599,51 @@ class AssignBitMappingToEncodingPatternTest(ChangeUnitTestBase):
                         self._builder)
 
 
+class RenameImagesTest(ChangeUnitTestBase):
+
+  _DIFF_RENAME_IMAGES = textwrap.dedent('''\
+      ---
+      +++
+      @@ -6,8 +6,8 @@
+         0: default
+
+       image_id:
+      -  0: PROTO
+      -  1: EVT
+      +  0: NEW_IMAGE_NAME0
+      +  1: NEW_IMAGE_NAME1
+
+       pattern:
+       - image_ids:
+  ''')
+
+  _DIFFS: Sequence[str] = [
+      _DIFF_RENAME_IMAGES,
+  ]
+
+  def testRenameImages_Success(self):
+
+    rename_images = _RenameImages({
+        0: 'NEW_IMAGE_NAME0',
+        1: 'NEW_IMAGE_NAME1',
+    })
+
+    self._AssertApplyingPatchesEqualsData(
+        self._LoadDBContentWithDiffPatched(self._DIFF_RENAME_IMAGES),
+        [rename_images])
+
+  def testRenameImages_PatchFail(self):
+
+    rename_images = _RenameImages({
+        1: 'NEW_IMAGE_NAME1',
+        2: 'NEW_IMAGE_NAME2',  # No such image id.
+    })
+
+    with self._builder:
+      self.assertRaises(_ApplyChangeUnitException, rename_images.Patch,
+                        self._builder)
+
+
 class ReplaceRulesTest(ChangeUnitTestBase):
 
   _DIFF_REPLACE_RULES = textwrap.dedent('''\
@@ -642,13 +689,17 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
   _DIFF_VARIOUS_CHANGES = textwrap.dedent('''\
       ---
       +++
-      @@ -8,11 +8,15 @@
+      @@ -6,13 +6,17 @@
+         0: default
+
        image_id:
-         0: PROTO
-         1: EVT
+      -  0: PROTO
+      -  1: EVT
+      +  0: PVT2
+      +  1: PVT
       +  3: DVT
-      +  4: PVT
-      +  5: PVT2
+      +  4: EVT
+      +  5: PROTO
 
        pattern:
        - image_ids:
@@ -714,7 +765,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
        components:
          mainboard:
       @@ -91,12 +125,21 @@
-                 hash": '0'
+                 hash: '0'
          comp_cls_1:
            items:
       -      comp_1_1:
@@ -885,8 +936,9 @@ class ChangeUnitManagerTest(unittest.TestCase):
             @@ -8,11 +8,17 @@
              image_id:
                0: PROTO
-               1: EVT
-            +  2: NEW_PHASE
+            -  1: EVT
+            +  1: EVT_OLD
+            +  2: EVT
             +  3: PHASE_NO_NEW_PATTERN_1
             +  4: PHASE_NO_NEW_PATTERN_2
             +  5: PHASE_NEW_PATTERN_1
@@ -1007,7 +1059,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
                 'AddEncodingCombination:new_field(first)-comp_cls_1:new_comp',
                 'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp'
             },
-            'NewImageIdToExistingEncodingPattern:NEW_PHASE(2)': {
+            'NewImageIdToExistingEncodingPattern:EVT(2)': {
                 # Change units containing the last image id depends on other
                 # image id additions.
                 'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
@@ -1016,9 +1068,18 @@ class ChangeUnitManagerTest(unittest.TestCase):
             'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)':
                 set(),
             'AssignBitMappingToEncodingPattern:PHASE_NO_NEW_PATTERN_1(3)': {
-                # change units containing the last image id depend on other
+                # Change units containing the last image id depend on other
                 # image id additions.
                 'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
+            },
+            'RenameImages': {
+                # Change units of adding new images depend on rename images.
+                ('AssignBitMappingToEncodingPattern:'
+                 'PHASE_NEW_PATTERN_1(5)(last)'),
+                # Change units of adding new images depend on rename images.
+                'AssignBitMappingToEncodingPattern:PHASE_NO_NEW_PATTERN_1(3)',
+                # Change units of adding new images depend on rename images.
+                'NewImageIdToExistingEncodingPattern:EVT(2)',
             },
         },
         graph)
@@ -1359,6 +1420,35 @@ class ChangeUnitManagerTest(unittest.TestCase):
     # Assert.
     self.assertTrue(
         _RelaxedDBEqual(patched_db, split_result.review_required_db))
+
+  def testSplitChangeFail_RemoveImage(self):
+    new_db_content = _ApplyUnifiedDiff(
+        self._base_db_content,
+        textwrap.dedent('''\
+            ---
+            +++
+            @@ -7,12 +7,10 @@
+
+             image_id:
+               0: PROTO
+            -  1: EVT
+
+             pattern:
+             - image_ids:
+               - 0
+            -  - 1
+               encoding_scheme: base8192
+               fields:
+               - mainboard_field: 3
+    '''))
+
+    self.assertRaisesRegex(
+        _SplitChangeUnitException,
+        r'Image IDs are removed: {1}',
+        _ChangeUnitManager,
+        self._base_db,
+        database.Database.LoadData(new_db_content),
+    )
 
 
 if __name__ == '__main__':
