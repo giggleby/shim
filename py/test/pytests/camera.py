@@ -27,12 +27,12 @@ by argument ``mode``):
 
 * ``'brightness'``: Check the maximum brightness of frames.
 
-``e2e_mode`` can be set to use Chrome Media API instead of device API.
-
 Test Procedure
 --------------
 If ``e2e_mode`` is ``True``, the operator may be prompt to click on the 'Allow'
-button on Chrome notification to give Chrome camera permission.
+button on Chrome notification to give Chrome camera permission. Set
+`--use-fake-ui-for-media-stream` in `/etc/chrome_dev.conf` to accept the
+permission automatically.
 
 The test procedure differs for each different modes:
 
@@ -66,7 +66,7 @@ The test procedure differs for each different modes:
 * ``'manual_led'``: The LED light of camera would either be constant on or
   blinking, and operator need to press the correct key to pass the test.
 
-``'brightness'``: No user interaction is required, the test pass after
+* ``'brightness'``: No user interaction is required, the test pass after
   ``num_frames_to_pass`` frames are captured. Only the frames which the maximum
   brightness is between `brightness_range` are counted.
 
@@ -90,20 +90,16 @@ To run a manual capture test. (The default case), add this in test list::
     "pytest_name": "camera"
   }
 
-Resolution must be set when using Chrome API::
+To use device API for USB cameras which don't support MediaStream API::
 
   {
     "pytest_name": "camera",
     "args": {
-      "camera_args": {
-        "resolution": [1920, 1280]
-      },
-      "e2e_mode": true
+      "e2e_mode": false
     }
   }
 
-To run camera_assemble test, use Chrome API and specify the minimal luminance
-ratio to 0.7::
+To run camera_assemble test, and specify the minimal luminance ratio to 0.7::
 
   {
     "pytest_name": "camera",
@@ -111,7 +107,6 @@ ratio to 0.7::
       "camera_args": {
         "resolution": [1920, 1280]
       },
-      "e2e_mode": true,
       "mode": "camera_assemble",
       "min_luminance_ratio": 0.7
     }
@@ -142,7 +137,7 @@ To run camera_assemble_qr test, and specify the QR string::
     }
   }
 
-To run facial recognition test, and use Chrome API instead of device API::
+To run facial recognition test::
 
   {
     "pytest_name": "camera",
@@ -150,7 +145,6 @@ To run facial recognition test, and use Chrome API instead of device API::
       "camera_args": {
         "resolution": [1920, 1280]
       },
-      "e2e_mode": true,
       "mode": "face"
     }
   }
@@ -201,6 +195,7 @@ import numbers
 import os
 import queue
 import random
+import textwrap
 import time
 import uuid
 
@@ -231,6 +226,12 @@ MIN_LUMINANCE_RATIO_TABLE = {
     camera_utils.CameraType.mipi: 0.7,
     camera_utils.CameraType.usb: 0.5
 }
+
+WEB_API_MEDIA_STREAM_URL = (
+    'https://developer.mozilla.org/en-US/docs/Web/API/MediaStream')
+CAMERA_REQUIREMENT_URL = (
+    'https://chromeos.google.com/partner/dlm/docs/versioned-requirements/'
+    'chromebook-12.2.html#cam-usrFcg-0003-v01')
 
 class TestModes(str, enum.Enum):
   camera_assemble = 'camera_assemble'
@@ -311,11 +312,21 @@ class CameraTest(test_case.TestCase):
       Arg('show_image', bool, 'Whether to actually show the image on screen.',
           default=True),
       Arg(
-          'e2e_mode', bool, 'Perform end-to-end test or not (for camera).'
-          'Normally, camera data is grabbed from video device by OpenCV, '
-          "which doesn't support MIPI camera. In e2e mode, camera data is "
-          'directly streamed on frontend using JavaScript MediaStream API.',
-          default=False),
+          'e2e_mode', bool,
+          textwrap.dedent(f"""
+          Perform end-to-end test or not (for camera).
+
+          In non-e2e mode, camera data is grabbed from video device by OpenCV.
+
+          In e2e mode, camera data is directly streamed on frontend using
+          JavaScript `MediaStream API <{WEB_API_MEDIA_STREAM_URL}>`_.
+
+          In e2e mode, if the test fails to create a video, then run the Tast
+          test camera.GetUserMedia.real to test the e2e readiness. If it fails,
+          for USB cameras, you can set e2e_mode to false and try the non-e2e
+          mode; for MIPI cameras, it means the function is not ready for using
+          this pytest.
+          """), default=True),
       Arg(
           'resize_ratio', float,
           'The resize ratio of captured image on screen, '
@@ -338,8 +349,16 @@ class CameraTest(test_case.TestCase):
           'The default value is False if camera_facing is "rear", True '
           'otherwise.', default=None),
       Arg(
-          'camera_args', dict, 'Dict of args used for enabling the camera '
-          'device. Only "resolution" is supported in e2e mode.', default={}),
+          'camera_args', dict,
+          textwrap.dedent(f"""
+          Args used for enabling the camera device.
+
+          In non-e2e mode, we call ``EnableCamera(**camera_args)`` defined
+          in ``camera_utils.ICameraReader``.
+
+          In e2e mode, only "resolution" is used. The default resolution is
+          ``[1280, 720]``. See the hardware
+          `requirement <{CAMERA_REQUIREMENT_URL}>`_."""), default={}),
       Arg('flicker_interval_secs', (int, float),
           'The flicker interval in seconds in manual_led mode', default=0.5),
       Arg('fullscreen', bool, 'Run the test in fullscreen', default=False),
@@ -746,10 +765,7 @@ class CameraTest(test_case.TestCase):
           'getUserMediaRetries': self.args.get_user_media_retries,
           'reinitializationDelayMs': self.args.reinitialization_delay_ms,
       }
-      resolution = self.args.camera_args.get('resolution')
-      if not resolution:
-        raise ValueError(
-            'Resolution must be specified when e2e_mode is set to true.')
+      resolution = self.args.camera_args.get('resolution', (1280, 720))
       options['width'], options['height'] = resolution
       options['flipImage'] = self.flip_image
       self.ui.RunJS(
