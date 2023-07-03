@@ -44,6 +44,15 @@ as an example:
 
 * This means we will have `api/v1/items/` and `api/status` as our endpoint.
 
+### Managing packages
+
+* This project relies on `pip-tools` to manage the package dependency.
+* You don't need to do anything if you just want to start the dev server.
+* If you want to add packages, please follow the below procedure.
+  1. Add package to `requirements.in` or `requirements-dev.in`.
+  2. Execute: `pip compile [requirements.in | requirements-dev.in]`.
+  3. Add the corresponding `.txt` and `.in` to the CL.
+
 ## Start the development process
 
 You can run the dev server with the following command, and the default port for the dev server

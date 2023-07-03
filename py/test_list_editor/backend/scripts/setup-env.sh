@@ -8,29 +8,35 @@ source "${SCRIPT_DIR}"/common.sh
 # shellcheck disable=SC2154
 REQUIREMENTS="${EDITOR_DIR}/requirements.dev"
 
-check_venv() {
-  # TODO(louischiu): We should use poetry or some package management tool
-  # to make this more robust.
-  if ! diff <(pip freeze --local -r "${REQUIREMENTS}" | \
-      sed -n '/^##/,$ !p') "${REQUIREMENTS}" ; then
-    pip install --force-reinstall -r "${REQUIREMENTS}"
-  fi
+setup_by_piptool() {
+  pip install pip-tools
+  pip-sync requirements.txt requirements-dev.txt
 }
+
 # shellcheck disable=SC2154
 if in_chroot && [ ! -d "${CHROOT_VENV_DIR}" ]; then
   # Chroot Case
   echo "Setup env inside chroot."
   virtualenv -p python3.8 "${CHROOT_VENV_DIR}"
   source "${CHROOT_VENV_DIR}"/bin/activate
+  setup_by_piptool
+  exit
 elif (! in_chroot) && [ ! -d "${VENV_DIR}" ]; then
   # Outside Case
   echo "Setup env outside chroot."
   virtualenv -p python3.10 "${VENV_DIR}"
   source "${VENV_DIR}"/bin/activate
-else
-  echo "Venv folder exists, Exiting..."
-  check_venv
+  setup_by_piptool
   exit
 fi
+echo "Venv folder exists, sync dependencies"
 
-pip install -r "${EDITOR_DIR}"/requirements.dev
+if in_chroot; then
+  # Chroot Case
+  source "${CHROOT_VENV_DIR}"/bin/activate
+  pip-sync requirements.txt requirements-dev.txt
+else
+  # outside
+  source "${VENV_DIR}"/bin/activate
+  pip-sync requirements.txt requirements-dev.txt
+fi
