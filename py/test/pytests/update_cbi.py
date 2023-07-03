@@ -185,11 +185,7 @@ class UpdateCBITest(test_case.TestCase):
                         return_type):
     command = ['cros_config_mock', '--sku-id', str(sku_id)]
     if custom_label_tag:
-      help_message = self._dut.CallOutput(['cros_config_mock', '--help'])
-      if help_message and '--custom-label-tag' in help_message:
-        command += ['--custom-label-tag', custom_label_tag]
-      else:
-        command += ['--whitelabel-tag', custom_label_tag]
+      command += ['--custom-label-tag', custom_label_tag]
     command += [path, name]
     output = self._dut.CallOutput(command)
     if output:
@@ -269,8 +265,8 @@ class UpdateCBITest(test_case.TestCase):
           f'FW CONFIG in EEPROM ({int(old_fw_config)}) is not equal to the FW '
           f'CONFIG in {self.args.config_source} ({int(new_fw_config)}).')
 
-    session.console.info('Set the new SKU_ID to EEPROM (%r -> %r).',
-                         old_sku_id, new_sku_id)
+    session.console.info('Set the new SKU_ID to EEPROM (%r -> %r).', old_sku_id,
+                         new_sku_id)
     SetCbiData(self._dut, CbiDataName.SKU_ID, new_sku_id)
     self.CheckCbiData(CbiDataName.SKU_ID, new_sku_id)
 
