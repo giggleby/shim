@@ -346,6 +346,8 @@ class CameraTest(test_case.TestCase):
           ('The times that we try to getUserMedia in camera.js. The '
            'getUserMedia executes at most (1+get_user_media_retries) times.'),
           default=0),
+      Arg('reinitialization_delay_ms', int,
+          'The delay between disable and enable in camera.js.', default=5000),
       Arg('min_luminance_ratio', float,
           ('The minimal acceptable luminance of the boundary region of an'
            'image. This value is multiplied by the brightest region of an'
@@ -734,6 +736,7 @@ class CameraTest(test_case.TestCase):
           }[camera_facing],
           'videoStartPlayTimeoutMs': self.args.video_start_play_timeout_ms,
           'getUserMediaRetries': self.args.get_user_media_retries,
+          'reinitializationDelayMs': self.args.reinitialization_delay_ms,
       }
       resolution = self.args.camera_args.get('resolution')
       if not resolution:

@@ -6,6 +6,7 @@ const imageDiv = document.getElementById('test-image');
 const instructionDiv = document.getElementById('instruction');
 const feedbackDiv = document.getElementById('feedback')
 const overlayCanvas = document.getElementById('overlay');
+const statistics = document.getElementById('statistics');
 
 const showImage = (data_url) => {
   imageDiv.src = data_url;
@@ -69,6 +70,13 @@ class CameraTest {
     this.flipImage = options.flipImage;
     this.videoStartPlayTimeoutMs = options.videoStartPlayTimeoutMs;
     this.getUserMediaRetries = options.getUserMediaRetries;
+    /**
+     * The delay between disable and enable.
+     * @type {number}
+     */
+    this.reinitializationDelayMs = options.reinitializationDelayMs;
+    this.muted_frame_count = 0;
+    this.total_frame_count = 0;
     this.videoStream = null;
 
     // The width/height would be set to the true width/height in grabFrame.
@@ -150,8 +158,21 @@ class CameraTest {
   async grabFrame() {
     // Sometimes when the system is buzy, the videoStream become muted.
     // Restarting the stream solves the issue.
-    if (this.videoStream.muted) {
+    this.total_frame_count += 1;
+    const muted = this.videoStream.muted;
+    if (muted) {
+      this.muted_frame_count += 1;
+    }
+    goog.dom.safe.setInnerHtml(statistics,
+      cros.factory.i18n.i18nLabel(
+        cros.factory.i18n.stringFormat(
+          _('Muted frame count: {count}\nTotal frame count: {total}'),
+          { count: this.muted_frame_count, total: this.total_frame_count })));
+    if (muted) {
       this.disable();
+      // Track.stop returns before the camera being released so we have to delay
+      // here.
+      await cros.factory.utils.delay(this.reinitializationDelayMs);
       await this.enable();
     }
     this.canvas.width = this.videoElem.videoWidth;
