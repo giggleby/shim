@@ -8,15 +8,20 @@ import os
 import shutil
 import sys
 import tempfile
+from typing import List
+
 
 _PY_PKG_DIR_PATH = os.path.abspath(
     os.path.join(os.path.realpath(__file__), '..', '..', '..', '..', 'py_pkg'))
 
+PY_PKG_PREFIX_PATH = os.path.join('cros', 'factory')
+
 
 class Loader:
 
-  def __init__(self):
+  def __init__(self, exclude_tests: List[str]):
     self._tmp_dir_path = ''
+    self._exclude_tests = exclude_tests
 
   def __enter__(self):
     self._tmp_dir_path = tempfile.mkdtemp()
@@ -47,6 +52,17 @@ class Loader:
       os.makedirs(dir_path)
     os.symlink(src, dst)
 
+  def _GenerateExcludeFileList(self):
+    exclude_files = set()
+
+    for exclude_path in self._exclude_tests:
+      exclude_path = exclude_path.replace('py/', '')
+      exclude_file_path = os.path.join(_PY_PKG_DIR_PATH, PY_PKG_PREFIX_PATH,
+                                       exclude_path, '**')
+      exclude_files |= set(glob.glob(exclude_file_path, recursive=True))
+
+    return exclude_files
+
   def _SetupFactoryDir(self, src_path, dst_path, enable_mocking):
     """Creates a directory for module importing.
 
@@ -54,8 +70,11 @@ class Loader:
     enable_mocking: Determine whether we copy the mocked files
                     instead the real files.
     """
+    exclude_files = self._GenerateExcludeFileList()
     files = glob.glob(os.path.join(src_path, '**/*.*'), recursive=True)
+    files = [file for file in files if file not in exclude_files]
     file_set = set(files)
+
     for src_file in files:
       if src_file.endswith('_mocked.py') or os.path.isdir(src_file):
         continue

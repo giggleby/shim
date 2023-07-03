@@ -302,7 +302,7 @@ class RunTests:
       max_jobs: maximum number of tests to run in parallel.
     """
     with CreatePortDistributeServer() as port_server_socket_file, \
-         mock_loader.Loader() as loader, \
+         mock_loader.Loader(TESTS_TO_EXCLUDE) as loader, \
          contextlib.ExitStack() as stack:
       for test_name in tests:
         python_path = loader.GetMockedRoot() if test_name.endswith(
@@ -498,6 +498,7 @@ def main():
     with open(TEST_PASSED_MARK, 'a', encoding='utf8'):
       os.utime(TEST_PASSED_MARK, None)
   sys.exit(return_value)
+
 
 if __name__ == '__main__':
   main()
