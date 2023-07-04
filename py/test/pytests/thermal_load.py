@@ -5,11 +5,36 @@
 
 """Tests thermal response under load.
 
+Description
+-----------
 Tests that under given load:
 
 - Temperatures don't go over temperature_limit before heat up.
 - Temperatures go over lower_threshold within heat_up_timeout_secs.
 - Temperatures don't go over temperature_limit throughout the entire test.
+
+Test Procedure
+--------------
+This is an automated test without user interaction.
+
+Dependency
+----------
+- Device API ``cros.factory.device.thermal``.
+
+Examples
+--------
+To use the test::
+
+  {
+    "pytest_name": "thermal_load",
+    "args": {
+      "lower_threshold": 40,
+      "temperature_limit": 100,
+      "heat_up_timeout_secs": 12,
+      "duration_secs": 15
+    }
+  }
+
 """
 
 import logging
@@ -18,12 +43,14 @@ import unittest
 
 from cros.factory.device import device_utils
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
+from cros.factory.test import test_tags
 from cros.factory.test.utils import stress_manager
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
 
 class ThermalLoadTest(unittest.TestCase):
+  related_components = (test_tags.TestCategory.CPU, )
   ARGS = [
       Arg('load', int,
           ('Number of threads stressapptest uses.  If None is '

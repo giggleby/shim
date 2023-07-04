@@ -93,7 +93,10 @@ from cros.factory.utils.arg_utils import Arg
 class StressAppTest(unittest.TestCase):
   """Run stressapptest to test the memory and disk is fine."""
 
-  related_components = (test_tags.TestCategory.DRAM, )
+  related_components = (
+      test_tags.TestCategory.CPU,
+      test_tags.TestCategory.DRAM,
+  )
   ARGS = [
       Arg('seconds', int, 'Time to execute the stressapptest.', default=60),
       Arg('memory_ratio', float, 'Radio of memory to be used by stressapptest.',

@@ -37,10 +37,12 @@ import logging
 import time
 import unittest
 
+from cros.factory.test import test_tags
 from cros.factory.utils import arg_utils
 
 
 class UrandomTest(unittest.TestCase):
+  related_components = (test_tags.TestCategory.CPU, )
   ARGS = [
       arg_utils.Arg('duration_secs', int, help='How long this test will take?'),
   ]

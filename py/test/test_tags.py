@@ -53,6 +53,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('Battery', 'battery'),
         TestCategory.CAMERA:
             CategoryProperties('Camera - USB', 'camera'),
+        TestCategory.CPU:
+            CategoryProperties('CPU', 'cpu'),
         TestCategory.DRAM:
             CategoryProperties('Memory', 'dram'),
         TestCategory.MIPI_CAMERA:

@@ -4,7 +4,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-u"""Determines how fast the processor heats/cools.
+"""Determines how fast the processor heats/cools.
+
+Description
+-----------
+
+The purpose of this test is to detect devices without thermal paste.
+
+The user should prepare one device with thermal paste and another device without
+it, run the tests on both of them, and then select the threshold of max_slope.
+
+Different CPUs on the same board or the same CPU on different boards may have
+different max_slope distribution so the user should set different thresholds for
+different (model, CPU).
+
+Test Procedure
+--------------
+This is an automated test without user interaction.
+
+Details
+^^^^^^^
 
 1. 'cool_down' stage: Runs the fan at <cool_down_fan_rpm> until it
    reaches <cool_down_temperature_c> (at least
@@ -30,6 +49,52 @@ u"""Determines how fast the processor heats/cools.
 
    If the thermal slope is not between min_slope and max_slope, the test
    fails.
+
+Dependency
+----------
+- Device API ``cros.factory.device.fan``.
+- Device API ``cros.factory.device.memory``.
+- Device API ``cros.factory.device.storage``.
+- Device API ``cros.factory.device.thermal``.
+
+Examples
+--------
+To collect the slope of a setting::
+
+  {
+    "pytest_name": "thermal_slope",
+    "args": {
+      "cool_down_fan_rpm": 9999,
+      "cool_down_min_duration_secs": 100,
+      "cool_down_max_duration_secs": 600,
+      "cool_down_temperature_c": 81,
+      "cool_down_max_temperature_c": 94,
+      "target_fan_rpm": 5001,
+      "fan_spin_down_secs": 10,
+      "duration_secs": 60,
+      "min_slope": null,
+      "max_slope": null
+    }
+  }
+
+To fail the device with slope out of range::
+
+  {
+    "pytest_name": "thermal_slope",
+    "args": {
+      "cool_down_fan_rpm": 9999,
+      "cool_down_min_duration_secs": 100,
+      "cool_down_max_duration_secs": 600,
+      "cool_down_temperature_c": 81,
+      "cool_down_max_temperature_c": 94,
+      "target_fan_rpm": 5001,
+      "fan_spin_down_secs": 10,
+      "duration_secs": 60,
+      "min_slope": 0.05,
+      "max_slope": 0.20
+    }
+  }
+
 """
 
 import logging
@@ -39,6 +104,7 @@ import unittest
 from cros.factory.device import device_utils
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test import session
+from cros.factory.test import test_tags
 from cros.factory.test.utils import stress_manager
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
@@ -48,40 +114,33 @@ POWER_SAMPLES = 3
 
 
 class ThermalSlopeTest(unittest.TestCase):
+  related_components = (test_tags.TestCategory.CPU, )
   ARGS = [
       Arg('cool_down_fan_rpm', (int, float, str),
-          'Fan RPM during cool_down, or the string "auto".',
-          default=10000),
+          'Fan RPM during cool_down, or the string "auto".', default=10000),
       Arg('cool_down_min_duration_secs', (int, float),
-          'Minimum duration of cool_down',
-          default=10),
+          'Minimum duration of cool_down', default=10),
       Arg('cool_down_max_duration_secs', (int, float),
-          'Maximum duration of cool_down',
-          default=60),
+          'Maximum duration of cool_down', default=60),
       Arg('cool_down_temperature_c', (int, float),
-          'Target temperature for cool_down',
-          default=50),
-      Arg('cool_down_max_temperature_c', (int, float),
+          'Target temperature for cool_down', default=50),
+      Arg(
+          'cool_down_max_temperature_c', (int, float),
           'Maximum allowable temperature after cool_down '
           '(if higher than this, the test will not run). '
-          'Defaults to cool_down_temperature_c',
-          default=None),
+          'Defaults to cool_down_temperature_c', default=None),
       Arg('target_fan_rpm', (int, float, str),
           'Target RPM of fan during slope test, or the string "auto".',
           default=4000),
       Arg('fan_spin_down_secs', (int, float),
-          'Number of seconds to allow for fan spin down',
-          default=5),
-      Arg('duration_secs', (int, float),
-          'Duration of slope test',
-          default=5),
-      Arg('min_slope', (int, float),
-          u'Minimum allowable thermal slope in °C/J',
+          'Number of seconds to allow for fan spin down', default=5),
+      Arg('duration_secs', (int, float), 'Duration of slope test', default=5),
+      Arg('min_slope', (int, float), 'Minimum allowable thermal slope in °C/J',
           default=None),
-      Arg('max_slope', (int, float),
-          u'Maximum allowable thermal slope in °C/J',
+      Arg('max_slope', (int, float), 'Maximum allowable thermal slope in °C/J',
           default=None),
-      Arg('console_log', bool,
+      Arg(
+          'console_log', bool,
           'Enable console log (disabling may make results more accurate '
           'since updating the console log on screen requires CPU cycles)',
           default=False),
@@ -215,8 +274,7 @@ class ThermalSlopeTest(unittest.TestCase):
 
       temp = self._MainTemperature()
       power_w = sum(power_w[-POWER_SAMPLES:]) / POWER_SAMPLES
-      self.log.info(u'%s: temp=%d°C, power: %.3f W',
-                    stage, temp, power_w)
+      self.log.info('%s: temp=%d°C, power: %.3f W', stage, temp, power_w)
       event_log.Log('stage_result',
                     stage=self.stage, temp=temp, power_w=power_w)
       with self.result_group_checker:
@@ -237,11 +295,10 @@ class ThermalSlopeTest(unittest.TestCase):
              one_core_duration_secs)
     # Always use session.console for this one, since we're done and
     # don't need to worry about conserving CPU cycles.
-    session.console.info(u'Δtemp=%d°C, Δpower=%.03f W, duration=%s s',
-                         one_core_temp - base_temp,
-                         one_core_power_w - base_power_w,
-                         one_core_duration_secs)
-    session.console.info(u'slope=%.5f°C/J', slope)
+    session.console.info(
+        'Δtemp=%d°C, Δpower=%.03f W, duration=%s s', one_core_temp - base_temp,
+        one_core_power_w - base_power_w, one_core_duration_secs)
+    session.console.info('slope=%.5f°C/J', slope)
     event_log.Log('result', slope=slope)
     testlog.LogParam('result_slope', slope)
 
