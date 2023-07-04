@@ -40,6 +40,8 @@ To test AP RO verification, add this to test list::
   }
 """
 
+import subprocess
+
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import write_protect_target
@@ -114,11 +116,13 @@ class Ti50APROVerficationTest(test_case.TestCase):
         # Reboot GSC.
         self.goofy.SaveDataForNextBoot()
         device_data.UpdateDeviceData({self.device_data_key: True})
+        subprocess.check_call('sync')
         try:
           self.gooftool.GSCReboot()
         finally:
           # If the command works properly, the device will reboot and won't
           # execute this line.
+          self.Sleep(5)
           self.FailTask('Please make sure gsctool version >= 15287.0.0.')
     finally:
       # Disable software write protect.
