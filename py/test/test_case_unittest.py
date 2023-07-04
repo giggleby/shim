@@ -401,6 +401,41 @@ class TestCaseTest(unittest.TestCase):
     self.assertEqual(5, self._timeline.GetTime())
     self.assertEqual([0, 2, 4], times)
 
+  def testSaveDataRightBeforeReboot(self):
+    next_stage = []
+
+    def _side_effect():
+      next_stage.append(self._test.GetNextTaskStage())
+
+    def _Task():
+      pass
+
+    self._test.AddTask(_Task)
+    self._test.AddTask(_Task, reboot=True)
+    self._mock_goofy_rpc.SaveDataForNextBoot.side_effect = _side_effect
+
+    self.GetRunResult()
+
+    self.assertEqual([2], next_stage)
+
+  @mock.patch('subprocess.check_call')
+  def testFlushLogRightBeforeReboot(self, mock_check_call):
+    next_stage = []
+
+    def _side_effect(_):
+      next_stage.append(self._test.GetNextTaskStage())
+
+    def _Task():
+      pass
+
+    self._test.AddTask(_Task, reboot=True)
+    self._test.AddTask(_Task)
+    mock_check_call.side_effect = _side_effect
+
+    self.GetRunResult()
+
+    self.assertEqual([1], next_stage)
+    mock_check_call.assert_called_once_with('sync')
 
 if __name__ == '__main__':
   unittest.main()

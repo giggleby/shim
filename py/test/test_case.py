@@ -5,6 +5,7 @@
 """A module for base test case for pytests."""
 
 import collections
+import subprocess
 import sys
 import threading
 import time
@@ -265,6 +266,11 @@ class TestCase(unittest.TestCase):
         # Updates the next task stage for stage checking before running.
         self.UpdateNextTaskStage(self.GetNextTaskStage() + 1)
 
+      if task.reboot:
+        # Saves pending test list for restoring test list after reboot.
+        self.goofy_rpc.SaveDataForNextBoot()
+        # Make sure logs are flushed.
+        subprocess.check_call('sync')
       task.run()
       # Adds buffer time for avoiding run next task before
       # triggering reboot.
@@ -297,10 +303,6 @@ class TestCase(unittest.TestCase):
       try:
         if tasks_with_reboot:
           self.__CheckAndSkipPassedTasks()
-
-          # Saves pending test list for restoring test list after reboot.
-          self.goofy_rpc.SaveDataForNextBoot()
-
         for task in self.__tasks:
           self.__RunTask(task, tasks_with_reboot)
           if self.__task_stopped:

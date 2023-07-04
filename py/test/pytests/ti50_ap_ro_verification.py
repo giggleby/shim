@@ -70,6 +70,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
         write_protect_target.WriteProtectTargetType.AP)
 
     self.AddTask(self.PreCheck)
+    self.AddTask(self.ProvisionSPIData)
     self.AddTask(self.VerifyAPRO, reboot=True)
     self.AddTask(self.CheckAPROResult)
 
@@ -79,38 +80,33 @@ class Ti50APROVerficationTest(test_case.TestCase):
       self.WaiveTest('Skip Ti50 AP RO Verification test '
                      'since the firmware is not Ti50.')
 
+  def ProvisionSPIData(self):
+    # Enable software write protect.
+    if self.args.enable_swwp:
+      session.console.info('Enable SWWP.')
+      self.ap_wp_target.SetProtectionStatus(enable=True, skip_enable_check=True)
+
+    # Set board ID.
+    session.console.info('Set board ID.')
+    self.gooftool.GSCSetBoardId(two_stages=self.args.two_stages)
+
+    # Set Addressing mode and WPSR.
+    session.console.info('Set Addressing mode and WPSR.')
+    self.gooftool.Ti50SetAddressingMode()
+    self.gooftool.Ti50SetSWWPRegister(
+        no_write_protect=(not self.args.enable_swwp))
+
   def VerifyAPRO(self):
+    # Reboot GSC.
     try:
-      # Enable software write protect.
-      if self.args.enable_swwp:
-        session.console.info('Enable SWWP.')
-        self.ap_wp_target.SetProtectionStatus(enable=True,
-                                              skip_enable_check=True)
-
-      # Set board ID.
-      session.console.info('Set board ID.')
-      self.gooftool.GSCSetBoardId(two_stages=self.args.two_stages)
-
-      # Set Addressing mode and WPSR.
-      session.console.info('Set Addressing mode and WPSR.')
-      self.gooftool.Ti50SetAddressingMode()
-      self.gooftool.Ti50SetSWWPRegister(
-          no_write_protect=(not self.args.enable_swwp))
-
-      # Reboot GSC.
-      try:
-        session.console.info('Start to reboot GSC...')
-        self.gooftool.GSCReboot()
-      finally:
-        # If the command works properly, the device will reboot and won't
-        # execute this line.
-        self.FailTask('Reboot failed. '
-                      'Please make sure gsctool version >= 15287.0.0.')
+      session.console.info('Start to reboot GSC...')
+      self.gooftool.GSCReboot()
     finally:
-      # Disable software write protect if reboot is not triggered.
-      if self.args.enable_swwp:
-        session.console.info('Disable SWWP.')
-        self.ap_wp_target.SetProtectionStatus(enable=False)
+      # If the command works properly, the device will reboot and won't
+      # execute this line.
+      self.Sleep(5)
+      self.FailTask('Reboot failed. '
+                    'Please make sure gsctool version >= 15287.0.0.')
 
   def CheckAPROResult(self):
     # Check the result after device has rebooted.
@@ -119,14 +115,13 @@ class Ti50APROVerficationTest(test_case.TestCase):
     # 'apro result (36) : AP_RO_V2_NON_ZERO_GBB_FLAGS',
     # which will map to a failure only related to non-zero GBB flags,
     # but it would pass if GBB flags are zero.
-    try:
-      result = self.gooftool.GSCGetAPROResult()
-      if result != gsctool.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
-        self.FailTask('Ti50 AP RO Verification failed '
-                      f'with the following result: {result.name}')
-        session.console.info('Ti50 AP RO Verification passed.')
-    finally:
-      # Disable software write protect.
-      if self.args.enable_swwp:
-        session.console.info('Disable SWWP.')
-        self.ap_wp_target.SetProtectionStatus(enable=False)
+    result = self.gooftool.GSCGetAPROResult()
+    if result != gsctool.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
+      self.FailTask('Ti50 AP RO Verification failed '
+                    f'with the following result: {result.name}')
+      session.console.info('Ti50 AP RO Verification passed.')
+
+  def tearDown(self):
+    if self.args.enable_swwp:
+      session.console.info('Disable SWWP.')
+      self.ap_wp_target.SetProtectionStatus(enable=False)
