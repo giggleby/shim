@@ -313,6 +313,11 @@ class ContentsAnalyzer:
     visited_patterns = set()
     for image_id in self._prev_db.instance.image_ids:
       old_bit_mapping = self._prev_db.instance.GetBitMapping(image_id=image_id)
+      if image_id not in self._curr_db.instance.image_ids:
+        report.errors.append(
+            Error(ErrorCode.COMPATIBLE_ERROR,
+                  f'Image id {image_id} is deleted.'))
+        continue
       new_bit_mapping = self._curr_db.instance.GetBitMapping(image_id=image_id)
 
       # Make sure all the encoded fields in the existing patterns are not
