@@ -1544,7 +1544,7 @@ class Gooftool:
     it is running on, and which phase is it, during the factory flow.
 
     A script located at /usr/share/cros/cr50-set-board-id.sh helps us
-    to set the board id and phase to the GSC ship.
+    to set the board id and phase to the GSC chip.
 
     To the detail design of the lock-down mechanism, please refer to
     go/cr50-boardid-lock for more details.
