@@ -101,3 +101,9 @@ class CrosConfig:
     """
     result = self.GetValue('/audio/main', 'sound-card-init-conf')
     return result.stdout.strip() if result.stdout else ''
+
+  def GetShimlessEnabledStatus(self):
+    """Checks if Shimless RMA has been enabled on this device."""
+    result = self.GetValue('/rmad', 'enabled')
+
+    return result.stdout and result.stdout.strip() == 'true'

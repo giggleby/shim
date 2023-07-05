@@ -33,7 +33,7 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 
 
-class SwtichTestListTest(test_case.TestCase):
+class CheckTestListTest(test_case.TestCase):
   ARGS = [
       Arg('test_list_id', str, 'An id of a test list needed to be checked.'),
   ]
