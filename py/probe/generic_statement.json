@@ -51,25 +51,17 @@
   },
   "embedded_controller": {
     "generic": {
-      "eval": [
-        {
-          "shell": {
-            "command": "mosys ec info -s vendor",
-            "key": "vendor"
-          }
-        },
-        {
-          "shell": {
-            "command": "mosys ec info -s name",
-            "key": "name"
-          }
-        }
-      ]
+      "eval": "embedded_controller"
     }
   },
   "ethernet": {
     "generic": {
       "eval": "generic_network_device:ethernet"
+    }
+  },
+  "feature_management_flags": {
+    "generic": {
+      "eval": "feature_management_flags"
     }
   },
   "fingerprint": {
@@ -100,13 +92,21 @@
   "pmic": {
     "generic": {
       "eval": {
-        "glob_path": {
-          "pathname": "/sys/bus/platform/devices/*-pmic",
-          "filename_only": true
-        },
-        "glob_path": {
-          "pathname": "/sys/bus/platform/devices/*.pwrap:*",
-          "filename_only": true
+        "concat": {
+          "functions": [
+            {
+              "glob_path": {
+                "pathname": "/sys/bus/platform/devices/*-pmic",
+                "filename_only": true
+              }
+            },
+            {
+              "glob_path": {
+                "pathname": "/sys/bus/platform/devices/*.pwrap:*",
+                "filename_only": true
+              }
+            }
+          ]
         }
       }
     }
@@ -114,6 +114,11 @@
   "storage": {
     "generic": {
       "eval": "generic_storage"
+    }
+  },
+  "smart_card_reader": {
+    "generic": {
+      "eval": "smart_card_usb"
     }
   },
   "stylus": {
@@ -142,8 +147,15 @@
   "touchscreen": {
     "generic": {
       "eval": {
-        "input_device": {
-          "device_type": "touchscreen"
+        "concat": {
+          "functions": [
+            {
+              "input_device": {
+                "device_type": "touchscreen"
+              }
+            },
+            "touchscreen_i2c"
+          ]
         }
       }
     }
