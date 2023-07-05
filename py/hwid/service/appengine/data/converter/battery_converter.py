@@ -30,7 +30,8 @@ class _PrefixAndTrimStrFormatter(converter_types.StrFormatter):
 def MakeStrPrefixMatchFactory(
     length: int) -> Callable[..., converter_types.FormattedStrType]:
   return converter_types.FormattedStrType.CreateInstanceFactory(
-      formatter_self=_PrefixAndTrimStrFormatter(length))
+      formatter_self=_PrefixAndTrimStrFormatter(length),
+      formatter_other=lambda x: x.rstrip())
 
 
 _BATTERY_CONVERTERS: Sequence[converter.FieldNameConverter] = (

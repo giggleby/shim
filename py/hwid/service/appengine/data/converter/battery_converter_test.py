@@ -120,6 +120,24 @@ class BatteryConverterCollectionTest(unittest.TestCase):
             _PVAlignmentStatus.ALIGNED,
             converter_identifier='prefix_match_length_11'))
 
+  def testPrefixMatch_WithTrailingSpace(self):
+    comp_values = {
+        'manufacturer': 'ABCDEF ',
+        'model_name': '123456 ',
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'manufacturer': 'ABCDEF GHIJ',
+        'model_name': '123456 7890',
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info)
+
+    self.assertEqual(
+        result,
+        converter.CollectionMatchResult(
+            _PVAlignmentStatus.ALIGNED,
+            converter_identifier='prefix_match_length_7'))
+
 
 if __name__ == '__main__':
   unittest.main()
