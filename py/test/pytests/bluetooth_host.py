@@ -31,6 +31,7 @@ import unittest
 from cros.factory.device import device_types
 from cros.factory.device import device_utils
 from cros.factory.test import session
+from cros.factory.test import test_tags
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 
@@ -46,6 +47,7 @@ DEFAULT_RETRY_TIME = 3
 
 class BluetoothScanTest(unittest.TestCase):
 
+  related_components = (test_tags.TestCategory.WIFI, )
   ARGS = [
       Arg('max_retry_times', int,
           'The maximum number attempts to retry scanning or pairing before '

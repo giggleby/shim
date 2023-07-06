@@ -605,6 +605,7 @@ class WirelessTest(test_case.TestCase):
   Properties:
     _phy_name: wireless phy name to test.
   """
+  related_components = (test_case.TestCategory.WIFI, )
   ARGS = [
       Arg('device_name', str,
           ('Wireless device name to test. e.g. wlan0. If not specified, it will'

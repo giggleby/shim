@@ -3,8 +3,44 @@
 # found in the LICENSE file.
 
 
-"""Checks Wifi calibration table from
+"""Checks Wifi calibration for WiFi devices using ath9k.
+
+Description
+-----------
+Checks Wifi calibration table from
 /sys/kernel/debug/ieee80211/phy*/ath9k/dump_eep_power.
+
+ath9k is a Linux kernel driver supporting Atheros 802.11n PCI/PCI-E chips. See
+more details at `here <https://wiki.debian.org/ath9k>`_.
+
+Test Procedure
+--------------
+This is an automated test without user interaction.
+
+Dependency
+----------
+- /sys/kernel/debug/ieee80211/phy*/ath9k/dump_eep_power
+
+Examples
+--------
+To use the test::
+
+  {
+    "pytest_name": "wifi_check_calibration"
+    "args": {
+      "min_low_band_required_unit": 0,
+      "max_low_band_required_unit": 1,
+      "expected_low_band_ref_power_range": {
+        "0": [-20, null],
+        "1": [null, -10]
+      },
+      "expected_high_band_ref_power_range" {
+        "0": [-20, null],
+        "1": [null, -10]
+      }
+    }
+  }
+
 """
 
 
@@ -15,6 +51,7 @@ import unittest
 
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test import session
+from cros.factory.test import test_tags
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
@@ -63,6 +100,7 @@ def CheckCalibratedUnits(table, min_required_units, band_name):
 
 
 class CheckWifiCalibrationTest(unittest.TestCase):
+  related_components = (test_tags.TestCategory.WIFI, )
   ARGS = [
       Arg('min_low_band_required_unit', int,
           'Expected the minimum numbers of calibrate units in 2.4G'),

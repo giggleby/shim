@@ -92,6 +92,7 @@ LOG_FILENAME = 'graphyte.log'
 
 class RFGraphyteTest(test_case.TestCase):
 
+  related_components = (test_case.TestCategory.WIFI, )
   ARGS = [
       Arg('graphyte_package', str,
           'Path to Graphyte package folder',

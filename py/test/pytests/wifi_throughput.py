@@ -369,8 +369,8 @@ class _ServiceTest:
 
   def _Log(self, text, *args):
     f_name = sys._getframe(1).f_code.co_name  # pylint: disable=protected-access
-    session.console.info(u'[%s] INFO [%s] ' + text,
-                         self._ap_config.ssid, f_name, *args)
+    session.console.info('[%s] INFO [%s] ' + text, self._ap_config.ssid, f_name,
+                         *args)
 
   def Run(self, ap_config):
     """Controls the overall flow of the service's tests.
@@ -484,7 +484,7 @@ class _ServiceTest:
 
   def _Find(self, ssid):
     # Look for requested service.
-    self._Log(u'Trying to connect to service %s...', ssid)
+    self._Log('Trying to connect to service %s...', ssid)
     for ap in self._aps:
       if ap.ssid == ssid:
         self._ap = ap
@@ -734,6 +734,7 @@ class WiFiThroughput(test_case.TestCase):
           default=None),
   ]
 
+  related_components = (test_case.TestCategory.WIFI, )
   # "Test-level" arguments.  _SHARED_ARGS is concatenated at the end, since we
   # want the option to provide arguments as global defaults (as in the example
   # above).

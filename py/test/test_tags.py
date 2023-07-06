@@ -59,6 +59,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('Memory', 'dram'),
         TestCategory.MIPI_CAMERA:
             CategoryProperties('Camera - MIPI', 'camera'),
+        TestCategory.WIFI:
+            CategoryProperties('Wifi / Bluetooth', 'wireless'),
     }.get(self, CategoryProperties(None, None))
 
   @property

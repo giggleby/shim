@@ -161,6 +161,7 @@ def _AppendLog(log_file, data):
 
 
 class BluetoothTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.WIFI, )
   ARGS = [
       Arg('expected_adapter_count', int,
           'Number of bluetooth adapters on the machine.',
