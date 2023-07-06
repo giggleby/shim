@@ -1,5 +1,23 @@
 <test-template id='template'>
-  <div style="width: 100%;">
+  <div id="animation">
+    <div id="instruction">
+      <div>
+        <img id="base_instruction">
+      </div>
+      <div>
+        <img id="lid_instruction">
+      </div>
+    </div>
+    <div id="imgs">
+      <div>
+        <img id="chromebook_base">
+      </div>
+      <div>
+        <img id="chromebook_lid">
+      </div>
+    </div>
+  </div>
+  <div id="classic" style="width: 100%;">
     <div id="base" class="accelerometer">
       <div class="picture">☎</div>
       <div class="status">base</div>
@@ -9,6 +27,7 @@
       <div class="status">lid</div>
     </div>
   </div>
+
   <test-view id="success" slot="extra-views">
     <i18n-label>Success!</i18n-label>
   </test-view>

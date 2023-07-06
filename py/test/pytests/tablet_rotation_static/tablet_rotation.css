@@ -14,7 +14,7 @@
 }
 
 .accelerometer {
-  width: 50%;
+  width: 100%;
   float: left;
   display: none;
 }
@@ -22,3 +22,35 @@
 .picture {
   font-size: 10em;
 }
+
+#imgs{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+}
+
+#chromebook_lid, #chromebook_base {
+  display: none;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+}
+
+#lid_instruction, #base_instruction {
+  display: none;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+  animation: rotation 2s infinite;
+}
+
+#instruction {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+}
+
+@keyframes rotation {
+  100% {transform: rotate(-90deg);}
+}
+

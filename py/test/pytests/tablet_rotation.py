@@ -99,6 +99,9 @@ the test::
   }
 """
 
+import enum
+import math
+
 from cros.factory.device import device_utils
 from cros.factory.test.i18n import _
 from cros.factory.test import state
@@ -106,9 +109,11 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 
+
 _TEST_DEGREES = ['90', '180', '270', '0']
-_POLL_ROTATION_INTERVAL = 0.1
+_POLL_ROTATION_INTERVAL = 0.01
 _VALID_LOCATIONS = ['base', 'lid']
+_RADIAN_TO_DEGREE = 180 / math.pi
 
 _ARG_DEGREES_TO_ORIENTATION_SCHEMA = JSONSchemaDict(
     'degrees_to_orientation schema object', {
@@ -199,7 +204,9 @@ class TabletRotationTest(test_case.TestCase):
           'indicating the tolerance for the digital output of sensors under '
           'zero gravity and one gravity.', default=[1, 1]),
       Arg('sample_rate_hz', int, 'The sample rate in Hz to get raw data from '
-          'accelerometers.', default=20),
+          'accelerometers.', default=200),
+      Arg('mode', enum.Enum('mode', ['classic', 'animation']),
+          'The mode for showing instruction of the test', default='classic'),
   ]
 
   def setUp(self):
@@ -257,6 +264,11 @@ class TabletRotationTest(test_case.TestCase):
         orientations = dic[degree]
         cal_data = self.accel_controllers[loc].GetData(
             sample_rate=self.args.sample_rate_hz)
+        if self.args.mode == "animation":
+          rotate_x, rotate_y, rotate_z = self.CalculateRotateDegree(
+              loc, cal_data)
+          self.RotateImage(loc, rotate_x, rotate_y, rotate_z)
+
         if self.accel_controllers[loc].IsWithinOffsetRange(
             cal_data, orientations, self.args.spec_offset):
           need_test_locations.remove(loc)
@@ -267,7 +279,9 @@ class TabletRotationTest(test_case.TestCase):
     self.ui.SetInstruction(
         _('Rotate the tablet to correctly align the picture, holding it at '
           'an upright 90-degree angle.'))
-
+    self.SetImageAndMode('chromebook_lid_rotate.png',
+                         'chromebook_base_rotate.png', 'chromebook_lid.png',
+                         'chromebook_base.png')
     for degree in _TEST_DEGREES:
       need_test_locations = set()
       for loc, dic in self.args.degrees_to_orientations.items():
@@ -278,6 +292,9 @@ class TabletRotationTest(test_case.TestCase):
         self._SetStyle(loc, 'color', '')
         self._SetStyle(loc, 'transform', f'rotate({degree}deg)')
         self._SetStyle(loc, 'display', 'block')
+        self._SetStyle(f'{loc}_instruction', 'rotate', f'z {90-int(degree)}deg')
+        self._SetStyle(f'{loc}_instruction', 'display', 'inline-block')
+        self._SetStyle(f'chromebook_{loc}', 'display', 'inline-block')
       if not need_test_locations:
         continue
 
@@ -285,3 +302,44 @@ class TabletRotationTest(test_case.TestCase):
       self._PromptAndWaitForRotation(degree, need_test_locations)
       self.ui.SetView('success')
       self.Sleep(1)
+
+  def SetImageAndMode(self, lid_instruction_url, base_instruction_url, lid_url,
+                      base_url):
+    """Sets the image src and the display mode."""
+    self.ui.RunJS('document.getElementById("lid_instruction").src = args.url;',
+                  url=lid_instruction_url)
+    self.ui.RunJS('document.getElementById("base_instruction").src = args.url;',
+                  url=base_instruction_url)
+    self.ui.RunJS('document.getElementById("chromebook_lid").src = args.url;',
+                  url=lid_url)
+    self.ui.RunJS('document.getElementById("chromebook_base").src = args.url;',
+                  url=base_url)
+
+    if self.args.mode == 'classic':
+      self._SetStyle('animation', 'display', 'none')
+    elif self.args.mode == 'animation':
+      self._SetStyle('classic', 'display', 'none')
+
+  def RotateImage(self, loc, degree_x, degree_y, degree_z):
+    """Rotates the image according to the degree captured."""
+    if loc == 'lid':
+      self._SetStyle(
+          'chromebook_lid', 'transform', f'rotateX({degree_x}deg) '
+          f'rotateY({degree_y}deg) rotateZ({degree_z}deg)')
+    elif loc == 'base':
+      self._SetStyle(
+          'chromebook_base', 'transform', f'rotateX({degree_x}deg) '
+          f'rotateY({degree_y}deg) rotateZ({degree_z}deg)')
+
+  def CalculateRotateDegree(self, loc, cal_data):
+    accel_x = cal_data['in_accel_x']
+    accel_y = cal_data['in_accel_y']
+    accel_z = cal_data['in_accel_z']
+    degree_x = int(math.atan2(accel_y, accel_z) * _RADIAN_TO_DEGREE)
+    degree_y = int(math.atan2(accel_x, accel_z) * _RADIAN_TO_DEGREE)
+    degree_z = int(math.atan2(accel_y, accel_x) * _RADIAN_TO_DEGREE)
+    if loc == 'lid':
+      degree_x, degree_y, degree_z = 0, 0, degree_z - 90
+    elif loc == 'base':
+      degree_x, degree_y, degree_z = 0, 0, -90 - degree_z
+    return degree_x, degree_y, degree_z
