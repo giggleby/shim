@@ -44,6 +44,7 @@ _LOCAL_FILE_PATH = '/tmp/test'
 
 class EthernetTest(test_case.TestCase):
   """Test built-in ethernet port"""
+  related_components = (test_case.TestCategory.ETHERNET, )
   ARGS = [
       Arg('auto_start', bool, 'Auto start option.', default=False),
       Arg('test_url', str, 'URL for testing data transmission.',

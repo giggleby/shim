@@ -57,6 +57,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('CPU', 'cpu'),
         TestCategory.DRAM:
             CategoryProperties('Memory', 'dram'),
+        TestCategory.ETHERNET:
+            CategoryProperties('Ethernet controller', 'ethernet'),
         TestCategory.MIPI_CAMERA:
             CategoryProperties('Camera - MIPI', 'camera'),
         TestCategory.WIFI:
