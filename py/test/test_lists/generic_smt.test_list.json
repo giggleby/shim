@@ -157,6 +157,7 @@
       "label": "Prepare",
       "subtests": [
         "ReadDeviceDataFromVPD",
+        "ReadDeviceDataFromCrosConfig",
         "SyncFactoryServer",
         "SMTScanMLB",
         "SMTScanOperatorID",

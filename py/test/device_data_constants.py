@@ -37,6 +37,8 @@ KEY_COMPONENT_HAS_TOUCHSCREEN = JoinKeys(KEY_COMPONENT, 'has_touchscreen')
 KEY_HWID = 'hwid'
 KEY_FACTORY = 'factory'
 
+KEY_CROS_CONFIG = 'cros_config'
+
 # Feature Management sections
 KEY_FM = 'feature_management'
 NAME_CHASSIS_BRANDED = 'chassis_branded'

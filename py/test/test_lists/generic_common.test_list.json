@@ -912,6 +912,9 @@
         "to_release": true
       }
     },
+    "ReadDeviceDataFromCrosConfig": {
+      "pytest_name": "read_device_data_from_cros_config"
+    },
     "ReadDeviceDataFromVPD": {
       "pytest_name": "read_device_data_from_vpd"
     },

@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-07-04 11:59+CST\n"
+"PO-Revision-Date: 2023-07-06 14:15+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -441,6 +441,10 @@ msgstr "提供 DRM 密钥"
 #: ../build/pytests_label_generated.json
 msgid "Proximity Sensor"
 msgstr "距离感测器"
+
+#: ../build/pytests_label_generated.json
+msgid "Read Device Data From Cros Config"
+msgstr "从 Cros Config 读机器资料"
 
 #: ../build/pytests_label_generated.json
 msgid "Read Device Data From VPD"

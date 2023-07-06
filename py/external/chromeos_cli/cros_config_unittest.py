@@ -39,5 +39,6 @@ class CrosConfigTest(unittest.TestCase):
 
     self.shell.assert_called_with(['cros_config', '/rmad', 'enabled'])
 
+
 if __name__ == '__main__':
   unittest.main()
