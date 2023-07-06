@@ -6,6 +6,7 @@
 import re
 from typing import List, Optional
 
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
@@ -190,9 +191,11 @@ class HWIDV2Action(hwid_action.HWIDAction):
     raise hwid_action.InvalidHWIDError(
         f'Invalid HWIDv2 format: {hwid_string!r}')
 
-  def GetFeatureEnablementLabel(self, hwid_string: str) -> str:
+  def GetFeatureEnablementStatus(
+      self, hwid_string: str) -> feature_matching.FeatureEnablementStatus:
     """See base class."""
-    return 'not_branded:0'
+    del hwid_string
+    return feature_matching.FeatureEnablementStatus.FromHWIncompliance()
 
 
 def _NormalizeString(string):

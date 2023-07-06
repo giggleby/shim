@@ -10,7 +10,7 @@ import logging
 import os
 import os.path
 import textwrap
-from typing import Collection, Mapping, Optional, Set, Union
+from typing import Collection, Mapping, NamedTuple, Optional, Set, Union
 
 import urllib3
 
@@ -19,7 +19,6 @@ from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.data import config_data as config_data_module
 from cros.factory.hwid.service.appengine.data import decoder_data as decoder_data_module
 from cros.factory.hwid.service.appengine.data import payload_data
-from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action_manager as hwid_action_manager_module
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -125,6 +124,18 @@ def _TryCreateCL(dryrun_upload: bool, abandon_cl: bool,
       raise PayloadGenerationException('CL is not created') from ex
 
 
+class _HWIDSelectionPayloadResult(NamedTuple):
+  """Handles generated HWID selection payload.
+
+  Attributes:
+    generated_file_contents: A string-to-string dictionary which represents the
+        files that should be committed into the bsp package.
+    payload_hash: Hash of the payload.
+  """
+  generated_file_contents: Mapping[str, Union[str, bytes]]
+  payload_hash: str
+
+
 class HWIDSelectionPayloadManager:
   """A class which manages the status of HWID feature matching payloads."""
 
@@ -228,8 +239,8 @@ class HWIDSelectionPayloadManager:
     return db_lists
 
   def _GeneratePayloads(
-      self, limit_models: Set[str]
-  ) -> Mapping[str, feature_matching.HWIDSelectionPayloadResult]:
+      self,
+      limit_models: Set[str]) -> Mapping[str, _HWIDSelectionPayloadResult]:
     """Generates payloads with given models.
     Args:
       limit_models: A set of models requiring payload generation, empty if
@@ -255,18 +266,18 @@ class HWIDSelectionPayloadManager:
           continue
 
       if payloads:
-        results[board] = feature_matching.HWIDSelectionPayloadResult(
-            payloads, self._JsonHash(payloads))
+        results[board] = _HWIDSelectionPayloadResult(payloads,
+                                                     self._JsonHash(payloads))
     return results
 
   def _ShouldUpdatePayload(self, board: str,
-                           result: feature_matching.HWIDSelectionPayloadResult,
+                           result: _HWIDSelectionPayloadResult,
                            force_update: bool) -> bool:
     """Gets payload hash if it differs from cached hash on datastore.
 
     Args:
       board: Board name.
-      result: Instance of `HWIDSelectionPayloadResult`.
+      result: Instance of `_HWIDSelectionPayloadResult`.
       force_update: True for always returning payload hash for testing purpose.
 
     Returns:

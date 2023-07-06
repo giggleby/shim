@@ -14,8 +14,8 @@ from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.v3 import database as db_module
 
 
-_DeviceFeatureInfo = feature_matching.DeviceFeatureInfo
 _FeatureEnablementType = feature_matching.FeatureEnablementType
+_FeatureEnablementStatus = feature_matching.FeatureEnablementStatus
 
 
 def _BuildHWIDDBForTest(project_name: str, image_ids: features.Collection[int],
@@ -193,27 +193,28 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
         feature_version, legacy_brands, hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
-    disabled_match_result = _DeviceFeatureInfo(feature_version,
-                                               _FeatureEnablementType.DISABLED)
-    legacy_enabled_match_result = _DeviceFeatureInfo(
-        feature_version, _FeatureEnablementType.ENABLED_FOR_LEGACY)
-    branded_enabled_match_result = _DeviceFeatureInfo(
-        feature_version, _FeatureEnablementType.ENABLED_WITH_CHASSIS)
-    waiver_enabled_match_result = _DeviceFeatureInfo(
-        feature_version, _FeatureEnablementType.ENABLED_BY_WAIVER)
+    hw_incompliant_match_result = _FeatureEnablementStatus.FromHWIncompliance()
+    hw_compliant_but_disabled_match_result = _FeatureEnablementStatus(
+        feature_version, _FeatureEnablementType.DISABLED)
+    legacy_enabled_match_result = _FeatureEnablementStatus(
+        feature_version, _FeatureEnablementType.SOFT_BRANDED_LEGACY)
+    branded_enabled_match_result = _FeatureEnablementStatus(
+        feature_version, _FeatureEnablementType.HARD_BRANDED)
+    waiver_enabled_match_result = _FeatureEnablementStatus(
+        feature_version, _FeatureEnablementType.SOFT_BRANDED_WAIVER)
     for hwid_string, expected_match_result_or_error in (
         # incorrect project
         ('NOTTHISPROJ-ABCD A2A-B47', ValueError),
         # no brand
-        ('THEPROJ A2A-B47', disabled_match_result),
+        ('THEPROJ A2A-B47', hw_incompliant_match_result),
         # incorrect brand with no feature management flag
-        ('THEPROJ-WXYZ A2A-B9W', disabled_match_result),
+        ('THEPROJ-WXYZ A2A-B9W', hw_incompliant_match_result),
         # match scenario_1
         ('THEPROJ-ABCD A8A-B4T', legacy_enabled_match_result),
         # match scenario_2
         ('THEPROJ-ABCD B2A-B5L', legacy_enabled_match_result),
         # match neither scenario_1 nor scenario_2
-        ('THEPROJ-ABCD C8A-B8Y', disabled_match_result),
+        ('THEPROJ-ABCD C8A-B8Y', hw_incompliant_match_result),
         # match scenario_2
         ('THEPROJ-ABCD C6A-B8S', legacy_enabled_match_result),
         # match neither scenario_1 nor scenario_2, but feature management flag
@@ -227,9 +228,9 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
         ('THEPROJ-ABCD C2A-A2B-B3L', waiver_enabled_match_result),
         # feature management flag indicates HW compliant without branded
         # chassis, also the brand code is not on the legacy list
-        ('THEPROJ-WXYZ C2A-A2B-B72', disabled_match_result),
+        ('THEPROJ-WXYZ C2A-A2B-B72', hw_compliant_but_disabled_match_result),
     ):
-      if isinstance(expected_match_result_or_error, _DeviceFeatureInfo):
+      if isinstance(expected_match_result_or_error, _FeatureEnablementStatus):
         with self.subTest(hwid_string=hwid_string,
                           expected_version=expected_match_result_or_error):
           actual = matcher.Match(hwid_string)
@@ -287,25 +288,24 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
         feature_version, legacy_brands, hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
-    disabled_match_result = _DeviceFeatureInfo(feature_version,
-                                               _FeatureEnablementType.DISABLED)
-    legacy_enabled_match_result = _DeviceFeatureInfo(
-        feature_version, _FeatureEnablementType.ENABLED_FOR_LEGACY)
+    hw_incompliant_match_result = _FeatureEnablementStatus.FromHWIncompliance()
+    legacy_enabled_match_result = _FeatureEnablementStatus(
+        feature_version, _FeatureEnablementType.SOFT_BRANDED_LEGACY)
     for hwid_string, expected_match_result_or_error in (
         # incorrect project
         ('NOTTHISPROJ-ABCD A2A-B47', ValueError),
         # no brand
-        ('THEPROJ A2A-B47', disabled_match_result),
+        ('THEPROJ A2A-B47', hw_incompliant_match_result),
         # incorrect brand, not match scenario_1
-        ('THEPROJ-WXYZ E2A-B7B', disabled_match_result),
+        ('THEPROJ-WXYZ E2A-B7B', hw_incompliant_match_result),
         # incorrect brand, match scenario_1
-        ('THEPROJ-WXYZ E8A-B5X', disabled_match_result),
+        ('THEPROJ-WXYZ E8A-B5X', hw_incompliant_match_result),
         # correct brand, not match scenario_1
-        ('THEPROJ-ABCD A8A-B4T', disabled_match_result),
+        ('THEPROJ-ABCD A8A-B4T', hw_incompliant_match_result),
         # correct brand, match scenario_1
         ('THEPROJ-ABCD E8A-B2E', legacy_enabled_match_result),
     ):
-      if isinstance(expected_match_result_or_error, _DeviceFeatureInfo):
+      if isinstance(expected_match_result_or_error, _FeatureEnablementStatus):
         with self.subTest(hwid_string=hwid_string,
                           expected_version=expected_match_result_or_error):
           actual = matcher.Match(hwid_string)

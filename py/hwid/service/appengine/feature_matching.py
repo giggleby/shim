@@ -6,7 +6,7 @@ import abc
 import enum
 import functools
 import hashlib
-from typing import Collection, Mapping, NamedTuple, Union
+from typing import Collection, Mapping, NamedTuple
 
 import device_selection_pb2  # pylint: disable=import-error
 import factory_hwid_feature_requirement_pb2  # pylint: disable=import-error
@@ -24,7 +24,6 @@ from cros.factory.utils import type_utils
 
 
 Collection = features.Collection
-
 
 # TODO(yhong): Consider move the following constants to
 #    `cros.factory.hwid.v3.common` to reduce duplications.
@@ -74,27 +73,19 @@ class _FeatureManagementFlagHWIDSpec(features.HWIDSpec):
 class FeatureEnablementType(enum.Enum):
   """Enumerates different ways to enable the feature."""
   DISABLED = enum.auto()
-  ENABLED_WITH_CHASSIS = enum.auto()
-  ENABLED_FOR_LEGACY = enum.auto()
-  ENABLED_BY_WAIVER = enum.auto()
+  HARD_BRANDED = enum.auto()
+  SOFT_BRANDED_LEGACY = enum.auto()
+  SOFT_BRANDED_WAIVER = enum.auto()
 
 
-class HWIDSelectionPayloadResult(NamedTuple):
-  """Handles generated HWID selection payload.
+class FeatureEnablementStatus(NamedTuple):
+  """A device's feature enablement type and its HW compliance version."""
+  hw_compliance_version: int
+  enablement_type: FeatureEnablementType
 
-  Attributes:
-    generated_file_contents: A string-to-string dictionary which represents the
-        files that should be committed into the bsp package.
-    payload_hash: Hash of the payload.
-  """
-  generated_file_contents: Mapping[str, Union[str, bytes]]
-  payload_hash: str
-
-
-class DeviceFeatureInfo(NamedTuple):
-  """Records a device's feature version and its enablement status."""
-  feature_version: int
-  enablement_status: FeatureEnablementType
+  @classmethod
+  def FromHWIncompliance(cls) -> 'FeatureEnablementStatus':
+    return cls(features.NO_FEATURE_VERSION, FeatureEnablementType.DISABLED)
 
 
 class HWIDFeatureMatcher(abc.ABC):
@@ -110,7 +101,7 @@ class HWIDFeatureMatcher(abc.ABC):
     """
 
   @abc.abstractmethod
-  def Match(self, hwid_string: str) -> DeviceFeatureInfo:
+  def Match(self, hwid_string: str) -> FeatureEnablementStatus:
     """Matches the given HWID string to resolve the feature enablement status.
 
     Args:
@@ -118,8 +109,9 @@ class HWIDFeatureMatcher(abc.ABC):
 
     Returns:
       It returns the named tuple of the following fields:
-        1. `feature_version` records the feature version bound to the device.
-        2. `enablement_status` refers to how the feature is enabled or not.
+        1. `hw_compliance_version` records the feature version bound to the
+            device.
+        2. `enablement_type` refers to whether the feature is enabled or not.
 
     Raises:
       ValueError: If the given `hwid_string` is invalid for the project.
@@ -304,33 +296,38 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     return checker.CheckFeatureComplianceVersion(
         identity) > features.NO_FEATURE_VERSION
 
-  def Match(self, hwid_string: str) -> DeviceFeatureInfo:
+  def Match(self, hwid_string: str) -> FeatureEnablementStatus:
     """See base class."""
     if not self._IsHWIDStringProjectMatch(hwid_string):
       raise ValueError('The given HWID string does not belong to the HWID DB.')
 
-    result_factory = functools.partial(DeviceFeatureInfo,
-                                       self._spec.feature_version)
-
     if self._spec.feature_version == features.NO_FEATURE_VERSION:
-      return result_factory(FeatureEnablementType.DISABLED)
+      # It implies that the product is legacy and totally non-soft-branded.
+      return FeatureEnablementStatus.FromHWIncompliance()
 
     hwid_identity = self._GetHWIDIdentityFromHWIDString(hwid_string)
 
     # Follows the same logic as OS runtime feature-level determination workflow
     # to deduce whether the versioned feature is enabled or not.
 
+    build_hw_compliant_result = functools.partial(FeatureEnablementStatus,
+                                                  self._spec.feature_version)
+
     if self._MatchByChecker(self._chassis_is_branded_checker, hwid_identity):
-      return result_factory(FeatureEnablementType.ENABLED_WITH_CHASSIS)
+      return build_hw_compliant_result(FeatureEnablementType.HARD_BRANDED)
 
     if self._MatchByChecker(self._hw_compliant_checker, hwid_identity):
       if hwid_identity.brand_code in self._spec.legacy_brands:
-        return result_factory(FeatureEnablementType.ENABLED_BY_WAIVER)
-      return result_factory(FeatureEnablementType.DISABLED)
+        return build_hw_compliant_result(
+            FeatureEnablementType.SOFT_BRANDED_WAIVER)
+      return build_hw_compliant_result(FeatureEnablementType.DISABLED)
 
     if self._MatchByChecker(self._legacy_checker, hwid_identity):
-      return result_factory(FeatureEnablementType.ENABLED_FOR_LEGACY)
-    return result_factory(FeatureEnablementType.DISABLED)
+      # Legacy and soft-branded case.
+      return build_hw_compliant_result(
+          FeatureEnablementType.SOFT_BRANDED_LEGACY)
+
+    return FeatureEnablementStatus.FromHWIncompliance()
 
 
 class HWIDFeatureMatcherBuilder:

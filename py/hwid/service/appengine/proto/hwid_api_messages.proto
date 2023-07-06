@@ -96,6 +96,22 @@ message BomRequest {
   bool no_avl_name = 3;
 }
 
+
+// Records the versioned feature's enablement status of a particular device.
+message FeatureEnablementStatus {
+  enum EnablementType {
+    ENABLEMENT_TYPE_UNSPECIFIED = 0;
+    DISABLED = 1;
+    HARD_BRANDED = 2;
+    SOFT_BRANDED_LEGACY = 3;
+    SOFT_BRANDED_WAIVER = 4;
+  }
+
+  EnablementType enablement_type = 1;
+  uint32 hw_compliance_version = 2;
+}
+
+
 // The response to a BOM request.
 message BomResponse {
   // A list of the components in the BOM.
@@ -110,7 +126,9 @@ message BomResponse {
   Status status = 5;
   // A human readable string representing the versioned feature info on the
   // device.
-  string feature_enablement_status = 6;
+  string feature_enablement_status_legacy = 6  [deprecated = true];
+  // Indicates the enablement status of the versioned features on the device.
+  FeatureEnablementStatus feature_enablement_status = 7;
 }
 
 // A request to query BOM data from given HWID strings.
@@ -139,7 +157,9 @@ message BatchGetBomResponse {
     Status status = 5;
     // A human readable string representing the versioned feature info on the
     // device.
-    string feature_enablement_status = 6;
+    string feature_enablement_status_legacy = 6  [deprecated = true];
+    // Indicates the enablement status of the versioned features on the device.
+    FeatureEnablementStatus feature_enablement_status = 7;
   }
   map<string, Bom> boms = 1;
   string error = 2;
@@ -314,7 +334,9 @@ message SkuResponse {
   repeated string warnings = 8;
   // A human readable string representing the versioned feature info on the
   // device.
-  string feature_enablement_status = 9;
+  string feature_enablement_status_legacy = 9  [deprecated = true];
+  // Indicates the enablement status of the versioned features on the device.
+  FeatureEnablementStatus feature_enablement_status = 10;
 }
 
 // A label of a DUT.

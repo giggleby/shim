@@ -8,6 +8,7 @@ import re
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.data import decoder_data
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import hwid_action_manager as hwid_action_mngr_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
@@ -18,12 +19,48 @@ from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 
 def _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
-    hwid: str, bom_entry: bc_helper_module.BOMEntry,
-    hwid_action_getter: hwid_action_mngr_module.IHWIDActionGetter) -> str:
+    hwid: str,
+    bom_entry: bc_helper_module.BOMEntry,
+    hwid_action_getter: hwid_action_mngr_module.IHWIDActionGetter,
+) -> feature_matching.FeatureEnablementStatus:
   if bom_entry.status != hwid_api_messages_pb2.Status.SUCCESS:
-    return ''
+    return feature_matching.FeatureEnablementStatus.FromHWIncompliance()
   action = hwid_action_getter.GetHWIDAction(bom_entry.project)
-  return action.GetFeatureEnablementLabel(hwid)
+  return action.GetFeatureEnablementStatus(hwid)
+
+
+def _GetFeatureEnablementStatusLabel(
+    source: feature_matching.FeatureEnablementStatus) -> str:
+  return f'{source.enablement_type.name}:{source.hw_compliance_version}'
+
+
+def _GetFeatureEnablementStatusLegacyLabel(
+    source: feature_matching.FeatureEnablementStatus) -> str:
+  if source.enablement_type == feature_matching.FeatureEnablementType.DISABLED:
+    enablement_type = 'not_branded'
+  else:
+    enablement_type = source.enablement_type.name.lower()
+  return f'{enablement_type}:{source.hw_compliance_version}'
+
+
+_FeatureEnablementType = feature_matching.FeatureEnablementType
+
+
+def _SetFeatureEnablementStatusMsg(
+    msg: hwid_api_messages_pb2.FeatureEnablementStatus,
+    source: feature_matching.FeatureEnablementStatus):
+  to_enablement_type_msg = (
+      hwid_api_messages_pb2.FeatureEnablementStatus.EnablementType.Value)
+  msg.enablement_type = to_enablement_type_msg(source.enablement_type.name)
+  msg.hw_compliance_version = source.hw_compliance_version
+
+
+def _ToFeatureEnablementStatusMsg(
+    source: feature_matching.FeatureEnablementStatus
+) -> hwid_api_messages_pb2.FeatureEnablementStatus:
+  msg = hwid_api_messages_pb2.FeatureEnablementStatus()
+  _SetFeatureEnablementStatusMsg(msg, source)
+  return msg
 
 
 class GetBOMShard(common_helper.HWIDServiceShardBase):
@@ -50,12 +87,21 @@ class GetBOMShard(common_helper.HWIDServiceShardBase):
       return hwid_api_messages_pb2.BomResponse(
           error='Internal error',
           status=hwid_api_messages_pb2.Status.SERVER_ERROR)
-    return hwid_api_messages_pb2.BomResponse(
-        components=bom_entry.components, phase=bom_entry.phase,
-        feature_enablement_status=(
-            _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
-                request.hwid, bom_entry, hwid_action_getter)),
-        error=bom_entry.error, status=bom_entry.status)
+    response = hwid_api_messages_pb2.BomResponse(
+        components=bom_entry.components,
+        phase=bom_entry.phase,
+        error=bom_entry.error,
+        status=bom_entry.status,
+    )
+    if bom_entry.status == hwid_api_messages_pb2.Status.SUCCESS:
+      feature_enablement_status = (
+          _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
+              request.hwid, bom_entry, hwid_action_getter))
+      response.feature_enablement_status_legacy = (
+          _GetFeatureEnablementStatusLegacyLabel(feature_enablement_status))
+      _SetFeatureEnablementStatusMsg(response.feature_enablement_status,
+                                     feature_enablement_status)
+    return response
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -68,13 +114,19 @@ class GetBOMShard(common_helper.HWIDServiceShardBase):
     bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
         hwid_action_getter, request.hwid, request.verbose, request.no_avl_name)
     for hwid, bom_entry in bom_entry_dict.items():
-      response.boms.get_or_create(hwid).CopyFrom(
-          hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-              components=bom_entry.components, phase=bom_entry.phase,
-              feature_enablement_status=(
-                  _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
-                      hwid, bom_entry, hwid_action_getter)),
-              error=bom_entry.error, status=bom_entry.status))
+      current_bom_response = hwid_api_messages_pb2.BatchGetBomResponse.Bom(
+          components=bom_entry.components, phase=bom_entry.phase,
+          error=bom_entry.error, status=bom_entry.status)
+      if bom_entry.status == hwid_api_messages_pb2.Status.SUCCESS:
+        feature_enablement_status = (
+            _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
+                hwid, bom_entry, hwid_action_getter))
+        current_bom_response.feature_enablement_status_legacy = (
+            _GetFeatureEnablementStatusLegacyLabel(feature_enablement_status))
+        _SetFeatureEnablementStatusMsg(
+            current_bom_response.feature_enablement_status,
+            feature_enablement_status)
+      response.boms.get_or_create(hwid).CopyFrom(current_bom_response)
       if bom_entry.status != hwid_api_messages_pb2.Status.SUCCESS:
         if response.status == hwid_api_messages_pb2.Status.SUCCESS:
           # Set the status and error of the response to the first unsuccessful
@@ -121,13 +173,21 @@ class GetSKUShard(common_helper.HWIDServiceShardBase):
     configless = bom_configless.configless
 
     sku = self._sku_helper.GetSKUFromBOM(bom, configless)
-    action = hwid_action_getter.GetHWIDAction(bom.project)
+    feature_enablement_status = hwid_action_getter.GetHWIDAction(
+        bom.project).GetFeatureEnablementStatus(request.hwid)
     return hwid_api_messages_pb2.SkuResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS, project=sku.project,
-        cpu=sku.cpu, memory_in_bytes=sku.total_bytes, memory=sku.memory_str,
-        sku=sku.sku_str, warnings=sku.warnings,
-        feature_enablement_status=(action.GetFeatureEnablementLabel(
-            request.hwid)))
+        status=hwid_api_messages_pb2.Status.SUCCESS,
+        project=sku.project,
+        cpu=sku.cpu,
+        memory_in_bytes=sku.total_bytes,
+        memory=sku.memory_str,
+        sku=sku.sku_str,
+        warnings=sku.warnings,
+        feature_enablement_status_legacy=_GetFeatureEnablementStatusLegacyLabel(
+            feature_enablement_status),
+        feature_enablement_status=_ToFeatureEnablementStatusMsg(
+            feature_enablement_status),
+    )
 
 
 class GetDUTLabelShard(common_helper.HWIDServiceShardBase):
@@ -253,8 +313,10 @@ class GetDUTLabelShard(common_helper.HWIDServiceShardBase):
         response.labels.add(name=comp_cls, value=avl_name)
 
     action = hwid_action_getter.GetHWIDAction(bom.project)
-    response.labels.add(name='feature_enablement_status',
-                        value=action.GetFeatureEnablementLabel(hwid))
+    response.labels.add(
+        name='feature_enablement_status',
+        value=_GetFeatureEnablementStatusLabel(
+            action.GetFeatureEnablementStatus(hwid)))
 
     unexpected_labels = set(
         label.name for label in response.labels) - set(possible_labels)

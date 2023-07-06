@@ -3,9 +3,11 @@
 # found in the LICENSE file.
 
 import os.path
+from typing import Optional
 import unittest
 from unittest import mock
 
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import decoding_apis
@@ -15,6 +17,9 @@ from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
 
 
+_FeatureEnablementStatus = feature_matching.FeatureEnablementStatus
+_FeatureEnablementType = feature_matching.FeatureEnablementType
+_FeatureEnablementStatusMsg = hwid_api_messages_pb2.FeatureEnablementStatus
 _BOMAndConfigless = bc_helper_module.BOMAndConfigless
 _BOMEntry = bc_helper_module.BOMEntry
 ComponentMsg = hwid_api_messages_pb2.Component
@@ -25,6 +30,10 @@ GOLDEN_HWIDV3_FILE = os.path.join(
 
 TEST_PROJECT = 'Foo'
 TEST_HWID = 'Foo'
+
+_FEATURE_DISABLED_STATUS_MSG = _FeatureEnablementStatusMsg(
+    enablement_type=_FeatureEnablementStatusMsg.DISABLED,
+    hw_compliance_version=0)
 
 
 class GetDUTLabelShardTest(unittest.TestCase):
@@ -58,9 +67,12 @@ class GetDUTLabelShardTest(unittest.TestCase):
     self._module_collection.ClearAll()
 
   def _SetupFakeHWIDActionForTestProject(
-      self, feature_enablement_label: str = 'just_a_random_default_value'):
+      self,
+      feature_enablement_status: Optional[_FeatureEnablementStatus] = None):
+    if feature_enablement_status is None:
+      feature_enablement_status = _FeatureEnablementStatus.FromHWIncompliance()
     instance = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    instance.GetFeatureEnablementLabel.return_value = feature_enablement_label
+    instance.GetFeatureEnablementStatus.return_value = feature_enablement_status
     self._module_collection.ConfigHWID(
         TEST_PROJECT, 3, 'unused raw HWID DB contents', hwid_action=instance)
     return instance
@@ -77,7 +89,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
     self._sku_helper.GetSKUFromBOM.return_value = sku_helper_module.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
         warnings=[])
-    self._SetupFakeHWIDActionForTestProject('feature_enablement_value')
+    self._SetupFakeHWIDActionForTestProject()
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
@@ -89,7 +101,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
         msg.labels,
         [
             hwid_api_messages_pb2.DutLabel(name='feature_enablement_status',
-                                           value='feature_enablement_value'),
+                                           value='DISABLED:0'),
             hwid_api_messages_pb2.DutLabel(name='hwid_component',
                                            value='cellular/cellular_10_20'),
             hwid_api_messages_pb2.DutLabel(name='hwid_component',
@@ -223,7 +235,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
     bom.project = TEST_PROJECT
     bom.phase = 'bar'
     configless = None
-    self._SetupFakeHWIDActionForTestProject('feature_value')
+    self._SetupFakeHWIDActionForTestProject()
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
@@ -238,7 +250,7 @@ class GetDUTLabelShardTest(unittest.TestCase):
                 # Only components with 'is_vp_related=True' will be reported as
                 # hwid_component.
                 hwid_api_messages_pb2.DutLabel(name='feature_enablement_status',
-                                               value='feature_value'),
+                                               value='DISABLED:0'),
                 hwid_api_messages_pb2.DutLabel(name='hwid_component',
                                                value='battery/battery_small'),
                 hwid_api_messages_pb2.DutLabel(name='hwid_component',
@@ -291,11 +303,13 @@ class GetBOMShardTest(unittest.TestCase):
     super().tearDown()
     self._modules.ClearAll()
 
-  def _SetupFakeHWIDActionForFeatureEnablementLabel(
+  def _SetupFakeHWIDAction(
       self, project_name: str,
-      feature_enablement_label: str = 'just_a_random_default_value'):
+      feature_enablement_status: Optional[_FeatureEnablementStatus] = None):
+    if feature_enablement_status is None:
+      feature_enablement_status = _FeatureEnablementStatus.FromHWIncompliance()
     instance = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    instance.GetFeatureEnablementLabel.return_value = feature_enablement_label
+    instance.GetFeatureEnablementStatus.return_value = feature_enablement_status
     self._modules.ConfigHWID(project_name, 3, 'unused raw HWID DB contents',
                              hwid_action=instance)
     return instance
@@ -311,7 +325,12 @@ class GetBOMShardTest(unittest.TestCase):
                                           status=StatusMsg.SERVER_ERROR), msg)
 
   def testGetBom_Success(self):
-    self._SetupFakeHWIDActionForFeatureEnablementLabel('proj1', 'feature_value')
+    self._SetupFakeHWIDAction(
+        'proj1',
+        _FeatureEnablementStatus(
+            enablement_type=_FeatureEnablementType.HARD_BRANDED,
+            hw_compliance_version=1,
+        ))
 
     self._mock_bc_helper.BatchGetBOMEntry.return_value = {
         TEST_HWID:
@@ -325,9 +344,15 @@ class GetBOMShardTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.BomResponse(
-            status=StatusMsg.SUCCESS, components=[
+            status=StatusMsg.SUCCESS,
+            components=[
                 ComponentMsg(name='qux', component_class='baz'),
-            ], feature_enablement_status='feature_value'), msg)
+            ],
+            feature_enablement_status=_FeatureEnablementStatusMsg(
+                enablement_type=_FeatureEnablementStatusMsg.HARD_BRANDED,
+                hw_compliance_version=1),
+            feature_enablement_status_legacy='hard_branded:1',
+        ), msg)
 
   def testGetBom_WithError(self):
     self._mock_bc_helper.BatchGetBOMEntry.return_value = {
@@ -356,7 +381,7 @@ class GetBOMShardTest(unittest.TestCase):
                 ComponentMsg(name='rox2', component_class='baz2'),
             ], '', '', StatusMsg.SUCCESS, 'TEST'),
     }
-    self._SetupFakeHWIDActionForFeatureEnablementLabel('TEST', 'feature_value')
+    self._SetupFakeHWIDAction('TEST')
 
     req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
     msg = self.service.BatchGetBom(req)
@@ -366,16 +391,24 @@ class GetBOMShardTest(unittest.TestCase):
             boms={
                 hwid1:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.SUCCESS, components=[
+                        status=StatusMsg.SUCCESS,
+                        components=[
                             ComponentMsg(name='qux1', component_class='baz1'),
                             ComponentMsg(name='rox1', component_class='baz1'),
-                        ], feature_enablement_status='feature_value'),
+                        ],
+                        feature_enablement_status_legacy='not_branded:0',
+                        feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
+                    ),
                 hwid2:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.SUCCESS, components=[
+                        status=StatusMsg.SUCCESS,
+                        components=[
                             ComponentMsg(name='qux2', component_class='baz2'),
                             ComponentMsg(name='rox2', component_class='baz2'),
-                        ], feature_enablement_status='feature_value'),
+                        ],
+                        feature_enablement_status_legacy='not_branded:0',
+                        feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
+                    ),
             }, status=StatusMsg.SUCCESS), msg)
 
   def testBatchGetBom_WithError(self):
@@ -397,7 +430,7 @@ class GetBOMShardTest(unittest.TestCase):
                 ComponentMsg(name='bar', component_class='foo'),
             ], '', '', StatusMsg.SUCCESS, 'TEST'),
     }
-    self._SetupFakeHWIDActionForFeatureEnablementLabel('TEST', 'feature_value')
+    self._SetupFakeHWIDAction('TEST')
 
     req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
     msg = self.service.BatchGetBom(req)
@@ -416,11 +449,15 @@ class GetBOMShardTest(unittest.TestCase):
                         status=StatusMsg.SERVER_ERROR, error='index error'),
                 hwid4:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=StatusMsg.SUCCESS, components=[
+                        status=StatusMsg.SUCCESS,
+                        components=[
                             ComponentMsg(name='qux', component_class='baz'),
                             ComponentMsg(name='rox', component_class='baz'),
                             ComponentMsg(name='bar', component_class='foo'),
-                        ], feature_enablement_status='feature_value'),
+                        ],
+                        feature_enablement_status_legacy='not_branded:0',
+                        feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
+                    ),
             }, status=StatusMsg.BAD_REQUEST, error='value error'), msg)
 
 
@@ -447,11 +484,13 @@ class GetSKUShardTest(unittest.TestCase):
     super().tearDown()
     self._modules.ClearAll()
 
-  def _SetupFakeHWIDActionForFeatureEnablementLabel(
+  def _SetupFakeHWIDAction(
       self, project_name: str,
-      feature_enablement_label: str = 'just_a_random_default_value'):
+      feature_enablement_status: Optional[_FeatureEnablementStatus] = None):
+    if feature_enablement_status is None:
+      feature_enablement_status = _FeatureEnablementStatus.FromHWIncompliance()
     instance = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    instance.GetFeatureEnablementLabel.return_value = feature_enablement_label
+    instance.GetFeatureEnablementStatus.return_value = feature_enablement_status
     self._modules.ConfigHWID(project_name, 3, 'unused raw HWID DB contents',
                              hwid_action=instance)
     return instance
@@ -464,14 +503,13 @@ class GetSKUShardTest(unittest.TestCase):
     })
     bom.project = 'foo'
     configless = None
-    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
-                                                       'feature_value')
+    self._SetupFakeHWIDAction(bom.project)
     self._mock_bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: _BOMAndConfigless(bom, configless, None)
     }
 
-    with mock.patch.object(
-        self._fake_sku_helper, 'GetTotalRAMFromHWIDData') as mock_func:
+    with mock.patch.object(self._fake_sku_helper,
+                           'GetTotalRAMFromHWIDData') as mock_func:
       mock_func.return_value = ('1MB', 100000000, [])
 
       req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
@@ -479,9 +517,15 @@ class GetSKUShardTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.SkuResponse(
-            status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
-            memory='1MB', memory_in_bytes=100000000, sku='foo_bar1_bar2_1MB',
-            feature_enablement_status='feature_value'), msg)
+            status=StatusMsg.SUCCESS,
+            project='foo',
+            cpu='bar1_bar2',
+            memory='1MB',
+            memory_in_bytes=100000000,
+            sku='foo_bar1_bar2_1MB',
+            feature_enablement_status_legacy='not_branded:0',
+            feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
+        ), msg)
 
   def testGetSku_WithConfigless(self):
     bom = hwid_action.BOM()
@@ -493,14 +537,13 @@ class GetSKUShardTest(unittest.TestCase):
     configless = {
         'memory': 4
     }
-    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
-                                                       'feature_value')
+    self._SetupFakeHWIDAction(bom.project)
     self._mock_bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: _BOMAndConfigless(bom, configless, None)
     }
 
-    with mock.patch.object(
-        self._fake_sku_helper, 'GetTotalRAMFromHWIDData') as mock_func:
+    with mock.patch.object(self._fake_sku_helper,
+                           'GetTotalRAMFromHWIDData') as mock_func:
       mock_func.return_value = ('1MB', 100000000, [])
 
       req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
@@ -508,9 +551,15 @@ class GetSKUShardTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.SkuResponse(
-            status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
-            memory='4GB', memory_in_bytes=4294967296, sku='foo_bar1_bar2_4GB',
-            feature_enablement_status='feature_value'), msg)
+            status=StatusMsg.SUCCESS,
+            project='foo',
+            cpu='bar1_bar2',
+            memory='4GB',
+            memory_in_bytes=4294967296,
+            sku='foo_bar1_bar2_4GB',
+            feature_enablement_status_legacy='not_branded:0',
+            feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
+        ), msg)
 
   def testGetSku_DramWithoutSize(self):
     bom = hwid_action.BOM()
@@ -520,8 +569,7 @@ class GetSKUShardTest(unittest.TestCase):
     })
     bom.project = 'foo'
     configless = None
-    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
-                                                       'feature_value')
+    self._SetupFakeHWIDAction(bom.project)
     self._mock_bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: _BOMAndConfigless(bom, configless, None)
     }
@@ -531,10 +579,55 @@ class GetSKUShardTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.SkuResponse(
-            project='foo', cpu='bar', memory_in_bytes=0, sku='foo_bar_0B',
-            memory='0B', status=StatusMsg.SUCCESS, warnings=[
-                "'fail' does not contain size field"
-            ], feature_enablement_status='feature_value'), msg)
+            project='foo',
+            cpu='bar',
+            memory_in_bytes=0,
+            sku='foo_bar_0B',
+            memory='0B',
+            status=StatusMsg.SUCCESS,
+            warnings=["'fail' does not contain size field"],
+            feature_enablement_status_legacy='not_branded:0',
+            feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
+        ), msg)
+
+  def testGetSku_FeatureEnabled(self):
+    bom = hwid_action.BOM()
+    bom.AddAllComponents({
+        'cpu': ['bar1', 'bar2'],
+        'dram': ['foo']
+    })
+    bom.project = 'foo'
+    configless = None
+    self._SetupFakeHWIDAction(
+        bom.project,
+        _FeatureEnablementStatus(
+            enablement_type=_FeatureEnablementType.SOFT_BRANDED_LEGACY,
+            hw_compliance_version=1))
+    self._mock_bc_helper.BatchGetBOMAndConfigless.return_value = {
+        TEST_HWID: _BOMAndConfigless(bom, configless, None)
+    }
+
+    with mock.patch.object(self._fake_sku_helper,
+                           'GetTotalRAMFromHWIDData') as mock_func:
+      mock_func.return_value = ('1MB', 100000000, [])
+
+      req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
+      msg = self.service.GetSku(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.SkuResponse(
+            status=StatusMsg.SUCCESS,
+            project='foo',
+            cpu='bar1_bar2',
+            memory='1MB',
+            memory_in_bytes=100000000,
+            sku='foo_bar1_bar2_1MB',
+            feature_enablement_status_legacy='soft_branded_legacy:1',
+            feature_enablement_status=_FeatureEnablementStatusMsg(
+                enablement_type=_FeatureEnablementStatusMsg.SOFT_BRANDED_LEGACY,
+                hw_compliance_version=1,
+            ),
+        ), msg)
 
 
 if __name__ == '__main__':

@@ -6,6 +6,7 @@
 import os
 import unittest
 
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
@@ -19,6 +20,9 @@ GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata/v3-golden.yaml')
 TEST_V3_HWID_1 = 'CHROMEBOOK AA5A-Y6L'
 TEST_V3_HWID_WITH_CONFIGLESS = 'CHROMEBOOK-BRAND 0-8-74-180 AA5C-YNQ'
+
+_FeatureEnablementStatus = feature_matching.FeatureEnablementStatus
+_FeatureEnablementType = feature_matching.FeatureEnablementType
 
 
 class HWIDV3ActionWithoutFeatureMatcherTextTest(unittest.TestCase):
@@ -135,15 +139,15 @@ class HWIDV3ActionWithoutFeatureMatcherTextTest(unittest.TestCase):
     for comp in bom.GetComponents(cls='storage'):
       self.assertTrue(comp.is_vp_related)
 
-  def testGetFeatureEnablementLabel(self):
-    label = self.action.GetFeatureEnablementLabel(TEST_V3_HWID_1)
+  def testGetFeatureEnablementStatus(self):
+    status = self.action.GetFeatureEnablementStatus(TEST_V3_HWID_1)
 
-    self.assertEqual(label, 'not_branded:0')
+    self.assertEqual(status, _FeatureEnablementStatus.FromHWIncompliance())
 
 
 class HWIDV3ActionWithFeatureMatcherTextTest(unittest.TestCase):
 
-  def testGetFeatureEnablementLabel(self):
+  def testGetFeatureEnablementStatus(self):
     feature_matcher_builder = (
         hwid_preproc_data.HWIDV3PreprocData.HWID_FEATURE_MATCHER_BUILDER)
     raw_source = feature_matcher_builder.GenerateFeatureMatcherRawSource(
@@ -157,11 +161,14 @@ class HWIDV3ActionWithFeatureMatcherTextTest(unittest.TestCase):
     action = hwid_v3_action.HWIDV3Action(preproc_data)
 
     for hwid, expected_label in (
-        ('CHROMEBOOK-WXYZ A2A-BUY', 'not_branded:1'),
-        ('CHROMEBOOK-ABCD A2A-BHL', 'soft_branded_legacy:1'),
+        ('CHROMEBOOK-WXYZ A2A-BUY',
+         _FeatureEnablementStatus(0, _FeatureEnablementType.DISABLED)),
+        ('CHROMEBOOK-ABCD A2A-BHL',
+         _FeatureEnablementStatus(1,
+                                  _FeatureEnablementType.SOFT_BRANDED_LEGACY)),
     ):
       with self.subTest(hwid=hwid, expected_label=expected_label):
-        actual = action.GetFeatureEnablementLabel(hwid)
+        actual = action.GetFeatureEnablementStatus(hwid)
 
         self.assertEqual(actual, expected_label)
 

@@ -19,17 +19,6 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import hwid_utils
 
 
-_FEATURE_ENABLEMENT_TYPE_TO_LABEL = {
-    feature_matching.FeatureEnablementType.DISABLED:
-        'not_branded',
-    feature_matching.FeatureEnablementType.ENABLED_WITH_CHASSIS:
-        'hard_branded',
-    feature_matching.FeatureEnablementType.ENABLED_FOR_LEGACY:
-        'soft_branded_legacy',
-    feature_matching.FeatureEnablementType.ENABLED_BY_WAIVER:
-        'soft_branded_waiver',
-}
-
 class HWIDV3Action(hwid_action.HWIDAction):
   HWID_VERSION = 3
 
@@ -113,12 +102,10 @@ class HWIDV3Action(hwid_action.HWIDAction):
     return self._ss_helper.ConvertToInternalHWIDDBContent(
         avl_converter_manager, hwid_db_contents, avl_resource)
 
-  def GetFeatureEnablementLabel(self, hwid_string: str) -> str:
+  def GetFeatureEnablementStatus(
+      self, hwid_string: str) -> feature_matching.FeatureEnablementStatus:
     """See base class."""
-    match_result = self._preproc_data.feature_matcher.Match(hwid_string)
-    enablement_status = _FEATURE_ENABLEMENT_TYPE_TO_LABEL[
-        match_result.enablement_status]
-    return f'{enablement_status}:{match_result.feature_version}'
+    return self._preproc_data.feature_matcher.Match(hwid_string)
 
   def GetFeatureMatcher(self) -> feature_matching.HWIDFeatureMatcher:
     """See base class."""
