@@ -1,17 +1,17 @@
 probe_statement_metadatas: {
-  component_name: "AVL_1"
-  fingerprint: "e8c21a82f1fb7148b5c5f07bec5bbbea40aa3914"
+  component_name: "AVL_QUAL_1"
+  fingerprint: "5b7a386da3859a10a89fb932b04919af9d1a063e"
 }
 probe_statement_metadatas: {
-  component_name: "AVL_2"
+  component_name: "AVL_QUAL_2"
   fingerprint: "814e23462e0b8ba62d90739475cf2cd83f869d99"
 }
 probe_statement_metadatas: {
-  component_name: "AVL_3"
-  fingerprint: "c9b3c0fed8ada419b02c207f6f55ab55affbe825"
+  component_name: "AVL_QUAL_3"
+  fingerprint: "5b8c7e58e9b373b9b6e99808d6862665cf38cded"
 }
 rp_invocation_result: {
   result_type: FINISHED
   return_code: 0
-  raw_stdout: "{\"storage\": [{\"name\": \"AVL_2\"}], \"battery\": [{\"name\": \"AVL_3\"}]}"
+  raw_stdout: "{\"storage\": [{\"name\": \"AVL_QUAL_2\"}], \"battery\": [{\"name\": \"AVL_QUAL_3\"}]}"
 }

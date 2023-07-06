@@ -7,9 +7,9 @@ envs:
 
 probed_outcome_prototxt: '
   probe_statement_metadatas: {
-    component_name: "AVL_1"
+    component_name: "AVL_QUAL_1"
     fingerprint: "5b4e4b54aebea41595c10d4d59cf8cc0493ff428"
-    component_part_names: "AVL_1"
+    component_part_names: "AVL_QUAL_1"
   }
   rp_invocation_result: {
     result_type: FINISHED
@@ -20,7 +20,7 @@ probed_outcome_prototxt: '
 probe_config_payload: '
   {
     "storage": {
-      "AVL_1": {
+      "AVL_QUAL_1": {
         "eval": {"mmc_storage": {}},
         "expect": {
           "mmc_manfid": [true, "hex", "!eq 0x0A"],

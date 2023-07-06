@@ -1,0 +1,13 @@
+# corresponding fingerprint: 8031268f8fddaf66c085646230c39bc6f5965af7
+component_identity: {
+  # No qual_id in the message.
+  readable_label: "PART_NO_3456"
+  component_id: 100
+}
+probe_info: {
+  probe_function_name: "cpu.generic_cpu"
+  probe_parameters: {
+    name: "identifier"
+    string_value: "CPU_ABC"
+  }
+}

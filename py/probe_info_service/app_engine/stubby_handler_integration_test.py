@@ -45,11 +45,14 @@ class StubbyHandlerTest(unittest.TestCase):
   def testGetProbeMetadata_IncludeProbeStatementPreviewOfValidInput(self):
     req = stubby_pb2.GetProbeMetadataRequest(
         component_probe_infos=[
-            unittest_utils.LoadComponentProbeInfo('1-valid')
+            unittest_utils.LoadComponentProbeInfo(input_name)
+            for input_name in ['1-valid', '1-valid_no_comp_id', '4-valid']
         ], include_probe_statement_preview=True)
     resp = self._stubby_handler.GetProbeMetadata(req)
-    self.assertEqual(resp.probe_metadatas[0].probe_statement_preview,
-                     unittest_utils.LoadProbeStatementString('1-default'))
+    for probe_metadata, ps_name in zip(resp.probe_metadatas,
+                                       ['1-default', '1-default', '4-default']):
+      self.assertEqual(probe_metadata.probe_statement_preview,
+                       unittest_utils.LoadProbeStatementString(ps_name))
 
   def testGetProbeMetadata_IncludeProbeStatementPreviewOfInvalidInput(self):
     req = stubby_pb2.GetProbeMetadataRequest(

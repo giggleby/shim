@@ -186,7 +186,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
     self._AssertJSONStringEqual(
         probe_statement, '''{
           "storage": {
-            "AVL_1": {
+            "AVL_QUAL_1": {
               "eval": { "mmc_storage": {} },
               "expect": [
                 { "mmc_manfid": [ true, "hex", "!eq 0x0A" ],
@@ -224,7 +224,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
     self._AssertJSONStringEqual(
         probe_statement, '''{
           "storage": {
-            "AVL_1": {
+            "AVL_QUAL_1": {
               "eval": { "mmc_storage": {} },
               "expect": {
                 "mmc_manfid": [ true, "hex", "!eq 0x0A" ],
@@ -260,7 +260,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
     self._AssertJSONStringEqual(
         probe_statement, '''{
           "camera": {
-            "AVL_1": {
+            "AVL_QUAL_1": {
               "eval": { "mipi_camera": {} },
               "expect": {
                 "mipi_module_id": [ true, "str", "!eq TC1234" ],
@@ -298,7 +298,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
     self._AssertJSONStringEqual(
         probe_statement, '''{
           "camera": {
-            "AVL_1": {
+            "AVL_QUAL_1": {
               "eval": { "mipi_camera": {} },
               "expect": [
                 { "mipi_module_id": [ true, "str", "!eq TC1234" ],

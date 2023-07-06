@@ -1,9 +1,9 @@
 probe_statement_metadatas: {
-  component_name: "AVL_1"
+  component_name: "AVL_QUAL_1"
   fingerprint: "f9d24486a9f3c410cdd204ea230980504f9302d6"
 }
 rp_invocation_result: {
   result_type: FINISHED
   return_code: 0
-  raw_stdout: "{\"storage\": [{\"name\": \"AVL_1\"}]}"
+  raw_stdout: "{\"storage\": [{\"name\": \"AVL_QUAL_1\"}]}"
 }

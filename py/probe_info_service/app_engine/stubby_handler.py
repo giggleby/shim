@@ -17,7 +17,9 @@ _ProbeInfoParsedResult = stubby_pb2.ProbeInfoParsedResult
 
 
 def GetProbeDataSourceComponentName(component_identity):
-  return f'AVL_{component_identity.qual_id}'
+  if component_identity.qual_id:
+    return f'AVL_QUAL_{component_identity.qual_id}'
+  return f'AVL_COMP_{component_identity.component_id}'
 
 
 def _DeriveSortableValueFromProbeParameter(probe_parameter):

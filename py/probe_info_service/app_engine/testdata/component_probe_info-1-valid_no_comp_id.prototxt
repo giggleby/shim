@@ -1,0 +1,25 @@
+# corresponding fingerprint: 5b4e4b54aebea41595c10d4d59cf8cc0493ff428
+component_identity: {
+  qual_id: 1
+  readable_label: "PART_NO_1234"
+  # No component_id in the message.
+}
+probe_info: {
+  probe_function_name: "storage.mmc_storage"
+  probe_parameters: {
+    name: "mmc_manfid"
+    string_value: "0x0a"
+  }
+  probe_parameters: {
+    name: "mmc_name"
+    string_value: "0x41424378797a"
+  }
+  probe_parameters: {
+    name: "mmc_prv"
+    string_value: "0x12"
+  }
+  probe_parameters: {
+    name: "size_in_gb"
+    int_value: 256
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "cpu": {
+    "AVL_COMP_100": {
+      "eval": {
+        "generic_cpu": {}
+      },
+      "expect": {
+        "identifier": [
+          true,
+          "str",
+          "!eq CPU_ABC"
+        ]
+      }
+    }
+  }
+}
