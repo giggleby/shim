@@ -344,7 +344,7 @@ class ExtDisplayTest(test_case.TestCase):
   """Main class for external display test."""
   ARGS = [
       Arg('main_display', str,
-          "xrandr/modeprint ID for ChromeBook's main display."),
+          "xrandr/modeprint ID for ChromeBook's main display.", default=''),
       Arg('display_info', list,
           ('A list of tuples (display_label, display_id, audio_info, '
            'usbpd_spec) represents an external port to test. display_id and '
