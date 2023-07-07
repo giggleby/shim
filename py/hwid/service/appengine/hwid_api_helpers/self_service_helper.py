@@ -210,6 +210,10 @@ class _GenerateCompInfoMsgAcceptor(
     return _AnalysisReportMsg.ComponentInfo(
         avl_info=_AvlInfo(cid=cid, is_subcomp=True), has_avl=True)
 
+  def AcceptUntracked(self) -> _AnalysisReportMsg.ComponentInfo:
+    """See base class."""
+    return _AnalysisReportMsg.ComponentInfo(marked_untracked=True)
+
   def AcceptLegacy(self,
                    raw_comp_name: str) -> _AnalysisReportMsg.ComponentInfo:
     """See base class."""

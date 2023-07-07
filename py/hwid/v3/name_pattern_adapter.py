@@ -38,6 +38,10 @@ class NameInfoAcceptor(abc.ABC, Generic[_T]):
     """Accepts a sub-component with its corresponding CID."""
 
   @abc.abstractmethod
+  def AcceptUntracked(self) -> _T:
+    """Accepts a component explicitly marked as untracked."""
+
+  @abc.abstractmethod
   def AcceptLegacy(self, raw_comp_name: str) -> _T:
     """Accepts the legacy component name without following any name policy."""
 
@@ -46,6 +50,7 @@ class NameInfoRawData(NamedTuple):
   cid: Optional[int]
   qid: Optional[int]
   is_subcomp: bool
+  is_untracked: bool
   legacy_comp_name: Optional[str]
 
 
@@ -54,15 +59,19 @@ class _NameInfoRawDataAcceptor(NameInfoAcceptor[NameInfoRawData]):
 
   def AcceptRegularComp(self, cid: int, qid: Optional[int]) -> NameInfoRawData:
     """See base class."""
-    return NameInfoRawData(cid, qid, False, None)
+    return NameInfoRawData(cid, qid, False, False, None)
 
   def AcceptSubcomp(self, cid: int) -> NameInfoRawData:
     """See base class."""
-    return NameInfoRawData(cid, None, True, None)
+    return NameInfoRawData(cid, None, True, False, None)
+
+  def AcceptUntracked(self) -> NameInfoRawData:
+    """See base class."""
+    return NameInfoRawData(None, None, False, True, None)
 
   def AcceptLegacy(self, raw_comp_name: str) -> NameInfoRawData:
     """See base class."""
-    return NameInfoRawData(None, None, False, raw_comp_name)
+    return NameInfoRawData(None, None, False, False, raw_comp_name)
 
 
 class GetCIDAcceptor(NameInfoAcceptor[Optional[int]]):
@@ -123,6 +132,14 @@ class LinkAVLNameSubcompInfo(NameInfoProvider):
   def Provide(self, acceptor: NameInfoAcceptor[_T]) -> _T:
     """See base class."""
     return acceptor.AcceptSubcomp(self._cid)
+
+
+class UntrackedNameInfo(NameInfoProvider):
+  """A name info of a component explicitly marked as untracked."""
+
+  def Provide(self, acceptor: NameInfoAcceptor[_T]) -> _T:
+    """See base class."""
+    return acceptor.AcceptUntracked()
 
 
 class LegacyNameInfo(NameInfoProvider):
@@ -190,6 +207,10 @@ class GenerateNameAcceptor(NameInfoAcceptor[str]):
       return f'{self._comp_cls}_{cid}_{qid}'
     return f'{self._comp_cls}_{cid}'
 
+  def AcceptUntracked(self) -> str:
+    """See base class."""
+    return f'{self._comp_cls}_{NamePattern.UNTRACKED_ANNOTATION}'
+
   def AcceptLegacy(self, raw_comp_name: str) -> str:
     """See base class."""
     return raw_comp_name
@@ -210,6 +231,9 @@ class NamePattern:
                             f'{annot}'
                             r'_(?P<cid>\d+)'
                             f'({sep}\\d+)?')
+  UNTRACKED_ANNOTATION = 'untracked'
+  _UNTRACKED_PATTERN = f'_{UNTRACKED_ANNOTATION}(?:{sep}\\d+)?'
+
   def __init__(self, comp_cls: str):
     self._comp_cls = comp_cls
     comp_cls_in_re = re.escape(comp_cls)
@@ -217,6 +241,8 @@ class NamePattern:
         f'{comp_cls_in_re}{self._COMP_VALUE_PATTERN}')
     self._subcomp_pattern = re.compile(
         f'{comp_cls_in_re}{self._SUBCOMP_VALUE_PATTERN}')
+    self._untracked_pattern = re.compile(
+        f'{comp_cls_in_re}{self._UNTRACKED_PATTERN}')
     self._gen_avl_name_acceptor = GenerateNameAcceptor(self._comp_cls)
 
   def Matches(self, tag: str) -> NameInfo:
@@ -232,6 +258,10 @@ class NamePattern:
       return LinkAVLNameSubcompInfo(
           _GetTypedMatchGroup(matched_result, 'cid', int),
       )
+
+    matched_result = self._untracked_pattern.fullmatch(tag)
+    if matched_result:
+      return UntrackedNameInfo()
 
     return LegacyNameInfo(TrimSequenceSuffix(tag))
 

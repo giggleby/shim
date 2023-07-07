@@ -47,6 +47,10 @@ class _GenerateAVLInfoAcceptor(name_pattern_adapter.NameInfoAcceptor[Optional[
     """See base class."""
     return hwid_api_messages_pb2.AvlInfo(cid=cid, is_subcomp=True)
 
+  def AcceptUntracked(self) -> Optional[hwid_api_messages_pb2.AvlInfo]:
+    """See base class."""
+    return None
+
   def AcceptLegacy(
       self, raw_comp_name: str) -> Optional[hwid_api_messages_pb2.AvlInfo]:
     """See base class."""

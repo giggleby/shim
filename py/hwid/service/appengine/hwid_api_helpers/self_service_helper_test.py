@@ -665,10 +665,11 @@ class SelfServiceShardTest(unittest.TestCase):
                             probe_value_alignment_status_changed=False,
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatus.NO_PROBE_INFO),
-                            converter_changed=False), link_avl=False,
+                            converter_changed=False,
+                            marked_untracked_changed=False), link_avl=False,
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
-                        skip_avl_check=False),
+                        skip_avl_check=False, marked_untracked=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
@@ -685,9 +686,11 @@ class SelfServiceShardTest(unittest.TestCase):
                             probe_value_alignment_status_changed=True,
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatus.NO_PROBE_INFO),
-                            converter_changed=False), link_avl=False,
+                            converter_changed=False,
+                            marked_untracked_changed=False), link_avl=False,
                         probe_value_alignment_status=(
-                            _PVAlignmentStatus.ALIGNED), skip_avl_check=False),
+                            _PVAlignmentStatus.ALIGNED), skip_avl_check=False,
+                        marked_untracked=False),
                 'comp3':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_name3',
@@ -698,7 +701,7 @@ class SelfServiceShardTest(unittest.TestCase):
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
-                        skip_avl_check=False),
+                        skip_avl_check=False, marked_untracked=False),
             }))
 
     self._modules.fake_session_cache_adapter.Put(
@@ -1184,7 +1187,7 @@ class SelfServiceShardTest(unittest.TestCase):
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
-                        skip_avl_check=False),
+                        skip_avl_check=False, marked_untracked=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
@@ -1196,7 +1199,7 @@ class SelfServiceShardTest(unittest.TestCase):
                         null_values=False, diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
-                        skip_avl_check=False),
+                        skip_avl_check=False, marked_untracked=False),
             },
             hwid_action.DBHWIDTouchSections(
                 hwid_action.DBHWIDTouchCase.UNTOUCHED,
@@ -1341,7 +1344,7 @@ class SelfServiceShardTest(unittest.TestCase):
                           diff_prev=None, link_avl=False,
                           probe_value_alignment_status=(
                               _PVAlignmentStatus.NO_PROBE_INFO),
-                          skip_avl_check=False),
+                          skip_avl_check=False, marked_untracked=False),
                   'comp2':
                       hwid_action.DBHWIDComponentAnalysisResult(
                           comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
@@ -1353,7 +1356,7 @@ class SelfServiceShardTest(unittest.TestCase):
                           null_values=True, diff_prev=None, link_avl=True,
                           probe_value_alignment_status=(
                               _PVAlignmentStatus.NO_PROBE_INFO),
-                          skip_avl_check=False),
+                          skip_avl_check=False, marked_untracked=False),
               }))
       return action
 
@@ -1429,10 +1432,11 @@ class SelfServiceShardTest(unittest.TestCase):
                             probe_value_alignment_status_changed=False,
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatus.NO_PROBE_INFO),
-                            converter_changed=False), link_avl=False,
+                            converter_changed=False,
+                            marked_untracked_changed=False), link_avl=False,
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
-                        skip_avl_check=False),
+                        skip_avl_check=False, marked_untracked=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
@@ -1449,9 +1453,11 @@ class SelfServiceShardTest(unittest.TestCase):
                             probe_value_alignment_status_changed=True,
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatus.NO_PROBE_INFO),
-                            converter_changed=False), link_avl=False,
+                            converter_changed=False,
+                            marked_untracked_changed=False), link_avl=False,
                         probe_value_alignment_status=(
-                            _PVAlignmentStatus.ALIGNED), skip_avl_check=False),
+                            _PVAlignmentStatus.ALIGNED), skip_avl_check=False,
+                        marked_untracked=False),
                 'comp3':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_name3',
@@ -1462,7 +1468,7 @@ class SelfServiceShardTest(unittest.TestCase):
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
-                        skip_avl_check=False),
+                        skip_avl_check=False, marked_untracked=False),
             },
             hwid_action.DBHWIDTouchSections(
                 hwid_action.DBHWIDTouchCase.UNTOUCHED,
@@ -2471,6 +2477,7 @@ class SelfServiceShardTest(unittest.TestCase):
             probe_value_alignment_status=_PVAlignmentStatusMsg.NO_PROBE_INFO,
             support_status_case=_SupportStatusCase.SUPPORTED,
             skip_avl_check=True,
+            marked_untracked=False,
         )
     ], skippable_comps)
 

@@ -493,6 +493,10 @@ class CreateDLMCompEntryAcceptor(
     """See base class."""
     return DLMComponentEntryID(cid, None)
 
+  def AcceptUntracked(self) -> Optional[DLMComponentEntryID]:
+    """See base class."""
+    return None
+
   def AcceptLegacy(self, raw_comp_name: str) -> Optional[DLMComponentEntryID]:
     """See base class."""
     return None

@@ -1,0 +1,54 @@
+checksum: DUMMY
+
+project: CHROMEBOOK
+
+encoding_patterns:
+  0: default
+
+image_id:
+  0: PVT
+
+pattern:
+  - image_ids: [0]
+    encoding_scheme: base8192
+    fields:
+    - display_panel_field: 1
+
+encoded_fields:
+  display_panel_field:
+    0: { display_panel: display_panel_0 }
+    1: { display_panel: display_panel_1 }
+
+components:
+  display_panel:
+    items:
+      display_panel_0:
+        values:
+          the_attribute: AAA
+      display_panel_1:
+        values:
+          the_attribute: BBB
+      display_panel_invalid1:
+        values:
+          the_attribute: CCC
+      display_panel_invalid2:
+        values:
+          the_attribute: DDD
+      display_panel_untracked#5:
+        status: unqualified
+        values:
+          the_attribute: EEE
+      display_panel_untracked#6:
+        values:
+          the_attribute: FFF
+  ro_ec_firmware:
+    items:
+      ro_ec_firmware_1: !from_factory_bundle
+        bundle_uuids:
+        - uuid1
+        status: unqualified
+        values: null
+
+rules:
+- name: device_info.set_image_id
+  evaluate: SetImageId('TEST');

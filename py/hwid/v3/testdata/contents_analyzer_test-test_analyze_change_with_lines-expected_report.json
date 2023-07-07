@@ -574,6 +574,7 @@
         "cid": null,
         "qid": null,
         "is_subcomp": false,
+        "is_untracked": false,
         "legacy_comp_name": "display_panel_A"
       },
       "seq_no": 1,
@@ -588,11 +589,13 @@
         "prev_support_status": "unqualified",
         "probe_value_alignment_status_changed": false,
         "prev_probe_value_alignment_status": "NO_PROBE_INFO",
-        "converter_changed": false
+        "converter_changed": false,
+        "marked_untracked_changed": false
       },
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
-      "skip_avl_check": false
+      "skip_avl_check": false,
+      "marked_untracked": false
     },
     "x@@@@component-display_panel-display_panel_B_both_null@@y@": {
       "comp_cls": "display_panel",
@@ -603,6 +606,7 @@
         "cid": null,
         "qid": null,
         "is_subcomp": false,
+        "is_untracked": false,
         "legacy_comp_name": "display_panel_B_both_null"
       },
       "seq_no": 2,
@@ -617,11 +621,13 @@
         "prev_support_status": "unqualified",
         "probe_value_alignment_status_changed": false,
         "prev_probe_value_alignment_status": "NO_PROBE_INFO",
-        "converter_changed": false
+        "converter_changed": false,
+        "marked_untracked_changed": false
       },
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
-      "skip_avl_check": false
+      "skip_avl_check": false,
+      "marked_untracked": false
     },
     "x@@@@component-display_panel-display_panel_B_prev_null@@y@": {
       "comp_cls": "display_panel",
@@ -632,6 +638,7 @@
         "cid": null,
         "qid": null,
         "is_subcomp": false,
+        "is_untracked": false,
         "legacy_comp_name": "display_panel_B_prev_null"
       },
       "seq_no": 3,
@@ -646,11 +653,13 @@
         "prev_support_status": "unqualified",
         "probe_value_alignment_status_changed": false,
         "prev_probe_value_alignment_status": "NO_PROBE_INFO",
-        "converter_changed": false
+        "converter_changed": false,
+        "marked_untracked_changed": false
       },
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
-      "skip_avl_check": false
+      "skip_avl_check": false,
+      "marked_untracked": false
     },
     "x@@@@component-display_panel-display_panel_B_next_null@@y@": {
       "comp_cls": "display_panel",
@@ -661,6 +670,7 @@
         "cid": null,
         "qid": null,
         "is_subcomp": false,
+        "is_untracked": false,
         "legacy_comp_name": "display_panel_B_next_null"
       },
       "seq_no": 4,
@@ -675,11 +685,13 @@
         "prev_support_status": "unqualified",
         "probe_value_alignment_status_changed": false,
         "prev_probe_value_alignment_status": "NO_PROBE_INFO",
-        "converter_changed": false
+        "converter_changed": false,
+        "marked_untracked_changed": false
       },
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
-      "skip_avl_check": false
+      "skip_avl_check": false,
+      "marked_untracked": false
     },
     "x@@@@component-display_panel-display_panel_123_456#8@@y@": {
       "comp_cls": "display_panel",
@@ -690,6 +702,7 @@
         "cid": 123,
         "qid": 456,
         "is_subcomp": false,
+        "is_untracked": false,
         "legacy_comp_name": null
       },
       "seq_no": 5,
@@ -698,7 +711,8 @@
       "diff_prev": null,
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
-      "skip_avl_check": false
+      "skip_avl_check": false,
+      "marked_untracked": false
     },
     "x@@@@component-display_panel-display_panel_subcomp_234@@y@": {
       "comp_cls": "display_panel",
@@ -709,6 +723,7 @@
         "cid": 234,
         "qid": null,
         "is_subcomp": true,
+        "is_untracked": false,
         "legacy_comp_name": null
       },
       "seq_no": 6,
@@ -717,7 +732,8 @@
       "diff_prev": null,
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
-      "skip_avl_check": false
+      "skip_avl_check": false,
+      "marked_untracked": false
     }
   },
   "touched_sections": {

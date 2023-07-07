@@ -74,6 +74,7 @@ class DiffStatus(NamedTuple):
   probe_value_alignment_status_changed: bool
   prev_probe_value_alignment_status: ProbeValueAlignmentStatus
   converter_changed: bool
+  marked_untracked_changed: bool
 
 
 ComponentNameInfo = name_pattern_adapter.NameInfo
@@ -126,6 +127,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   link_avl: bool
   probe_value_alignment_status: ProbeValueAlignmentStatus
   skip_avl_check: bool
+  marked_untracked: bool
 
 
 class HWIDSectionTouchCase(enum.Enum):
@@ -574,7 +576,7 @@ class ContentsAnalyzer:
                 comp.extracted_name_info, comp.expected_seq_no,
                 comp_name_with_correct_seq_no, comp.null_values, comp.diff_prev,
                 comp.link_avl, comp.probe_value_alignment_status,
-                comp.skip_avl_check))
+                comp.skip_avl_check, comp.marked_untracked))
 
     if require_hwid_db_lines:
       if db_contents_patcher is None:
@@ -602,6 +604,7 @@ class ContentsAnalyzer:
     probe_value_alignment_status: ProbeValueAlignmentStatus
     skip_avl_check: bool
     from_factory_bundle: bool
+    marked_untracked: bool
 
   def _ExtractHWIDComponents(
       self,
@@ -637,8 +640,13 @@ class ContentsAnalyzer:
         skip_avl_check = (
             skip_avl_check_checker(comp_cls, comp_info)
             if skip_avl_check_checker else False)
+        marked_untracked = isinstance(name_info,
+                                      name_pattern_adapter.UntrackedNameInfo)
         if prev_item:
           prev_comp_name, prev_comp_info = prev_item
+          prev_name_info = name_pattern.Matches(prev_comp_name)
+          prev_marked_untracked = isinstance(
+              prev_name_info, name_pattern_adapter.UntrackedNameInfo)
           prev_support_status = prev_comp_info.status
           name_changed = prev_comp_name != comp_name
           support_status_changed = prev_support_status != comp_info.status
@@ -655,12 +663,15 @@ class ContentsAnalyzer:
               _GetConverterIdentifier(comp_info) !=
               _GetConverterIdentifier(prev_comp_info))
 
+          marked_untracked_changed = marked_untracked != prev_marked_untracked
+
           unchanged = not any([
               name_changed,
               support_status_changed,
               values_changed,
               probe_value_alignment_status_changed,
               converter_changed,
+              marked_untracked_changed,
           ])
           diffstatus = DiffStatus(
               unchanged,
@@ -672,6 +683,7 @@ class ContentsAnalyzer:
               probe_value_alignment_status_changed,
               prev_alignment_status,
               converter_changed,
+              marked_untracked_changed,
           )
           from_factory_bundle = bool(prev_comp_info.bundle_uuids)
           is_newly_added = False
@@ -683,7 +695,8 @@ class ContentsAnalyzer:
                 comp_name, comp_info.status, noseq_comp_name,
                 actual_seq if sep else None, name_info, expected_seq,
                 is_newly_added, null_values, diffstatus, link_avl,
-                curr_alignment_status, skip_avl_check, from_factory_bundle))
+                curr_alignment_status, skip_avl_check, from_factory_bundle,
+                marked_untracked))
     return ret
 
   @classmethod

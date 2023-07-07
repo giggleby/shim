@@ -91,6 +91,18 @@ class NamePatternTest(unittest.TestCase):
 
     self.assertEqual(avl_name, 'mycomp_subcomp_123')
 
+  def testGenerateAVLName_Untracked(self):
+    name_info = name_pattern_adapter.UntrackedNameInfo()
+    avl_name = self._name_pattern.GenerateAVLName(name_info)
+
+    self.assertEqual(avl_name, 'mycomp_untracked')
+
+  def testGenerateAVLName_UntrackedAndSeqNo(self):
+    name_info = name_pattern_adapter.UntrackedNameInfo()
+    avl_name = self._name_pattern.GenerateAVLName(name_info, seq=3)
+
+    self.assertEqual(avl_name, 'mycomp_untracked#3')
+
   def testGenerateAVLName_Legacy(self):
     name_info = name_pattern_adapter.LegacyNameInfo('no_avl_info')
     avl_name = self._name_pattern.GenerateAVLName(name_info)

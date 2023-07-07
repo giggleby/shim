@@ -78,7 +78,7 @@ def _GenerateNewComponentAnalysis(seq_no: int, comp_cls: str = 'comp_cls_1',
       seq_no=seq_no, comp_name_with_correct_seq_no=None, null_values=None,
       diff_prev=None, link_avl=False,
       probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
-      skip_avl_check=False)
+      skip_avl_check=False, marked_untracked=False)
 
 
 def _BuildHWIDComponentAnalysisResultWithDefaults(
@@ -88,7 +88,8 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
     comp_name_with_correct_seq_no: Optional[str] = None,
     probe_value_alignment_status: _PVAlignmentStatus = (
         _PVAlignmentStatus.NO_PROBE_INFO), converter_changed: bool = False,
-    diff_prev: Optional[_DiffStatus] = None, skip_avl_check: bool = False):
+    diff_prev: Optional[_DiffStatus] = None, skip_avl_check: bool = False,
+    marked_untracked_changed: bool = False):
 
   null_values = comp_info.value_is_none
   support_status = comp_info.status
@@ -98,6 +99,8 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
       name_pattern_adapter.LinkAVLNameRegularInfo,
       name_pattern_adapter.LinkAVLNameSubcompInfo,
   ))
+  marked_untracked = isinstance(comp_name_info,
+                                name_pattern_adapter.UntrackedNameInfo)
   if is_newly_added:
     if diff_prev:
       raise ValueError('Newly added component must not have DiffStatus.')
@@ -109,7 +112,8 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
           prev_support_status=support_status,
           probe_value_alignment_status_changed=False,
           prev_probe_value_alignment_status=probe_value_alignment_status,
-          converter_changed=converter_changed)
+          converter_changed=converter_changed,
+          marked_untracked_changed=marked_untracked_changed)
   return _HWIDComponentAnalysisResult(
       comp_cls=comp_cls, comp_name=comp_name, seq_no=seq_no,
       support_status=support_status, is_newly_added=is_newly_added,
@@ -117,7 +121,8 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
       comp_name_with_correct_seq_no=comp_name_with_correct_seq_no,
       null_values=null_values,
       probe_value_alignment_status=probe_value_alignment_status,
-      diff_prev=diff_prev, skip_avl_check=skip_avl_check)
+      diff_prev=diff_prev, skip_avl_check=skip_avl_check,
+      marked_untracked=marked_untracked)
 
 
 def _CollectHashMappingOfCombinations(
@@ -343,8 +348,8 @@ class CompChangeTest(ChangeUnitTestBase):
                 prev_support_status='supported',
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
-                    _PVAlignmentStatus.NO_PROBE_INFO),
-                converter_changed=False)), comp_info.values,
+                    _PVAlignmentStatus.NO_PROBE_INFO), converter_changed=False,
+                marked_untracked_changed=False)), comp_info.values,
         comp_info.information, comp_info.comp_hash)
 
     self._AssertApplyingPatchesEqualsData(
@@ -366,8 +371,8 @@ class CompChangeTest(ChangeUnitTestBase):
                 prev_support_status='supported',
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
-                    _PVAlignmentStatus.NO_PROBE_INFO),
-                converter_changed=False)), comp_info.values,
+                    _PVAlignmentStatus.NO_PROBE_INFO), converter_changed=False,
+                marked_untracked_changed=False)), comp_info.values,
         comp_info.information, comp_info.comp_hash)
 
     with self._builder:
@@ -832,7 +837,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
             prev_support_status='supported',
             probe_value_alignment_status_changed=False,
             prev_probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
-            converter_changed=False))
+            converter_changed=False, marked_untracked_changed=False))
     comp_change_cus = [
         _CompChange(  # Add component.
             analysis_result=comp_1_2_analysis, probe_values=comp_info_1.values,

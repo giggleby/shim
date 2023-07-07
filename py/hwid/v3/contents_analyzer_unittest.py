@@ -33,6 +33,8 @@ DB_ADD_COMP_CLS_PVT_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_add_comp_cls_pvt.yaml')
 DB_FORM_FACTOR_COMP_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_form_factor_comp.yaml')
+DB_ADD_COMP_WITH_NAME_INFO = os.path.join(
+    _TEST_DATA_PATH, 'test_database_db_add_comp_with_name_info.yaml')
 
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _HWIDCompAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
@@ -222,7 +224,7 @@ class ContentsAnalyzerTest(unittest.TestCase):
             seq_no=1, comp_name_with_correct_seq_no=None, null_values=False,
             diff_prev=None, link_avl=False,
             probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
-            skip_avl_check=True)
+            skip_avl_check=True, marked_untracked=False)
     ], skippable_comps)
 
   def test_AnalyzeChange_WithConverterChanges(self):
@@ -249,10 +251,11 @@ class ContentsAnalyzerTest(unittest.TestCase):
                 prev_comp_name='comp1', prev_support_status='supported',
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
-                    _PVAlignmentStatus.NOT_ALIGNED),
-                converter_changed=True), link_avl=True,
+                    _PVAlignmentStatus.NOT_ALIGNED), converter_changed=True,
+                marked_untracked_changed=False), link_avl=True,
             probe_value_alignment_status=_PVAlignmentStatus.NOT_ALIGNED,
-            skip_avl_check=False), analysis.hwid_components.values())
+            skip_avl_check=False, marked_untracked=False),
+        analysis.hwid_components.values())
     # converter_identifier unchanged.
     self.assertIn(
         _HWIDCompAnalysisResult(
@@ -266,10 +269,64 @@ class ContentsAnalyzerTest(unittest.TestCase):
                 prev_comp_name='comp2', prev_support_status='supported',
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
-                    _PVAlignmentStatus.NOT_ALIGNED),
-                converter_changed=False), link_avl=True,
+                    _PVAlignmentStatus.NOT_ALIGNED), converter_changed=False,
+                marked_untracked_changed=False), link_avl=True,
             probe_value_alignment_status=_PVAlignmentStatus.NOT_ALIGNED,
-            skip_avl_check=False), analysis.hwid_components.values())
+            skip_avl_check=False, marked_untracked=False),
+        analysis.hwid_components.values())
+
+  def test_AnalyzeChange_WithCompMarkedUntracked(self):
+    prev_db_contents = file_utils.ReadFile(DB_COMP_BEFORE_PATH)
+    curr_db_contents = file_utils.ReadFile(DB_ADD_COMP_WITH_NAME_INFO)
+
+    inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
+                                              prev_db_contents)
+    analysis = inst.AnalyzeChange(None, False)
+
+    self.assertIn(
+        _HWIDCompAnalysisResult(
+            comp_cls='display_panel',
+            comp_name='display_panel_untracked#5',
+            support_status='unqualified',
+            is_newly_added=False,
+            comp_name_info=name_pattern_adapter.UntrackedNameInfo(),
+            seq_no=5,
+            comp_name_with_correct_seq_no=None,
+            null_values=False,
+            diff_prev=_DiffStatus(
+                unchanged=False,
+                name_changed=True,
+                support_status_changed=False,
+                values_changed=False,
+                prev_comp_name='display_panel_100_200',
+                prev_support_status='unqualified',
+                probe_value_alignment_status_changed=False,
+                prev_probe_value_alignment_status=(
+                    _PVAlignmentStatus.NO_PROBE_INFO),
+                converter_changed=False,
+                marked_untracked_changed=True,
+            ),
+            link_avl=False,
+            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
+            skip_avl_check=False,
+            marked_untracked=True,
+        ), analysis.hwid_components.values())
+    self.assertIn(
+        _HWIDCompAnalysisResult(
+            comp_cls='display_panel',
+            comp_name='display_panel_untracked#6',
+            support_status='supported',
+            is_newly_added=True,
+            comp_name_info=name_pattern_adapter.UntrackedNameInfo(),
+            seq_no=6,
+            comp_name_with_correct_seq_no=None,
+            null_values=False,
+            diff_prev=None,
+            link_avl=False,
+            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
+            skip_avl_check=False,
+            marked_untracked=True,
+        ), analysis.hwid_components.values())
 
   def _ReadTestData(self, test_data_name: str) -> str:
     return file_utils.ReadFile(os.path.join(_TEST_DATA_PATH, test_data_name))
