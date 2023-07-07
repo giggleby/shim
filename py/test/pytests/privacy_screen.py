@@ -55,6 +55,7 @@ class PrivacyScreenNotSupportedException(Error):
 class PrivacyScreenTest(test_case.TestCase):
   """Pytest to measure functionality of built-in privacy screen."""
 
+  related_components = (test_case.TestCategory.LCD, )
   ARGS = [
       Arg('target_state', enum.Enum('_StateType', ['on', 'off']),
           'Privacy screen target state.'),

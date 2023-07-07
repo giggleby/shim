@@ -195,6 +195,7 @@ class DisplayTest(test_case.TestCase):
     fullscreen: the test ui is in fullscreen or not.
     static_dir: string of static file directory.
   """
+  related_components = (test_case.TestCategory.LCD, )
   ARGS = [
       Arg(
           'items', list,

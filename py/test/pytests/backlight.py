@@ -67,6 +67,7 @@ class BacklightTest(test_case.TestCase):
   During each subtest, pressing esc can reset the brightness.
   Operator needs to answer H for brighter screen and L for darker screen.
   """
+  related_components = (test_case.TestCategory.LCD, )
   ARGS = [
       Arg('adjust_level', float,
           'How much the brightness level should be adjusted. Max: 1.0',

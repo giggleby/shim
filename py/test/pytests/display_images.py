@@ -2,8 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""A factory test to test the function of display.
+"""A station-based factory test to test the function of display.
 
+Description
+-----------
 The test will display images on the display.
 It will extract image files from factory/misc/display_images.tar.gz by default.
 User can add new xx.tar.gz in the private overlay.
@@ -16,6 +18,32 @@ The image under dut/ is for displaying on DUT. The image under station/ is for
 providing information to operators.
 e.g.
 dut/abc.ppm and station/abc.bmp
+
+This test is also known as FOS (front-of-screen) test.
+
+Test Procedure
+--------------
+1. Display one image.
+2. Operator marks pass or fail.
+3. Go back to 1. until there is no image left.
+
+Dependency
+----------
+- Device API `cros.factory.device.display`.
+- Device API `cros.factory.device.path`.
+- Device API `cros.factory.device.temp`.
+
+Examples
+--------
+Sample test_list entry::
+
+  {
+    "pytest_name": "display_images",
+    "args": {
+      "compressed_image_file": "display_images.tar.gz"
+    }
+  }
+
 """
 
 import glob
@@ -51,6 +79,7 @@ class DisplayImageTest(test_case.TestCase):
     _total_images: number of total images.
     _can_pass: check if operator checks all images.
   """
+  related_components = (test_case.TestCategory.LCD, )
   ARGS = [
       i18n_arg_utils.I18nArg(
           'title', 'Label Title of the test', default=_('Display Test')),

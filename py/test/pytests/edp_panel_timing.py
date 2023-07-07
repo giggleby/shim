@@ -47,6 +47,7 @@ from cros.factory.test import test_case
 
 class EDPPanelTimingTest(test_case.TestCase):
 
+  related_components = (test_case.TestCategory.LCD, )
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
 

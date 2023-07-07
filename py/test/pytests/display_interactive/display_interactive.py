@@ -73,6 +73,7 @@ class ThreadXMLRPCServer(socketserver.ThreadingMixIn,
 
 
 class DisplayInteractiveTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.LCD, )
   ARGS = [
       Arg('port', type=int, help='Port of the XML-RPC server', default=5566),
       Arg('autostart', type=bool, help='Auto start the test', default=True)

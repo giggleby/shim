@@ -2,6 +2,38 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """A factory test to test the function of display panel using some points.
+
+Description
+-----------
+Show some points on the display. The test is designed to catch display with
+dark dots.
+
+Test Procedure
+--------------
+1. Display white/black screen with a random number of black/white dots at random
+   generated positions.
+2. Operator reports the number of dots.
+3. Fails if the numbers don't match.
+4. Display the other color in step 1 and generate the dots again.
+5. Operator reports the number of dots.
+6. Fails if the numbers don't match.
+
+Dependency
+----------
+- A browser to run display_point.js.
+
+Examples
+--------
+Sample test_list entry::
+
+  {
+    "pytest_name": "display_point",
+    "args": {
+      "point_size": 3.0,
+      "max_point_count": 5
+    }
+  }
+
 """
 
 import collections
@@ -27,6 +59,7 @@ class DisplayPointTest(test_case.TestCase):
   Attributes:
     list_number_point: a list of the number of points in each subtest.
   """
+  related_components = (test_case.TestCategory.LCD, )
   ARGS = [
       Arg('point_size', (float, int), 'width and height of testing point in px',
           default=3.0),
