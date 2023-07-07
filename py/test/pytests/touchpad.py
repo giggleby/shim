@@ -144,6 +144,7 @@ class TouchpadTest(test_case.TestCase):
         to process double click. We will only process right_btn and left_btn.
     self.quadrant: This represents the current quadrant of mouse.
   """
+  related_components = (test_case.TestCategory.TRACKPAD, )
   ARGS = [
       Arg('device_filter', (int, str),
           'Touchpad input event id or evdev name. The test will probe'

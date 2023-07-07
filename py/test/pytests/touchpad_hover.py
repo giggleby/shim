@@ -82,6 +82,7 @@ from cros.factory.external.py_lib import evdev
 
 class TouchpadHoverTest(test_case.TestCase):
   """Touchpad Hover Test."""
+  related_components = (test_case.TestCategory.TRACKPAD, )
   ARGS = [
       Arg('touchpad_filter', (int, str),
           'Touchpad input event id or evdev name. The test will probe for '

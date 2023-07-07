@@ -3,8 +3,44 @@
 # found in the LICENSE file.
 
 
-"""Checks and updates touch device firmware."""
+"""Checks and updates touch device firmware.
 
+Description
+-----------
+This test only works for legacy devices. The name and usage of the
+scripts under /opt/google/touch/scripts/* were changed.
+
+The current touch firmware in factory is updated at boot time by
+`boot-update-firmware.conf`_. If the fw version on factory branch test image and
+FSI image are different then the fw is updated again on the first boot out of
+factory.
+
+.. _boot-update-firmware.conf: https://chromium.googlesource.com/chromiumos/\
+platform2/+/main/init/upstart/boot-update-firmware.conf
+
+Test Procedure
+--------------
+The test runs automatically.
+
+Dependency
+----------
+- /opt/google/touch/scripts/*
+
+Examples
+--------
+To check touchpad hover with default parameters without calibration, add this
+in test list::
+
+  {
+    "pytest_name": "touch_device_fw_update",
+    "args": {
+      "device_name": "MyTouchDevice",
+      "fw_name": "xxx.bin",
+      "fw_version": "160.0"
+    }
+  }
+
+"""
 
 import glob
 import logging
@@ -12,6 +48,7 @@ import os
 import unittest
 
 from cros.factory.test import session
+from cros.factory.test import test_tags
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
@@ -22,6 +59,7 @@ CONFIG_UPDATER = '/opt/google/touch/scripts/chromeos-touch-config-update.sh'
 
 
 class UpdateTouchDeviceFWTest(unittest.TestCase):
+  related_components = (test_tags.TestCategory.TRACKPAD, )
   ARGS = [
       Arg('device_name', str, 'Name of the touch device as in'
           '/sys/bus/i2c/devices/\\*/name)'),

@@ -5,11 +5,29 @@
 
 """A factory test for checking touch uniformity.
 
+Description
+-----------
 This test is intended to be run during run-in without a fixture or operator.
 The test recalibrates the touch device then reads raw reference (baseline) data.
 Each value must fall within a specified max and min range. Delta values (the
 baseline - current reading) are also checked.
 
+The args thresholds in need to be experimentally determined by checking
+a set of machines. The test logs the actual max and min values found.
+
+Currently, the test only supports Atmel based touch devices.
+
+Test Procedure
+--------------
+The test runs automatically. The touch device shouldn't be touched when
+calibrating.
+
+Dependency
+----------
+- Device API `cros.factory.device.touch`.
+
+Examples
+--------
 Sample test_list entry::
 
   {
@@ -22,8 +40,6 @@ Sample test_list entry::
     }
   }
 
-The args thresholds in need to be experimentally determined by checking
-a set of machines. The test logs the actual max and min values found.
 """
 
 import collections
@@ -50,6 +66,7 @@ CheckItem = collections.namedtuple(
 
 
 class TouchUniformity(test_case.TestCase):
+  related_components = (test_case.TestCategory.TRACKPAD, )
   ARGS = [
       Arg('device_index', int, 'Index of touch device to test.', default=0),
       Arg('check_list', list,
