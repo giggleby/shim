@@ -270,6 +270,57 @@ class GSCTool:
           f'BID_TYPE({bid_type:x}) and RLZ_CODE({result.BID_RLZ}) mismatch.')
     return BoardID(bid_type, bid_flags)
 
+  def CCDOpen(self):
+    self._InvokeCommand([GSCTOOL_PATH, '-a', '-o'], 'Failed to start CCD open.')
+
+  def GetCr50APROHash(self):
+    return self._InvokeCommand([GSCTOOL_PATH, '-a', '-A'],
+                               'Failed to check the Cr50 AP-RO hash.').stdout
+
+  def IsCr50ROHashSet(self):
+    """Check if the AP RO hash is set in Cr50.
+
+    The result is defined in process_get_apro_hash in
+    platform/cr50/extra/usb_updater/gsctool.c
+    """
+
+    return self.GetCr50APROHash().startswith('digest:')
+
+  def Cr50VerifyAPRO(self):
+    """Reboot and trigger the Cr50 AP RO verification.
+
+    This command only can be run in the factory mode.
+    The device will reboot after the command.
+    """
+    self._InvokeCommand([GSCTOOL_PATH, '-a', '-B', 'start'],
+                        'Failed to verify the Cr50 AP-RO hash.')
+
+  def Ti50VerifyAPRO(self):
+    """Reboot and trigger the Ti50 AP RO verification V2.
+
+    The device will reboot after the command.
+    """
+    self._InvokeCommand([GSCTOOL_PATH, '-a', '--reboot'],
+                        'Failed to verify the Ti50 AP-RO hash.')
+
+  def ParseGSCAPROResult(self, ap_ro_result):
+    # An example of the Cr50 result is "apro result (0) : not run".
+    # An example of the Ti50 result is "apro result (20) : success".
+    match = re.match(r'apro result \((\d+)\).*', ap_ro_result)
+    if match:
+      return APROResult(int(match.group(1)))
+    raise GSCToolError(f'Unknown apro result {ap_ro_result}.')
+
+  def GSCGetAPROResult(self):
+    """Get the result of the AP RO verification.
+
+    ref: process_get_apro_boot_status in
+    platform/cr50/extra/usb_updater/gsctool.c
+    """
+    result = self._InvokeCommand([GSCTOOL_PATH, '-a', '-B'],
+                                 'Failed to check the AP-RO hash.')
+    return self.ParseGSCAPROResult(result.stdout)
+
   def ClearROHash(self):
     """Clear the AP-RO hash in Cr50."""
     self._InvokeCommand([GSCTOOL_PATH, '-a', '-H'],

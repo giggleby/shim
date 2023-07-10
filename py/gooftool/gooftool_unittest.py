@@ -250,6 +250,7 @@ class GooftoolTest(unittest.TestCase):
 
     self._smart_amp_info = self._gooftool.GetSmartAmpInfo
     self._gooftool.GetSmartAmpInfo = mock.Mock(return_value=[None, None, None])
+    self._gooftool._gsctool = mock.Mock(self._gooftool._gsctool)
 
   def testVerifyECKeyWithPubkeyHash(self):
     f = MockFile()
@@ -1202,6 +1203,7 @@ class GooftoolTest(unittest.TestCase):
 
     matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
     self.assertDictEqual(matched_config, configs[0])
+
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO)

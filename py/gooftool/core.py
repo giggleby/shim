@@ -175,6 +175,7 @@ class Gooftool:
     self._named_temporary_file = tempfile.NamedTemporaryFile
     self._db = None
     self._cros_config = cros_config_module.CrosConfig()
+    self._gsctool = gsctool_module.GSCTool()
 
   def GetLogicalBlockSize(self):
     """Get the logical block size of a DUT by reading file under /sys/block.
@@ -1302,10 +1303,8 @@ class Gooftool:
       Error if failed to get board ID, failed to get RLZ, or cr50 board ID is
       different from RLZ.
     """
-    gsctool = gsctool_module.GSCTool()
-
     try:
-      board_id = gsctool.GetBoardID()
+      board_id = self._gsctool.GetBoardID()
     except gsctool_module.GSCToolError as e:
       raise Error(
           f'Failed to get boardID with gsctool command: {e!r}') from None
@@ -1324,20 +1323,12 @@ class Gooftool:
     if self.IsCr50BoardIDSet():
       logging.warning('Cr50 boardID is already set. Skip clearing RO hash.')
       return
-    if not self.IsCr50ROHashSet():
+    if not self._gsctool.IsCr50ROHashSet():
       logging.info('AP-RO hash is already cleared, do nothing.')
       return
 
-    gsctool = gsctool_module.GSCTool()
-    gsctool.ClearROHash()
+    self._gsctool.ClearROHash()
     logging.info('Successfully clear AP-RO hash on Cr50.')
-
-  def IsCr50ROHashSet(self):
-    # The result is defined in process_get_apro_hash in
-    # platform/cr50/extra/usb_updater/gsctool.c
-    cmd = 'gsctool -a -A'
-    result = self._util.shell(cmd)
-    return result.stdout.startswith('digest:')
 
   def _Cr50SetROHashForShipping(self):
     """Calculate and set the hash as in release/shipping state.
@@ -1503,8 +1494,7 @@ class Gooftool:
         device_data.KEY_FM_CHASSIS_BRANDED)
     hw_compliance_version = device_data.GetDeviceData(
         device_data.KEY_FM_HW_COMPLIANCE_VERSION)
-    gsctool = gsctool_module.GSCTool()
-    feature_flags = gsctool.GetFeatureManagementFlags()
+    feature_flags = self._gsctool.GetFeatureManagementFlags()
 
     # In RMA scene, in cases where the feature flags unchanged,
     # we shouldn't try to set it, otherwise the finalize will fail.
@@ -1519,7 +1509,8 @@ class Gooftool:
       self._Cr50SetFeatureManagementFlagsWithHwSecUtils(chassis_branded,
                                                         hw_compliance_version)
     except FileNotFoundError:
-      gsctool.SetFeatureManagementFlags(chassis_branded, hw_compliance_version)
+      self._gsctool.SetFeatureManagementFlags(chassis_branded,
+                                              hw_compliance_version)
 
   def Cr50SetBoardId(self, two_stages, is_flags_only=False):
     """Set the board id and flags on the Cr50 chip.
@@ -1646,8 +1637,7 @@ class Gooftool:
       self._Cr50SetROHashForShipping()
 
     skip_feature_tiering_steps |= (
-        rma_mode and
-        gsctool_module.GSCTool().IsGSCFeatureManagementFlagsLocked())
+        rma_mode and self._gsctool.IsGSCFeatureManagementFlagsLocked())
 
     # Setting the feature management flags to GSC is a write-once operation,
     # so we should set these flags right before Cr50SetBoardId.
@@ -1672,17 +1662,16 @@ class Gooftool:
     open ccd capabilities. Before finalizing the DUT, factory mode MUST be
     disabled.
     """
-    gsctool = gsctool_module.GSCTool()
 
     def _IsCCDInfoMandatory():
-      cr50_verion = gsctool.GetCr50FirmwareVersion().rw_version
+      gsc_version = self._gsctool.GetGSCFirmwareVersion().rw_version
       # If second number is odd in version then it is prod version.
-      is_prod = int(cr50_verion.split('.')[1]) % 2
+      is_prod = int(gsc_version.split('.')[1]) % 2
 
       res = True
-      if is_prod and LooseVersion(cr50_verion) < LooseVersion('0.3.9'):
+      if is_prod and LooseVersion(gsc_version) < LooseVersion('0.3.9'):
         res = False
-      elif not is_prod and LooseVersion(cr50_verion) < LooseVersion('0.4.5'):
+      elif not is_prod and LooseVersion(gsc_version) < LooseVersion('0.4.5'):
         res = False
 
       return res
@@ -1692,20 +1681,21 @@ class Gooftool:
 
     try:
       try:
-        gsctool.SetFactoryMode(False)
+        self._gsctool.SetFactoryMode(False)
         factory_mode_disabled = True
       except gsctool_module.GSCToolError:
         factory_mode_disabled = False
 
       if not _IsCCDInfoMandatory():
-        logging.warning('Command of disabling factory mode %s and can not get '
-                        'CCD info so there is no way to make sure factory mode '
-                        'status.  cr50 version RW %s',
-                        'succeeds' if factory_mode_disabled else 'fails',
-                        gsctool.GetCr50FirmwareVersion().rw_version)
+        logging.warning(
+            'Command of disabling factory mode %s and can not get '
+            'CCD info so there is no way to make sure factory mode '
+            'status. GSC version RW %s',
+            'succeeds' if factory_mode_disabled else 'fails',
+            self._gsctool.GetGSCFirmwareVersion().rw_version)
         return
 
-      is_factory_mode = gsctool.IsFactoryMode()
+      is_factory_mode = self._gsctool.IsFactoryMode()
 
     except gsctool_module.GSCToolError as e:
       raise Error(f'gsctool command fail: {e!r}') from None
@@ -1715,39 +1705,6 @@ class Gooftool:
 
     if is_factory_mode:
       raise Error('Failed to disable Cr50 factory mode.')
-
-  def Cr50VerifyAPRO(self):
-    """Trigger the AP RO verification.
-
-    This command only can be run in the factory mode.
-    The device will reboot after the command.
-    """
-    cmd = 'gsctool -aB start'
-    self._util.shell(cmd)
-
-  def GSCReboot(self):
-    """Reboot and trigger the AP RO verification V2.
-
-    The device will reboot after the command.
-    """
-    cmd = 'gsctool -a --reboot'
-    self._util.shell(cmd)
-
-  def GSCGetAPROResult(self):
-    """Get the result of the AP RO verification.
-
-    ref: process_get_apro_boot_status in
-    platform/cr50/extra/usb_updater/gsctool.c
-    """
-    cmd = 'gsctool -aB'
-    result = self._util.shell(cmd)
-    if result.success:
-      # An example of the Cr50 result is "apro result (0) : not run".
-      # An example of the Ti50 result is "apro result (20) : success".
-      match = re.match(r'apro result \((\d+)\).*', result.stdout)
-      if match:
-        return gsctool_module.APROResult(int(match.group(1)))
-    raise Error(f'Unknown apro result {result}.')
 
   def FpmcuInitializeEntropy(self):
     """Initialze entropy of FPMCU.
@@ -1856,8 +1813,7 @@ class Gooftool:
     """Sets addressing mode for ap ro verification on Ti50."""
 
     futility = futility_module.Futility()
-    gsctool = gsctool_module.GSCTool()
-    gsctool.SetAddressingMode(futility.GetFlashSize())
+    self._gsctool.SetAddressingMode(futility.GetFlashSize())
 
   def Ti50SetSWWPRegister(self, no_write_protect):
     """Sets wpsr for ap ro verification on Ti50.
@@ -1865,7 +1821,6 @@ class Gooftool:
     If write protect is enabled, the wpsr should be derived from ap_wpsr.
     Otherwise, set zero to ask Ti50 to ignore the write protect status.
     """
-    gsctool = gsctool_module.GSCTool()
     futility = futility_module.Futility()
     if no_write_protect:
       wpsr = '0 0'
@@ -1882,7 +1837,7 @@ class Gooftool:
         wpsr = match[1]
       else:
         raise Error(f'Fail to parse the wpsr from ap_wpsr tool {res}')
-    gsctool.SetWpsr(wpsr)
+    self._gsctool.SetWpsr(wpsr)
 
   def GetFlashName(self):
     """Probes the flash chip for ap_wpsr tool to derive wpsr.
