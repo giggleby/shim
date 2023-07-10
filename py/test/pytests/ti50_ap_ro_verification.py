@@ -50,7 +50,7 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.gsc_utils import GSCUtils
 
-from cros.factory.external.chromeos_cli import gsctool
+from cros.factory.external.chromeos_cli import gsctool as gsctool_module
 
 
 class Ti50APROVerficationTest(test_case.TestCase):
@@ -64,6 +64,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
 
   def setUp(self):
     self.gooftool = Gooftool()
+    self.gsctool = gsctool_module.GSCTool()
     self.goofy = state.GetInstance()
     self._util = Util()
     self.ap_wp_target = write_protect_target.CreateWriteProtectTarget(
@@ -100,7 +101,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
     # Reboot GSC.
     try:
       session.console.info('Start to reboot GSC...')
-      self.gooftool.GSCReboot()
+      self.gsctool.Ti50VerifyAPRO()
     finally:
       # If the command works properly, the device will reboot and won't
       # execute this line.
@@ -115,8 +116,8 @@ class Ti50APROVerficationTest(test_case.TestCase):
     # 'apro result (36) : AP_RO_V2_NON_ZERO_GBB_FLAGS',
     # which will map to a failure only related to non-zero GBB flags,
     # but it would pass if GBB flags are zero.
-    result = self.gooftool.GSCGetAPROResult()
-    if result != gsctool.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
+    result = self.gsctool.GSCGetAPROResult()
+    if result != gsctool_module.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
       self.FailTask('Ti50 AP RO Verification failed '
                     f'with the following result: {result.name}')
       session.console.info('Ti50 AP RO Verification passed.')

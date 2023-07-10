@@ -251,6 +251,9 @@ class GooftoolTest(unittest.TestCase):
 
     self._smart_amp_info = self._gooftool.GetSmartAmpInfo
     self._gooftool.GetSmartAmpInfo = mock.Mock(return_value=[None, None, None])
+    self._gooftool._gsctool = mock.Mock(self._gooftool._gsctool)
+    self._gooftool._gsctool.GetFeatureManagementFlags.return_value = (
+        FeatureManagementFlags(False, 0))
 
   def testVerifyECKeyWithPubkeyHash(self):
     f = MockFile()
@@ -1206,43 +1209,34 @@ class GooftoolTest(unittest.TestCase):
 
   @mock.patch('cros.factory.gooftool.core.Gooftool.'
               'GSCSetFeatureManagementFlagsWithHwSecUtils')
-  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
   def testGSCSetFeatureManagementFlags_Flags_Inconsistent_Use_HwSecUtils(
-      self, mock_get_device_data, mock_gsctool, mock_hwsec_wrapper):
+      self, mock_get_device_data, mock_hwsec_wrapper):
 
     mock_get_device_data.side_effect = [True, 1]
-    mock_gsctool(
-    ).GetFeatureManagementFlags.return_value = FeatureManagementFlags(False, 0)
 
     self._gooftool.GSCSetFeatureManagementFlags()
     mock_hwsec_wrapper.assert_called_once()
 
   @mock.patch('cros.factory.gooftool.core.Gooftool.'
               'GSCSetFeatureManagementFlagsWithHwSecUtils')
-  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
   def testGSCSetFeatureManagementFlags_Flags_Inconsistent_Use_GSCTool(
-      self, mock_get_device_data, mock_gsctool, mock_hwsec_wrapper):
+      self, mock_get_device_data, mock_hwsec_wrapper):
 
     mock_get_device_data.side_effect = [True, 1]
     mock_hwsec_wrapper.side_effect = FileNotFoundError()
-    mock_gsctool(
-    ).GetFeatureManagementFlags.return_value = FeatureManagementFlags(False, 0)
 
     self._gooftool.GSCSetFeatureManagementFlags()
-    mock_gsctool().SetFeatureManagementFlags.assert_called_once()
+    self._gooftool._gsctool.SetFeatureManagementFlags.assert_called_once()
 
   @mock.patch('cros.factory.gooftool.core.Gooftool.'
               'GSCSetFeatureManagementFlagsWithHwSecUtils')
-  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
   def testGSCSetFeatureManagementFlags_Flags_Consistent(
-      self, mock_get_device_data, mock_gsctool, mock_hwsec_wrapper):
+      self, mock_get_device_data, mock_hwsec_wrapper):
 
     mock_get_device_data.side_effect = [False, 0]
-    mock_gsctool(
-    ).GetFeatureManagementFlags.return_value = FeatureManagementFlags(False, 0)
 
     self._gooftool.GSCSetFeatureManagementFlags()
     mock_hwsec_wrapper.assert_not_called()

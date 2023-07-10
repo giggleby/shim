@@ -63,7 +63,7 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.gsc_utils import GSCUtils
 
-from cros.factory.external.chromeos_cli import gsctool
+from cros.factory.external.chromeos_cli import gsctool as gsctool_module
 
 
 class OperationError(Exception):
@@ -83,6 +83,7 @@ class Cr50APROVerficationTest(test_case.TestCase):
 
   def setUp(self):
     self.gooftool = Gooftool()
+    self.gsctool = gsctool_module.GSCTool()
     self.ui.ToggleTemplateClass('font-large', True)
     self.dut = device_utils.CreateDUTInterface()
     self.goofy = state.GetInstance()
@@ -93,18 +94,18 @@ class Cr50APROVerficationTest(test_case.TestCase):
     self.AddTask(self.CheckAPROResult)
 
   def HandleError(self, status):
-    if status == gsctool.APROResult.AP_RO_NOT_RUN:
+    if status == gsctool_module.APROResult.AP_RO_NOT_RUN:
       # Since the verification is triggered by command, the only case that the
       # the verification won't be triggered is the reboot to recover from brick
       # when the verification failed.
       self.FailTask('The verification is failed.')
-    elif status == gsctool.APROResult.AP_RO_UNSUPPORTED_NOT_TRIGGERED:
+    elif status == gsctool_module.APROResult.AP_RO_UNSUPPORTED_NOT_TRIGGERED:
       # If AP RO verification is not supported, the test should fail in the
       # first round.
       if self.args.manual_test:
         raise OperationError
       raise Exception('Unexpected error, please retry the test.')
-    elif status == gsctool.APROResult.AP_RO_FAIL:
+    elif status == gsctool_module.APROResult.AP_RO_FAIL:
       logging.exception(
           'Should not be here, device is expected to be not bootable.')
       self.FailTask('The verification is failed.')
@@ -129,8 +130,8 @@ class Cr50APROVerficationTest(test_case.TestCase):
             seconds=self.args.timeout_secs))
     else:
       try:
-        self.dut.CheckOutput(['gsctool', '-ao'], log=True)
-        self.gooftool.Cr50VerifyAPRO()
+        self.gsctool.CCDOpen()
+        self.gsctool.Cr50VerifyAPRO()
       finally:
         # If the command works properly, the device will reboot and won't
         # execute this line.
@@ -138,6 +139,6 @@ class Cr50APROVerficationTest(test_case.TestCase):
                       'and check if DUT is in CR50 factory mode.')
 
   def CheckAPROResult(self):
-    status = self.gooftool.GSCGetAPROResult()
-    if status != gsctool.APROResult.AP_RO_PASS:
+    status = self.gsctool.GSCGetAPROResult()
+    if status != gsctool_module.APROResult.AP_RO_PASS:
       self.HandleError(status)
