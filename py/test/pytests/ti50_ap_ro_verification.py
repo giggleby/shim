@@ -52,7 +52,7 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.gsc_utils import GSCUtils
 
-from cros.factory.external.chromeos_cli import gsctool
+from cros.factory.external.chromeos_cli import gsctool as gsctool_module
 
 
 class Ti50APROVerficationTest(test_case.TestCase):
@@ -66,6 +66,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
 
   def setUp(self):
     self.gooftool = Gooftool()
+    self.gsctool = gsctool_module.GSCTool()
     self.goofy = state.GetInstance()
     self.device_data_key = f'factory.{type(self).__name__}.has_rebooted'
     self._util = Util()
@@ -90,8 +91,8 @@ class Ti50APROVerficationTest(test_case.TestCase):
         # 'apro result (36) : AP_RO_V2_NON_ZERO_GBB_FLAGS',
         # which will map to a failure only related to non-zero GBB flags,
         # but it would pass if GBB flags are zero.
-        result = self.gooftool.GSCGetAPROResult()
-        if result != gsctool.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
+        result = self.gsctool.GSCGetAPROResult()
+        if result != gsctool_module.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
           self.FailTask('Ti50 AP RO Verification failed '
                         f'with the following result: {result.name}')
       else:
@@ -116,7 +117,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
         device_data.UpdateDeviceData({self.device_data_key: True})
         subprocess.check_call('sync')
         try:
-          self.gooftool.GSCReboot()
+          self.gsctool.Ti50VerifyAPRO()
         finally:
           # If the command works properly, the device will reboot and won't
           # execute this line.

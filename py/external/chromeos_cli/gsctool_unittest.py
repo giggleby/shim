@@ -143,6 +143,42 @@ class GSCToolTest(unittest.TestCase):
     self._SetGSCToolUtilityResult(status=1)
     self.assertRaises(gsctool.GSCToolError, self.gsctool.GetBoardID)
 
+  def testCCDOpen(self):
+    self.gsctool.CCDOpen()
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-o'])
+
+  def testGetCr50APROHash(self):
+    self.gsctool.GetCr50APROHash()
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-A'])
+
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool.'
+              'GetCr50APROHash')
+  def testIsCr50ROHashSet(self, mock_get_cr50_ap_ro_hash):
+    mock_get_cr50_ap_ro_hash.return_value = 'digest: af0241'
+    self.assertTrue(self.gsctool.IsCr50ROHashSet())
+    mock_get_cr50_ap_ro_hash.return_value = 'get hash rc: 12 board id blocked'
+    self.assertFalse(self.gsctool.IsCr50ROHashSet())
+
+  def testCr50VerifyAPRO(self):
+    self.gsctool.Cr50VerifyAPRO()
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-B', 'start'])
+
+  def testTi50VerifyAPRO(self):
+    self.gsctool.Ti50VerifyAPRO()
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '--reboot'])
+
+  def testParseGSCAPROResult(self):
+    not_run = self.gsctool.ParseGSCAPROResult('apro result (0) : not run')
+    self.assertEqual(not_run, gsctool.APROResult.AP_RO_NOT_RUN)
+    success = self.gsctool.ParseGSCAPROResult('apro result (20) : success')
+    self.assertEqual(success, gsctool.APROResult.AP_RO_V2_SUCCESS)
+
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool.'
+              'ParseGSCAPROResult')
+  def testGSCGetAPROResult(self, _unused_mock_parse_gsc_ap_ro_result):
+    self.gsctool.GSCGetAPROResult()
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-B'])
+
   def _SetGSCToolUtilityResult(self, stdout='', status=0):
     self.shell.return_value = shell.ShellResult(
         success=status == 0, status=status, stdout=stdout, stderr='')
