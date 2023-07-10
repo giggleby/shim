@@ -373,6 +373,13 @@
     "ClearTPMOwnerRequest": {
       "pytest_name": "tpm_clear_owner"
     },
+    "ClearUnknownRWVPD": {
+      "inherit": "ExecShell",
+      "label": "Clear Unknown RW VPD",
+      "args": {
+        "commands": "gooftool clear_unknown_vpd_entries"
+      }
+    },
     "ColdReset": {
       "inherit": "TestGroup",
       "label": "Cold Reset",

@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-10-20 14:01+CST\n"
+"PO-Revision-Date: 2023-07-12 14:43+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3432,6 +3432,10 @@ msgstr "清除 AP RO Hash"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Clear factory VPD entries"
 msgstr "清除工厂 VPD 资讯"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Clear Unknown RW VPD"
+msgstr "清除未知 RW VPD"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "EC Cold Reset"
