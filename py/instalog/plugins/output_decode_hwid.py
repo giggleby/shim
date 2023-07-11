@@ -112,7 +112,8 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
     enablement_status = bom['xEnablementStatus']
     event['featureEnablementType'] = FEATURE_ENABLEMENT_TYPE_MAP[
         enablement_status['enablementType']]
-    event['hwComplianceVersion'] = enablement_status['hwComplianceVersion']
+    event['hwComplianceVersion'] = enablement_status.get('hwComplianceVersion',
+                                                         0)
     return event
 
   def DecodeHwid(self):
