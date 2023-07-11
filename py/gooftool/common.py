@@ -516,17 +516,5 @@ class Util:
             self.GetCrosSystem(),
         'modem_status':
             self.shell('modem status').stdout.splitlines(),
-        'ec_wp_status':
-            self.shell('flashrom -p ec --flash-size 2>/dev/null && '
-                       'flashrom -p ec --wp-status || '
-                       'echo "EC is not available."').stdout,
-        'bios_wp_status':
-            self.shell('flashrom -p host --wp-status').stdout,
-        'cr50_board_id':
-            self.shell('gsctool -a -i -M').stdout,
-        'cr50_sn_bits':
-            self.shell('/usr/share/cros/cr50-read-rma-sn-bits.sh').stdout,
-        'cr50_fw_version':
-            self.shell('gsctool -a -f -M').stdout,
     }
     return system_info
