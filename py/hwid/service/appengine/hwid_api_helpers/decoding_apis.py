@@ -34,15 +34,6 @@ def _GetFeatureEnablementStatusLabel(
   return f'{source.enablement_type.name}:{source.hw_compliance_version}'
 
 
-def _GetFeatureEnablementStatusLegacyLabel(
-    source: feature_matching.FeatureEnablementStatus) -> str:
-  if source.enablement_type == feature_matching.FeatureEnablementType.DISABLED:
-    enablement_type = 'not_branded'
-  else:
-    enablement_type = source.enablement_type.name.lower()
-  return f'{enablement_type}:{source.hw_compliance_version}'
-
-
 _FeatureEnablementType = feature_matching.FeatureEnablementType
 
 
@@ -97,8 +88,6 @@ class GetBOMShard(common_helper.HWIDServiceShardBase):
       feature_enablement_status = (
           _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
               request.hwid, bom_entry, hwid_action_getter))
-      response.feature_enablement_status_legacy = (
-          _GetFeatureEnablementStatusLegacyLabel(feature_enablement_status))
       _SetFeatureEnablementStatusMsg(response.feature_enablement_status,
                                      feature_enablement_status)
     return response
@@ -121,8 +110,6 @@ class GetBOMShard(common_helper.HWIDServiceShardBase):
         feature_enablement_status = (
             _GetFeatureEnablementStatusOrDefaultFromBOMEntry(
                 hwid, bom_entry, hwid_action_getter))
-        current_bom_response.feature_enablement_status_legacy = (
-            _GetFeatureEnablementStatusLegacyLabel(feature_enablement_status))
         _SetFeatureEnablementStatusMsg(
             current_bom_response.feature_enablement_status,
             feature_enablement_status)
@@ -183,8 +170,6 @@ class GetSKUShard(common_helper.HWIDServiceShardBase):
         memory=sku.memory_str,
         sku=sku.sku_str,
         warnings=sku.warnings,
-        feature_enablement_status_legacy=_GetFeatureEnablementStatusLegacyLabel(
-            feature_enablement_status),
         feature_enablement_status=_ToFeatureEnablementStatusMsg(
             feature_enablement_status),
     )

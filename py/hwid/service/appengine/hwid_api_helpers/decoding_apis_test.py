@@ -351,7 +351,6 @@ class GetBOMShardTest(unittest.TestCase):
             feature_enablement_status=_FeatureEnablementStatusMsg(
                 enablement_type=_FeatureEnablementStatusMsg.HARD_BRANDED,
                 hw_compliance_version=1),
-            feature_enablement_status_legacy='hard_branded:1',
         ), msg)
 
   def testGetBom_WithError(self):
@@ -396,7 +395,6 @@ class GetBOMShardTest(unittest.TestCase):
                             ComponentMsg(name='qux1', component_class='baz1'),
                             ComponentMsg(name='rox1', component_class='baz1'),
                         ],
-                        feature_enablement_status_legacy='not_branded:0',
                         feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
                     ),
                 hwid2:
@@ -406,7 +404,6 @@ class GetBOMShardTest(unittest.TestCase):
                             ComponentMsg(name='qux2', component_class='baz2'),
                             ComponentMsg(name='rox2', component_class='baz2'),
                         ],
-                        feature_enablement_status_legacy='not_branded:0',
                         feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
                     ),
             }, status=StatusMsg.SUCCESS), msg)
@@ -455,7 +452,6 @@ class GetBOMShardTest(unittest.TestCase):
                             ComponentMsg(name='rox', component_class='baz'),
                             ComponentMsg(name='bar', component_class='foo'),
                         ],
-                        feature_enablement_status_legacy='not_branded:0',
                         feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
                     ),
             }, status=StatusMsg.BAD_REQUEST, error='value error'), msg)
@@ -523,7 +519,6 @@ class GetSKUShardTest(unittest.TestCase):
             memory='1MB',
             memory_in_bytes=100000000,
             sku='foo_bar1_bar2_1MB',
-            feature_enablement_status_legacy='not_branded:0',
             feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
         ), msg)
 
@@ -557,7 +552,6 @@ class GetSKUShardTest(unittest.TestCase):
             memory='4GB',
             memory_in_bytes=4294967296,
             sku='foo_bar1_bar2_4GB',
-            feature_enablement_status_legacy='not_branded:0',
             feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
         ), msg)
 
@@ -586,7 +580,6 @@ class GetSKUShardTest(unittest.TestCase):
             memory='0B',
             status=StatusMsg.SUCCESS,
             warnings=["'fail' does not contain size field"],
-            feature_enablement_status_legacy='not_branded:0',
             feature_enablement_status=_FEATURE_DISABLED_STATUS_MSG,
         ), msg)
 
@@ -622,7 +615,6 @@ class GetSKUShardTest(unittest.TestCase):
             memory='1MB',
             memory_in_bytes=100000000,
             sku='foo_bar1_bar2_1MB',
-            feature_enablement_status_legacy='soft_branded_legacy:1',
             feature_enablement_status=_FeatureEnablementStatusMsg(
                 enablement_type=_FeatureEnablementStatusMsg.SOFT_BRANDED_LEGACY,
                 hw_compliance_version=1,

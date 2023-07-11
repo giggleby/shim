@@ -114,6 +114,8 @@ message FeatureEnablementStatus {
 
 // The response to a BOM request.
 message BomResponse {
+  reserved 6;
+
   // A list of the components in the BOM.
   repeated Component components = 1;
   // A list of labels of the BOM.
@@ -124,9 +126,6 @@ message BomResponse {
   // the other fields in the message should be disregarded.
   string error = 4;
   Status status = 5;
-  // A human readable string representing the versioned feature info on the
-  // device.
-  string feature_enablement_status_legacy = 6  [deprecated = true];
   // Indicates the enablement status of the versioned features on the device.
   FeatureEnablementStatus feature_enablement_status = 7;
 }
@@ -145,6 +144,8 @@ message BatchGetBomRequest {
 message BatchGetBomResponse {
   // The response to a BOM request.
   message Bom {
+    reserved 6;
+
     // A list of the components in the BOM.
     repeated Component components = 1;
     // A list of labels of the BOM.
@@ -155,9 +156,6 @@ message BatchGetBomResponse {
     // the other fields in the message should be disregarded.
     string error = 4;
     Status status = 5;
-    // A human readable string representing the versioned feature info on the
-    // device.
-    string feature_enablement_status_legacy = 6  [deprecated = true];
     // Indicates the enablement status of the versioned features on the device.
     FeatureEnablementStatus feature_enablement_status = 7;
   }
@@ -316,6 +314,8 @@ message SkuRequest {
 
 // The response to a BOM request.
 message SkuResponse {
+  reserved 9;
+
   // The project listed in the BOM.
   string project = 1;
   // The listed CPU in the BOM.
@@ -332,9 +332,6 @@ message SkuResponse {
   Status status = 7;
   // Strings of warnings as a note of potential issues in the SKU.
   repeated string warnings = 8;
-  // A human readable string representing the versioned feature info on the
-  // device.
-  string feature_enablement_status_legacy = 9  [deprecated = true];
   // Indicates the enablement status of the versioned features on the device.
   FeatureEnablementStatus feature_enablement_status = 10;
 }
