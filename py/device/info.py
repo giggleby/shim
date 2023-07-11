@@ -514,12 +514,15 @@ class SystemInfo(device_types.DeviceComponent):
     """Returns the crosid of the device.
 
     The output of `crosid` command looks like:
-      SKU=xxx
-      CONFIG_INDEX=xxx
+      SKU='xxx'
+      CONFIG_INDEX='xxx'
       FIRMWARE_MANIFEST_KEY='xxx'
     """
     output = self._device.CheckOutput(['crosid']).strip()
     crosid = self._ParseStrToDict(self._REGEX_KEY_EQUAL_VALUE, output)
+    # Removes the quotes around string.
+    for k, v in crosid.items():
+      crosid[k] = v.replace('\'', '')
     return {
         'sku': self._IntToHexStr(int(crosid['SKU'])),
         'config_index': int(crosid['CONFIG_INDEX']),
