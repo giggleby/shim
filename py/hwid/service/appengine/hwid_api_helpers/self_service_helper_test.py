@@ -1200,6 +1200,25 @@ class SelfServiceShardTest(unittest.TestCase):
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
                         skip_avl_check=False, marked_untracked=False),
+                'comp3':
+                    hwid_action.DBHWIDComponentAnalysisResult(
+                        comp_cls='comp_cls2', comp_name='comp_cls2_untracked',
+                        support_status='unqualified', is_newly_added=False,
+                        comp_name_info=name_pattern_adapter.UntrackedNameInfo(),
+                        seq_no=10, comp_name_with_correct_seq_no=None,
+                        null_values=False, diff_prev=_DiffStatus(
+                            unchanged=False, name_changed=True,
+                            support_status_changed=False, values_changed=False,
+                            prev_comp_name='comp_cls2_123_456',
+                            prev_support_status='unqualified',
+                            probe_value_alignment_status_changed=False,
+                            prev_probe_value_alignment_status=(
+                                _PVAlignmentStatus.NO_PROBE_INFO),
+                            converter_changed=False,
+                            marked_untracked_changed=True), link_avl=False,
+                        probe_value_alignment_status=(
+                            _PVAlignmentStatus.NO_PROBE_INFO),
+                        skip_avl_check=False, marked_untracked=False),
             },
             hwid_action.DBHWIDTouchSections(
                 hwid_action.DBHWIDTouchCase.UNTOUCHED,
@@ -1263,6 +1282,32 @@ class SelfServiceShardTest(unittest.TestCase):
                             'comp_cls2_111_222#1'),
                         probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO),
+                    ),
+                'comp3':
+                    _ComponentInfoMsg(
+                        component_class='comp_cls2',
+                        original_name='comp_cls2_untracked',
+                        original_status='unqualified',
+                        support_status_case=_SupportStatusCase.UNQUALIFIED,
+                        is_newly_added=False,
+                        has_avl=False,
+                        avl_info=None,
+                        seq_no=10,
+                        diff_prev=_DiffStatusMsg(
+                            unchanged=False, name_changed=True,
+                            support_status_changed=False, values_changed=False,
+                            prev_comp_name='comp_cls2_123_456',
+                            prev_support_status='unqualified',
+                            prev_support_status_case=(
+                                _SupportStatusCase.UNQUALIFIED),
+                            probe_value_alignment_status_changed=False,
+                            prev_probe_value_alignment_status=(
+                                _PVAlignmentStatusMsg.NO_PROBE_INFO),
+                            marked_untracked_changed=True),
+                        probe_value_alignment_status=(
+                            _PVAlignmentStatusMsg.NO_PROBE_INFO),
+                        skip_avl_check=False,
+                        marked_untracked=True,
                     ),
             }, touched_sections=_HWIDSectionChangeMsg(
                 image_id_change_status=_HWIDSectionChangeStatusMsg.UNTOUCHED,
