@@ -358,7 +358,8 @@ class DatabaseBuilder:
       self._database.AddEncodedFieldComponents(field_name, {comp_cls: []})
 
   @_EnsureInBuilderContext
-  def AddFirmwareComponent(self, comp_cls, value, comp_name, supported=False):
+  def AddFirmwareComponent(self, comp_cls, value, comp_name,
+                           supported=False) -> database.ComponentInfo:
     # Rename instead of add if any old component has same probed value
     for old_comp_name, comp_info in self.GetComponents(comp_cls).items():
       if (value and not comp_info.value_is_none and
@@ -368,7 +369,7 @@ class DatabaseBuilder:
         self.UpdateComponent(comp_cls, old_comp_name, comp_name,
                              comp_info.values, status, comp_info.information,
                              comp_info.bundle_uuids)
-        return
+        return self.GetComponents(comp_cls)[comp_name]
 
     field_name = f'{comp_cls}_field'
 
@@ -379,7 +380,8 @@ class DatabaseBuilder:
       self.AddNullComponent(comp_cls)
       self.AppendEncodedFieldBit(field_name, 1)
 
-    self.AddComponentCheck(comp_cls, value, comp_name, supported=supported)
+    comp_info = self.AddComponentCheck(comp_cls, value, comp_name,
+                                       supported=supported)
     if field_name not in self._database.encoded_fields:
       self.AddNewEncodedField(comp_cls, [comp_name])
     else:
@@ -388,6 +390,8 @@ class DatabaseBuilder:
     # missing essential comps.
     if not self._database.is_initial:
       self.FillEncodedFieldBit(field_name)
+
+    return comp_info
 
   @_EnsureInBuilderContext
   def AddRegions(self, new_regions, region_field_name='region_field'):
@@ -567,7 +571,7 @@ class DatabaseBuilder:
   @_EnsureInBuilderContext
   def AddComponentCheck(self, comp_cls: str, probed_value: ProbedValueType,
                         set_comp_name: Optional[str] = None,
-                        supported: bool = False):
+                        supported: bool = False) -> database.ComponentInfo:
     """Tries to add an item into the component.
 
     This method is called with probed value from factory process instead of
@@ -584,13 +588,18 @@ class DatabaseBuilder:
       set_comp_name: Set component name for the item. If None is given, it will
         be determined automatically.
       supported: whether to mark the added component as supported.
+
+    Returns:
+      The added component info.
     """
 
     if common.FirmwareComps.has_value(comp_cls):
       self._DeprecateOldFirmwareComponent(comp_cls, probed_value)
 
-    comp_name = set_comp_name or DetermineComponentName(
-        comp_cls, probed_value, list(self._database.GetComponents(comp_cls)))
+    comps = list(self._database.GetComponents(comp_cls))
+    comp_name = (
+        HandleCollisionName(set_comp_name, comps) or
+        DetermineComponentName(comp_cls, probed_value, comps))
 
     logging.info('Component %s: add an item "%s".', comp_cls, comp_name)
     status = (
@@ -603,6 +612,8 @@ class DatabaseBuilder:
     if default_comp_name is not None:
       self._database.SetComponentStatus(comp_cls, default_comp_name,
                                         common.ComponentStatus.unsupported)
+
+    return self.GetComponents(comp_cls)[comp_name]
 
   @_EnsureInBuilderContext
   def AddComponent(self, comp_cls: str, comp_name: str,

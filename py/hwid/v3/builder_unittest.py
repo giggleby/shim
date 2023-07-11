@@ -930,6 +930,27 @@ class DatabaseBuilderTest(unittest.TestCase):
     components = db.GetComponents('ro_fp_firmware')
     self.assertEqual('supported', components['firmware0'].status)
 
+  @label_utils.Informational
+  def testAddComponentCheck_HandleCollisionName(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddComponentCheck('ro_main_firmware', {
+          'version': 'Google_Proj.1111.1.1',
+          'hash': '1'
+      }, 'firmware0', True)
+
+    db = db_builder.Build()
+
+    components = db.GetComponents('ro_main_firmware')
+    self.assertDictEqual({
+        'version': 'Google_Proj.1111.1.1',
+        'hash': '0'
+    }, components['firmware0'].values)
+    self.assertDictEqual({
+        'version': 'Google_Proj.1111.1.1',
+        'hash': '1'
+    }, components['firmware0_1'].values)
+
   # TODO (b/204729913)
   @label_utils.Informational
   def testAddEncodedFieldComponents(self):

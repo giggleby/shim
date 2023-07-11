@@ -1707,6 +1707,31 @@ class SelfServiceShardTest(unittest.TestCase):
 
     self.assertEqual(len(resp.commits), 0)
 
+  def testCreateHwidDbFirmwareInfoUpdateCl_NameCollision(self):
+    raw_db = file_utils.ReadFile(HWIDV3_FROM_FACTORY_BUNDLE_AFTER_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
+
+    firmware_record = _FirmwareRecord(
+        model='proj', ro_fp_firmware=[
+            _FirmwareRecord.FirmwareInfo(hash='another_hash_string',
+                                         version='fp_firmware_1')
+        ])
+    bundle_record = _FactoryBundleRecord(board='board', firmware_signer='',
+                                         firmware_records=[firmware_record])
+    req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
+        bundle_record=bundle_record)
+    resp = self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
+    comps = action.GetComponents(['ro_fp_firmware'])
+
+    self.assertIn('fp_firmware_1_1', comps['ro_fp_firmware'])
+    self.assertEqual(resp.commits['PROJ'].cl_number, 123)
+    self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
+                     action.GetDBEditableSection())
+
   def testCreateHwidDbFirmwareInfoUpdateCl_ProjectNotFound(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
 

@@ -865,12 +865,14 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
             else:
               comp_name = v3_builder.DetermineComponentName(field.name, value)
 
-            if comp_name not in db_builder.GetComponents(field.name):
-              db_builder.AddFirmwareComponent(
-                  field.name, value, comp_name,
-                  supported=firmware_record.supported)
+            comp = db_builder.AddFirmwareComponent(
+                field.name, value, comp_name,
+                supported=firmware_record.supported)
 
-            comp = db_builder.GetComponents(field.name)[comp_name]
+            # Get the comp_name by hash again since it may be renamed if there's
+            # a collision
+            comp_name = db_builder.GetComponentNameByHash(
+                field.name, comp.comp_hash)
             db_builder.GetComponents(field.name)[comp_name] = comp.Replace(
                 bundle_uuids=list(comp.bundle_uuids) + [request_uuid])
 
