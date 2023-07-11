@@ -34,8 +34,8 @@ Model name:                      Vendor ID 1234
 """
 
 MOCK_CROSID = """
-SKU=1
-CONFIG_INDEX=10
+SKU='95'
+CONFIG_INDEX='10'
 FIRMWARE_MANIFEST_KEY='mock_fw'
 """
 
@@ -83,9 +83,9 @@ class SystemInfoTest(unittest.TestCase):
     info = info_module.SystemInfo(dut)
     self.assertEqual(
         {
-            'sku': '0x1',
+            'sku': '0x5f',
             'config_index': 10,
-            'firmware_manifest_key': "'mock_fw'",
+            'firmware_manifest_key': 'mock_fw',
         }, info.crosid)
 
 

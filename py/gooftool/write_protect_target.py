@@ -125,7 +125,7 @@ class _ECWriteProtectTarget(IWriteProtectTarget):
             'sure hardware write protection is enabled.')
 
   def GetStatus(self):
-    result = self._InvokeCommand('')
+    result = self._InvokeCommand('').stdout
     lines = result.split('\n')
 
     # First line should be active flags
