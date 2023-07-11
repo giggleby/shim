@@ -47,7 +47,7 @@
       "keys": [
         "model",
         "cores",
-        "hardware"
+        "chip_id"
       ]
     }
   },
