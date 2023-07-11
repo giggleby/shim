@@ -74,8 +74,8 @@ def _GetSoCInfo():
   soc_id = match.group(2)
 
   model = f'ARMv8 Vendor{vendor_id} {soc_id}'
-  hardware = _ProbeChipID(vendor_id)
-  return model, hardware
+  chip_id = _ProbeChipID(vendor_id)
+  return model, chip_id
 
 
 class GenericCPUFunction(probe_function.ProbeFunction):
@@ -134,37 +134,9 @@ class GenericCPUFunction(probe_function.ProbeFunction):
         'cores': str(physical),
         'online_cores': str(online)}
 
-  @staticmethod
-  def _ProbeArm():
-    # For ARM platform, ChromeOS kernel has/had special code to expose fields
-    # like 'model name' or 'Processor' and 'Hardware' field.  However, this
-    # doesn't seem to be available in ARMv8 (and probably all future versions).
-    # In this case, we will use 'CPU architecture' to identify the ARM version.
-
-    cpuinfo = file.ReadFile(CPU_INFO_FILE)
-
-    def _SearchCPUInfo(regex, name):
-      matched = re.search(regex, cpuinfo, re.MULTILINE)
-      if matched is None:
-        logging.warning('Unable to find "%s" field in %s.', name, CPU_INFO_FILE)
-        return 'unknown'
-      return matched.group(1)
-
-    # For ARMv7, model and hardware should be available.
-    model = _SearchCPUInfo(r'^(?:Processor|model name)\s*: (.*)$', 'model')
-    hardware = _SearchCPUInfo(r'^Hardware\s*: (.*)$', 'hardware')
-    architecture = _SearchCPUInfo(r'^CPU architecture\s*: (\d+)$',
-                                  'architecture')
-
-    if model.strip() == 'unknown' and architecture == '8':
-      # For ARMv8, the model and hardware are not available from the cpuinfo
-      # file; but the identifiers can be found from the soc_id and some
-      # vendor-specific information.
-      model, hardware = _GetSoCInfo()
-
-    if model.strip() == 'unknown':
-      logging.error('Unable to construct "model" of ARM CPU')
-
+  @classmethod
+  def _ProbeArm(cls):
+    model, chip_id = _GetSoCInfo()
     cores = process_utils.CheckOutput('nproc', shell=True, log=True)
     # TODO(frankbozar): count the number of online cores
 
@@ -172,6 +144,6 @@ class GenericCPUFunction(probe_function.ProbeFunction):
         'model': model.strip(),
         'cores': cores.strip(),
     }
-    if hardware:
-      values['hardware'] = hardware.strip()
+    if chip_id:
+      values['chip_id'] = chip_id.strip()
     return values
