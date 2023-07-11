@@ -516,15 +516,5 @@ class Util:
             self.GetCrosSystem(),
         'modem_status':
             self.shell('modem status').stdout.splitlines(),
-        'ec_wp_status':
-            self.shell('ectool flashprotect').stdout,
-        'bios_wp_status':
-            self.shell('futility flash --wp-status --ignore-hw').stdout,
-        'gsc_board_id':
-            self.shell('gsctool -a -i -M').stdout,
-        'gsc_sn_bits':
-            self.shell('/usr/share/cros/cr50-read-rma-sn-bits.sh').stdout,
-        'gsc_fw_version':
-            self.shell('gsctool -a -f -M').stdout,
     }
     return system_info

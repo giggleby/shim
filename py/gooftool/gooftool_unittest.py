@@ -968,8 +968,6 @@ class GooftoolTest(unittest.TestCase):
     system_summary_keys = {
         'cbi', 'crosid', 'device', 'factory', 'fw', 'gsc', 'hw', 'image',
         'system', 'vpd', 'wp', 'platform_name', 'crossystem', 'modem_status',
-        'ec_wp_status', 'bios_wp_status', 'gsc_board_id', 'gsc_sn_bits',
-        'gsc_fw_version'
     }
     self.assertEqual(system_summary_keys,
                      set(self._gooftool.GetSystemDetails().keys()))
