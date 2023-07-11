@@ -122,7 +122,7 @@ class HWIDV3PreprocData(HWIDPreprocData):
     if feature_matcher_source is None:
       feature_matcher_source = (
           cls.HWID_FEATURE_MATCHER_BUILDER.GenerateFeatureMatcherRawSource(
-              features.NO_FEATURE_VERSION, [], []))
+              features.NO_FEATURE_VERSION, {}, []))
 
     try:
       return cls.HWID_FEATURE_MATCHER_BUILDER.CreateHWIDFeatureMatcher(

@@ -39,6 +39,13 @@ message HwidRequirement {
   repeated EncodingRequirement encoding_requirements = 2;
 }
 
+message FeatureEnablementPermission {
+  bool allow_disabled_units = 1;
+  bool allow_soft_branded_legacy_units = 2;
+  bool allow_soft_branded_waiver_units = 3;
+  bool allow_hard_branded_units = 4;
+}
+
 // The feature spec of the device.
 message DeviceFeatureSpec {
   // The device's feature version.  Value 0 means the device completely out
@@ -51,5 +58,7 @@ message DeviceFeatureSpec {
   repeated HwidRequirement hwid_requirement_candidates = 2;
 
   // A list of legacy brand names.
-  repeated string legacy_brands = 3;
+  repeated string legacy_brands = 3 [deprecated = true];
+
+  map<string, FeatureEnablementPermission> brand_code_permissions = 4;
 }

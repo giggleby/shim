@@ -378,7 +378,8 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         hwid_preproc_data.HWIDV3PreprocData.HWID_FEATURE_MATCHER_BUILDER)
     feature_matcher_source = (
         feature_matcher_builder.GenerateFeatureMatcherRawSource(
-            feature_version=1, legacy_brands=[], hwid_requirement_candidates=[
+            feature_version=1, brand_allowed_feature_enablement_types={},
+            hwid_requirement_candidates=[
                 features.HWIDRequirement(
                     description='always_fulfill_requirement',
                     bit_string_prerequisites=[])

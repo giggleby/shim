@@ -119,9 +119,10 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     ]
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
-    legacy_brands = []
+    brand_allowed_feature_enablement_types = {}
     source = builder.GenerateFeatureMatcherRawSource(
-        feature_version, legacy_brands, hwid_requirement_candidates)
+        feature_version, brand_allowed_feature_enablement_types,
+        hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
     actual = matcher.GenerateHWIDFeatureRequirementPayload()
 
@@ -168,7 +169,17 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     feature_version = 1
     db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
                              feature_version=str(feature_version))
-    legacy_brands = ['ABCD']
+    brand_allowed_feature_enablement_types = {
+        'ABCD': [
+            _FeatureEnablementType.SOFT_BRANDED_LEGACY,
+            _FeatureEnablementType.SOFT_BRANDED_WAIVER,
+            _FeatureEnablementType.DISABLED,
+        ],
+        'WXYZ': [
+            _FeatureEnablementType.HARD_BRANDED,
+            _FeatureEnablementType.DISABLED,
+        ],
+    }
     hwid_requirement_candidates = [
         features.HWIDRequirement(
             description='scenario_1', bit_string_prerequisites=[
@@ -190,7 +201,8 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
     source = builder.GenerateFeatureMatcherRawSource(
-        feature_version, legacy_brands, hwid_requirement_candidates)
+        feature_version, brand_allowed_feature_enablement_types,
+        hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     hw_incompliant_match_result = _FeatureEnablementStatus.FromHWIncompliance()
@@ -273,7 +285,9 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
                   dummy_probe_attr: dummy_probe_value
         rules: []
         """))
-    legacy_brands = ['ABCD']
+    brand_allowed_feature_enablement_types = {
+        'ABCD': [_FeatureEnablementType.SOFT_BRANDED_LEGACY],
+    }
     hwid_requirement_candidates = [
         features.HWIDRequirement(
             description='scenario_1', bit_string_prerequisites=[
@@ -285,7 +299,8 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
     source = builder.GenerateFeatureMatcherRawSource(
-        feature_version, legacy_brands, hwid_requirement_candidates)
+        feature_version, brand_allowed_feature_enablement_types,
+        hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     hw_incompliant_match_result = _FeatureEnablementStatus.FromHWIncompliance()
@@ -320,7 +335,9 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     feature_version = 1
     db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
                              feature_version=str(feature_version))
-    legacy_brands = ['ABCD']
+    brand_allowed_feature_enablement_types = {
+        'ABCD': [_FeatureEnablementType.SOFT_BRANDED_LEGACY],
+    }
     hwid_requirement_candidates = [
         features.HWIDRequirement(
             description='scenario_1', bit_string_prerequisites=[
@@ -342,7 +359,8 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
     source = builder.GenerateFeatureMatcherRawSource(
-        feature_version, legacy_brands, hwid_requirement_candidates)
+        feature_version, brand_allowed_feature_enablement_types,
+        hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
@@ -388,7 +406,10 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     feature_version = 1
     db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
                              feature_version=str(feature_version))
-    legacy_brands = ['ABCD', 'EFGH']
+    brand_allowed_feature_enablement_types = {
+        'ABCD': [_FeatureEnablementType.SOFT_BRANDED_LEGACY],
+        'EFGH': [_FeatureEnablementType.SOFT_BRANDED_LEGACY],
+    }
     hwid_requirement_candidates = [
         features.HWIDRequirement(
             description='scenario_1', bit_string_prerequisites=[
@@ -410,7 +431,8 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
     source = builder.GenerateFeatureMatcherRawSource(
-        feature_version, legacy_brands, hwid_requirement_candidates)
+        feature_version, brand_allowed_feature_enablement_types,
+        hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
@@ -457,7 +479,9 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     feature_version = 0
     db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
                              feature_version=str(feature_version))
-    legacy_brands = ['ABCD']
+    brand_allowed_feature_enablement_types = {
+        'ABCD': [_FeatureEnablementType.SOFT_BRANDED_LEGACY],
+    }
     hwid_requirement_candidates = [
         features.HWIDRequirement(
             description='scenario_1', bit_string_prerequisites=[
@@ -470,18 +494,61 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
     source = builder.GenerateFeatureMatcherRawSource(
-        feature_version, legacy_brands, hwid_requirement_candidates)
+        feature_version, brand_allowed_feature_enablement_types,
+        hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
     self.assertEqual(actual, '')
+
+  def testConvertedHWIDFeatureMatcher_GenerateLegacyPayload_PrefixOnlyForWaiver(
+      self):
+    feature_version = 1
+    db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
+                             feature_version=str(feature_version))
+    brand_allowed_feature_enablement_types = {
+        'ABCD': [_FeatureEnablementType.SOFT_BRANDED_WAIVER],
+    }
+    hwid_requirement_candidates = [
+        features.HWIDRequirement(
+            description='scenario_1', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(
+                    description='image_id_0_or_1',
+                    bit_positions=[4, 3, 2, 1,
+                                   0], required_values=[0b00000, 0b00001]),
+            ]),
+    ]
+
+    builder = feature_matching.HWIDFeatureMatcherBuilder()
+    source = builder.GenerateFeatureMatcherRawSource(
+        feature_version, brand_allowed_feature_enablement_types,
+        hwid_requirement_candidates)
+    matcher = builder.CreateHWIDFeatureMatcher(db, source)
+
+    actual = matcher.GenerateLegacyPayload()
+    self.assertEqual(
+        actual,
+        textwrap.dedent("""\
+            feature_level: 1
+            hwid_profiles {
+              prefixes: "THEPROJ-ABCD"
+              encoding_requirements {
+                bit_locations: 8388608
+                required_values: "1"
+              }
+            }
+            """))
 
   def testConvertedHWIDFeatureMatcher_GenerateLegacyPayload_NoLegacyBrands(
       self):
     feature_version = 1
     db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
                              feature_version=str(feature_version))
-    legacy_brands = []
+    brand_allowed_feature_enablement_types = {
+        'ABCD': [
+            _FeatureEnablementType.DISABLED, _FeatureEnablementType.HARD_BRANDED
+        ],
+    }
     hwid_requirement_candidates = [
         features.HWIDRequirement(
             description='scenario_1', bit_string_prerequisites=[
@@ -494,7 +561,8 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
     source = builder.GenerateFeatureMatcherRawSource(
-        feature_version, legacy_brands, hwid_requirement_candidates)
+        feature_version, brand_allowed_feature_enablement_types,
+        hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()

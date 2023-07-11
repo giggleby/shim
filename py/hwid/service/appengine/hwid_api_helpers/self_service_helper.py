@@ -21,6 +21,7 @@ from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
@@ -430,6 +431,9 @@ class FeatureMatcherBuilder(abc.ABC):
     """
 
 
+_FeatureEnablementType = feature_matching.FeatureEnablementType
+
+
 class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
   """Real implementation of feature matcher source builder."""
   _FEATURE_MATCHER_BUILDER = (
@@ -618,12 +622,24 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
           camera_property=self._GetCameraProperty(dlm_component_info))
     return dlm_component_db
 
-  def _ExtractLegacyBrands(self) -> Collection[str]:
-    return [
-        brand_name for brand_name, feature_info in
-        self._extra_resource.brand_feature_infos.items()
-        if feature_info.has_legacy_units
-    ]
+  def _ExtractBrandAllowedFeatureEnablementTypes(
+      self) -> Mapping[str, Collection[_FeatureEnablementType]]:
+    results = {}
+    for brand_name, msg in self._extra_resource.brand_feature_infos.items():
+      allowed_types = []
+      if msg.allow_soft_branded_legacy:
+        allowed_types.append(_FeatureEnablementType.SOFT_BRANDED_LEGACY)
+      if msg.allow_soft_branded_waiver:
+        allowed_types.append(_FeatureEnablementType.SOFT_BRANDED_WAIVER)
+      if msg.allow_hard_branded:
+        allowed_types.append(_FeatureEnablementType.HARD_BRANDED)
+      if msg.allow_feature_disabled:
+        allowed_types.append(_FeatureEnablementType.DISABLED)
+      if not allowed_types:
+        raise ValueError(
+            f'No allowed feature enablement type for {brand_name!r}.')
+      results[brand_name] = allowed_types
+    return results
 
   def Build(self) -> FeatureMatcherBuildResult:
     """Build the feature matcher source from the resources.
@@ -639,13 +655,13 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
             self._FEATURE_MATCHER_BUILDER.GenerateNoneFeatureMatcherRawSource())
 
       else:
-        legacy_brand_names = self._ExtractLegacyBrands()
         dlm_db = self._BuildDLMComponentDB()
         hwid_requirement_candidates = features.GetHWIDRequirementResolver(
             feature_version).DeduceHWIDRequirementCandidates(self._db, dlm_db)
         feature_matcher_source = (
             self._FEATURE_MATCHER_BUILDER.GenerateFeatureMatcherRawSource(
-                feature_version, legacy_brand_names,
+                feature_version,
+                self._ExtractBrandAllowedFeatureEnablementTypes(),
                 hwid_requirement_candidates))
     except (ValueError, features.HWIDDBNotSupportError) as ex:
       logging.exception('Failed to build feature matcher payload.')

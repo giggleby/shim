@@ -244,9 +244,10 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
     return self._GetMockMethodArg(
         self._mock_generate_feature_matcher_raw_source, 0, 'feature_version')
 
-  def _GetLegacyBrandsFromMock(self):
+  def _GetBrandAllowedFeatureEnablementTypesFromMock(self):
     return self._GetMockMethodArg(
-        self._mock_generate_feature_matcher_raw_source, 1, 'legacy_brands')
+        self._mock_generate_feature_matcher_raw_source, 1,
+        'brand_allowed_feature_enablement_types')
 
   def _GetConvertedDLMComponentDatabaseFromMock(self):
     return self._GetMockMethodArg(self._mock_deduce_hwid_requirement_candidates,
@@ -298,15 +299,35 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
     db = self._BuildHWIDDBForTest()
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
     extra_resource.device_feature_version = 1
-    extra_resource.brand_feature_infos.get_or_create('AAAA')
+    aaaa_info = extra_resource.brand_feature_infos.get_or_create('AAAA')
+    aaaa_info.allow_feature_disabled = True
     bbbb_info = extra_resource.brand_feature_infos.get_or_create('BBBB')
-    bbbb_info.has_legacy_units = True
+    bbbb_info.allow_soft_branded_legacy = True
 
     inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
     result = inst.Build()
 
     self._AssertFeatureMatcherBuildResultSuccess(result)
-    self.assertCountEqual(self._GetLegacyBrandsFromMock(), ['BBBB'])
+    self.assertIn(
+        feature_matching.FeatureEnablementType.SOFT_BRANDED_LEGACY,
+        self._GetBrandAllowedFeatureEnablementTypesFromMock().get('BBBB', []))
+
+  def testBuild_WithValidHardBrands_ThenSuccess(self):
+    db = self._BuildHWIDDBForTest()
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.device_feature_version = 1
+    aaaa_info = extra_resource.brand_feature_infos.get_or_create('AAAA')
+    aaaa_info.allow_feature_disabled = True
+    bbbb_info = extra_resource.brand_feature_infos.get_or_create('BBBB')
+    bbbb_info.allow_hard_branded = True
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(result)
+    self.assertIn(
+        feature_matching.FeatureEnablementType.HARD_BRANDED,
+        self._GetBrandAllowedFeatureEnablementTypesFromMock().get('BBBB', []))
 
   def testBuild_WithInvalidCPUFeatureVersion_ThenSuccessWithWarning(self):
     db = self._BuildHWIDDBForTest(

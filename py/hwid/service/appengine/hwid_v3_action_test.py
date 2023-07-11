@@ -151,7 +151,9 @@ class HWIDV3ActionWithFeatureMatcherTextTest(unittest.TestCase):
     feature_matcher_builder = (
         hwid_preproc_data.HWIDV3PreprocData.HWID_FEATURE_MATCHER_BUILDER)
     raw_source = feature_matcher_builder.GenerateFeatureMatcherRawSource(
-        1, ['ABCD'], [
+        1,
+        {'ABCD': [feature_matching.FeatureEnablementType.SOFT_BRANDED_LEGACY]},
+        [
             features.HWIDRequirement(description='always_match',
                                      bit_string_prerequisites=[])
         ])

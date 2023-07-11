@@ -6,7 +6,7 @@ import abc
 import enum
 import functools
 import hashlib
-from typing import Collection, Mapping, NamedTuple
+from typing import Collection, Mapping, NamedTuple, Set
 
 import device_selection_pb2  # pylint: disable=import-error
 import factory_hwid_feature_requirement_pb2  # pylint: disable=import-error
@@ -122,6 +122,24 @@ _BrandFeatureRequirementSpec = (
     factory_hwid_feature_requirement_pb2.BrandFeatureRequirementSpec)
 
 
+def _PatchDeviceFeatureSpec(spec: feature_match_pb2.DeviceFeatureSpec):
+  for brand_code in spec.legacy_brands:
+    permission = spec.brand_code_permissions.get_or_create(brand_code)
+    permission.allow_disabled_units = True
+    permission.allow_soft_branded_legacy_units = True
+
+
+def _MatchByChecker(checker: feature_compliance.FeatureRequirementSpecChecker,
+                    identity: identity_module.Identity) -> bool:
+  return checker.CheckFeatureComplianceVersion(
+      identity) > features.NO_FEATURE_VERSION
+
+
+# A regular HWID string can never reach this much bits because we don't
+# expect a HWID string that occupies more than 8MB.
+_IMPOSSIBLE_BIT_LOCATION = 8 * 1024 * 1024
+
+
 class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
   """A seralizable HWID feature matcher implementation."""
 
@@ -141,6 +159,9 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
                                      feature_match_pb2.DeviceFeatureSpec())
     except text_format.ParseError as ex:
       raise ValueError(f'Invalid raw spec: {ex}') from ex
+    # TODO(yhong): Stop migrating from the old data format once the migration
+    #     has completed.
+    _PatchDeviceFeatureSpec(self._spec)
 
   def _ExtendHWIDProfiles(
       self, brand_feature_spec: _BrandFeatureRequirementSpec,
@@ -156,7 +177,22 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
             required_values=encoding_requirement.required_values)
 
   @type_utils.LazyProperty
+  def _soft_branded_legacy_brand_code_set(self) -> Set[str]:
+    return set(brand_code
+               for brand_code, p in self._spec.brand_code_permissions.items()
+               if p.allow_soft_branded_legacy_units)
+
+  @type_utils.LazyProperty
+  def _soft_branded_brand_code_set(self) -> Set[str]:
+    return set(brand_code
+               for brand_code, p in self._spec.brand_code_permissions.items()
+               if p.allow_soft_branded_legacy_units or
+               p.allow_soft_branded_waiver_units)
+
+  @type_utils.LazyProperty
   def _hwid_feature_requirement_payload(self) -> str:
+    # TODO(yhong): Populate the permission of each RLZ brand codes to the
+    #     payload.
     spec_msg = factory_hwid_feature_requirement_pb2.FeatureRequirementSpec()
     brand_spec_msg = spec_msg.brand_specs.get_or_create('')
     brand_spec_msg.feature_version = self._spec.feature_version
@@ -179,23 +215,48 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
 
   def GenerateLegacyPayload(self) -> str:
     """See base class."""
-    if self._spec.feature_version == 0 or not self._spec.legacy_brands:
+    if self._spec.feature_version == 0:
       return ''
+
+    db_project = self._db.project.upper()
+
     payload_msg = device_selection_pb2.DeviceSelection(
         feature_level=self._spec.feature_version,
         scope=feature_management_pb2.Feature.Scope.SCOPE_DEVICES_0)
-    db_project = self._db.project.upper()
-    for hwid_requirement_candidate in self._spec.hwid_requirement_candidates:
+
+    if self._soft_branded_legacy_brand_code_set:
+      for hwid_requirement_candidate in self._spec.hwid_requirement_candidates:
+        profile = hwid_feature_requirement_pb2.HwidProfile()
+        for encoding_requirement in (
+            hwid_requirement_candidate.encoding_requirements):
+          profile.encoding_requirements.append(
+              hwid_feature_requirement_pb2.HwidProfile.EncodingRequirement(
+                  bit_locations=encoding_requirement.bit_positions,
+                  required_values=encoding_requirement.required_values))
+        profile.prefixes.extend(
+            sorted(f'{db_project}-{brand_code}'
+                   for brand_code in self._soft_branded_legacy_brand_code_set))
+        payload_msg.hwid_profiles.append(profile)
+
+    # Append non-legacy soft-branded brand codes with an impossible to match
+    # encoding requirement so that libsegmentation can match with prefix
+    # for the waiver scenario but will not mistakenly match with the raw HWID
+    # regexp.
+    non_legacy_soft_branded_brand_codes = (
+        self._soft_branded_brand_code_set -
+        self._soft_branded_legacy_brand_code_set)
+    if non_legacy_soft_branded_brand_codes:
       profile = hwid_feature_requirement_pb2.HwidProfile()
-      for encoding_requirement in (
-          hwid_requirement_candidate.encoding_requirements):
-        profile.encoding_requirements.append(
-            hwid_feature_requirement_pb2.HwidProfile.EncodingRequirement(
-                bit_locations=encoding_requirement.bit_positions,
-                required_values=encoding_requirement.required_values))
-      profile.prefixes.extend(f'{db_project}-{brand_code}'
-                              for brand_code in self._spec.legacy_brands)
+      profile.encoding_requirements.add(
+          bit_locations=[_IMPOSSIBLE_BIT_LOCATION], required_values=["1"])
+      profile.prefixes.extend(
+          sorted(f'{db_project}-{brand_code}'
+                 for brand_code in non_legacy_soft_branded_brand_codes))
       payload_msg.hwid_profiles.append(profile)
+
+    if not payload_msg.hwid_profiles:
+      return ''
+
     return text_format.MessageToString(payload_msg)
 
   def _BuildFeatureManagementFlagChecker(
@@ -260,7 +321,7 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     assert self._spec.feature_version != features.NO_FEATURE_VERSION
 
     spec_msg = factory_hwid_feature_requirement_pb2.FeatureRequirementSpec()
-    for brand_name in self._spec.legacy_brands:
+    for brand_name in self._soft_branded_legacy_brand_code_set:
       brand_matching_spec_msg = spec_msg.brand_specs.get_or_create(brand_name)
       brand_matching_spec_msg.feature_version = self._spec.feature_version
       brand_matching_spec_msg.feature_enablement_case = (
@@ -290,12 +351,6 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     return hwid_string.startswith(f'{db_project}-') or hwid_string.startswith(
         f'{db_project} ')
 
-  def _MatchByChecker(self,
-                      checker: feature_compliance.FeatureRequirementSpecChecker,
-                      identity: identity_module.Identity) -> bool:
-    return checker.CheckFeatureComplianceVersion(
-        identity) > features.NO_FEATURE_VERSION
-
   def Match(self, hwid_string: str) -> FeatureEnablementStatus:
     """See base class."""
     if not self._IsHWIDStringProjectMatch(hwid_string):
@@ -308,26 +363,45 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     hwid_identity = self._GetHWIDIdentityFromHWIDString(hwid_string)
 
     # Follows the same logic as OS runtime feature-level determination workflow
-    # to deduce whether the versioned feature is enabled or not.
+    # (i.e. libsegmentation) deduce whether the versioned feature is enabled or
+    # not.
 
     build_hw_compliant_result = functools.partial(FeatureEnablementStatus,
                                                   self._spec.feature_version)
 
-    if self._MatchByChecker(self._chassis_is_branded_checker, hwid_identity):
+    if _MatchByChecker(self._chassis_is_branded_checker, hwid_identity):
       return build_hw_compliant_result(FeatureEnablementType.HARD_BRANDED)
 
-    if self._MatchByChecker(self._hw_compliant_checker, hwid_identity):
-      if hwid_identity.brand_code in self._spec.legacy_brands:
+    if _MatchByChecker(self._hw_compliant_checker, hwid_identity):
+      if hwid_identity.brand_code in self._soft_branded_brand_code_set:
         return build_hw_compliant_result(
             FeatureEnablementType.SOFT_BRANDED_WAIVER)
       return build_hw_compliant_result(FeatureEnablementType.DISABLED)
 
-    if self._MatchByChecker(self._legacy_checker, hwid_identity):
+    if _MatchByChecker(self._legacy_checker, hwid_identity):
       # Legacy and soft-branded case.
       return build_hw_compliant_result(
           FeatureEnablementType.SOFT_BRANDED_LEGACY)
 
     return FeatureEnablementStatus.FromHWIncompliance()
+
+
+def _ToFeatureEnablementPermissionMsg(
+    allowed_feature_enablement_types: Collection[FeatureEnablementType]
+) -> feature_match_pb2.FeatureEnablementPermission:
+  inst = feature_match_pb2.FeatureEnablementPermission()
+  for a in allowed_feature_enablement_types:
+    if a == FeatureEnablementType.DISABLED:
+      inst.allow_disabled_units = True
+    elif a == FeatureEnablementType.HARD_BRANDED:
+      inst.allow_hard_branded_units = True
+    elif a == FeatureEnablementType.SOFT_BRANDED_LEGACY:
+      inst.allow_soft_branded_legacy_units = True
+    elif a == FeatureEnablementType.SOFT_BRANDED_WAIVER:
+      inst.allow_soft_branded_waiver_units = True
+    else:
+      raise AssertionError(f'Incomplete if-elif clause, {a!r} is not covered.')
+  return inst
 
 
 class HWIDFeatureMatcherBuilder:
@@ -336,7 +410,8 @@ class HWIDFeatureMatcherBuilder:
   def GenerateFeatureMatcherRawSource(
       self,
       feature_version: int,
-      legacy_brands: Collection[str],
+      brand_allowed_feature_enablement_types: (
+          Mapping[str, Collection[FeatureEnablementType]]),
       hwid_requirement_candidates: features.HWIDRequirementCandidates,
   ) -> str:
     """Converts the device feature information to a loadable raw string.
@@ -347,7 +422,8 @@ class HWIDFeatureMatcherBuilder:
     Args:
       feature_version: The feature version of the target device.  The value is
         expected to be greater than `features.NO_FEATURE_VERSION`.
-      legacy_brands: Brand names of legacy products.
+      brand_allowed_feature_enablement_types: Maps the RLZ brand code to a set
+        of allowed feature enablement types.
       hwid_requirement_candidates: The HWID requirement candidates to match
         the feature.
 
@@ -355,8 +431,13 @@ class HWIDFeatureMatcherBuilder:
       A raw string that can be used as the source for HWID feature matcher
       creation.
     """
-    msg = feature_match_pb2.DeviceFeatureSpec(feature_version=feature_version,
-                                              legacy_brands=legacy_brands)
+    brand_code_permissions = {
+        k: _ToFeatureEnablementPermissionMsg(v)
+        for k, v in brand_allowed_feature_enablement_types.items()
+    }
+    msg = feature_match_pb2.DeviceFeatureSpec(
+        feature_version=feature_version,
+        brand_code_permissions=brand_code_permissions)
     for hwid_requirement_candidate in hwid_requirement_candidates:
       hwid_requirement_candidate_msg = msg.hwid_requirement_candidates.add(
           description=hwid_requirement_candidate.description)

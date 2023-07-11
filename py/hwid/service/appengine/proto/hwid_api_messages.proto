@@ -494,9 +494,7 @@ message DlmComponentInfo {
 }
 
 message FeatureInfo {
-  reserved 1;
-  bool has_legacy_units = 2;
-
+  reserved 1, 2;
   // Whether the target scope allows soft-branded legacy units.
   bool allow_soft_branded_legacy = 3;
   // Whether the target scope allows soft-branded waiver units.
