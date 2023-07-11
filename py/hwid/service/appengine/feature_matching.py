@@ -156,6 +156,24 @@ def _MatchByChecker(checker: feature_compliance.FeatureRequirementSpecChecker,
 _IMPOSSIBLE_BIT_LOCATION = 8 * 1024 * 1024
 
 
+_ALLOW_ONLY_HARD_BRANDED_MSG = feature_match_pb2.FeatureEnablementPermission(
+    allow_hard_branded_units=True)
+
+
+def _ExtendHWIDProfiles(
+    brand_feature_spec: _BrandFeatureRequirementSpec,
+    hwid_requirement_candidates: features.HWIDRequirementCandidates):
+  for hwid_requirement_candidate in hwid_requirement_candidates:
+    profile_msg = brand_feature_spec.profiles.add(
+        description=hwid_requirement_candidate.description)
+    for encoding_requirement in (
+        hwid_requirement_candidate.encoding_requirements):
+      profile_msg.encoding_requirements.add(
+          description=encoding_requirement.description,
+          bit_locations=encoding_requirement.bit_positions,
+          required_values=encoding_requirement.required_values)
+
+
 class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
   """A seralizable HWID feature matcher implementation."""
 
@@ -179,19 +197,6 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     #     has completed.
     _PatchDeviceFeatureSpec(self._spec)
 
-  def _ExtendHWIDProfiles(
-      self, brand_feature_spec: _BrandFeatureRequirementSpec,
-      hwid_requirement_candidates: features.HWIDRequirementCandidates):
-    for hwid_requirement_candidate in hwid_requirement_candidates:
-      profile_msg = brand_feature_spec.profiles.add(
-          description=hwid_requirement_candidate.description)
-      for encoding_requirement in (
-          hwid_requirement_candidate.encoding_requirements):
-        profile_msg.encoding_requirements.add(
-            description=encoding_requirement.description,
-            bit_locations=encoding_requirement.bit_positions,
-            required_values=encoding_requirement.required_values)
-
   @type_utils.LazyProperty
   def _soft_branded_legacy_brand_code_set(self) -> Set[str]:
     return set(brand_code
@@ -207,16 +212,29 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
 
   @type_utils.LazyProperty
   def _hwid_feature_requirement_payload(self) -> str:
-    # TODO(yhong): Populate the permission of each RLZ brand codes to the
-    #     payload.
+    must_enabled_brand_codes = [
+        b for b, p in self._spec.brand_code_permissions.items()
+        if p == _ALLOW_ONLY_HARD_BRANDED_MSG
+    ]
+    may_enabled_brand_codes = [
+        b for b, p in self._spec.brand_code_permissions.items()
+        if p.allow_hard_branded_units and p != _ALLOW_ONLY_HARD_BRANDED_MSG
+    ]
+
     spec_msg = factory_hwid_feature_requirement_pb2.FeatureRequirementSpec()
-    brand_spec_msg = spec_msg.brand_specs.get_or_create('')
-    brand_spec_msg.feature_version = self._spec.feature_version
-    brand_spec_msg.feature_enablement_case = (
-        brand_spec_msg.FEATURE_MUST_NOT_ENABLED if self._spec.feature_version
-        == features.NO_FEATURE_VERSION else brand_spec_msg.MIXED)
-    self._ExtendHWIDProfiles(brand_spec_msg,
-                             self._spec.hwid_requirement_candidates)
+    for brand_codes, feature_enablement_case in (
+        (must_enabled_brand_codes,
+         _BrandFeatureRequirementSpec.FEATURE_MUST_ENABLED),
+        (may_enabled_brand_codes, _BrandFeatureRequirementSpec.MIXED),
+        ([''], _BrandFeatureRequirementSpec.FEATURE_MUST_NOT_ENABLED),
+    ):
+      for brand_code in brand_codes:
+        brand_spec_msg = spec_msg.brand_specs.get_or_create(brand_code)
+        brand_spec_msg.feature_version = self._spec.feature_version
+        brand_spec_msg.feature_enablement_case = feature_enablement_case
+        _ExtendHWIDProfiles(brand_spec_msg,
+                            self._spec.hwid_requirement_candidates)
+
     spec_text = text_format.MessageToString(spec_msg)
 
     checksum = hashlib.sha256(spec_text.encode('utf-8')).hexdigest()
@@ -343,8 +361,8 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
       brand_matching_spec_msg.feature_version = self._spec.feature_version
       brand_matching_spec_msg.feature_enablement_case = (
           brand_matching_spec_msg.MIXED)
-      self._ExtendHWIDProfiles(brand_matching_spec_msg,
-                               self._spec.hwid_requirement_candidates)
+      _ExtendHWIDProfiles(brand_matching_spec_msg,
+                          self._spec.hwid_requirement_candidates)
 
     default_matching_spec_msg = spec_msg.brand_specs.get_or_create('')
     default_matching_spec_msg.feature_version = features.NO_FEATURE_VERSION

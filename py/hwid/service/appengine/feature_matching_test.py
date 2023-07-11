@@ -7,6 +7,7 @@ import textwrap
 import unittest
 from unittest import mock
 
+import factory_hwid_feature_requirement_pb2  # pylint: disable=import-error
 from google.protobuf import text_format
 import yaml
 
@@ -120,51 +121,77 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     ]
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
-    brand_allowed_feature_enablement_types = {}
+    brand_allowed_feature_enablement_types = {
+        'ABCD': [_FeatureEnablementType.HARD_BRANDED],
+        'EFGH': [
+            _FeatureEnablementType.HARD_BRANDED, _FeatureEnablementType.DISABLED
+        ],
+        'IJKL': [_FeatureEnablementType.DISABLED],
+    }
     source = builder.GenerateFeatureMatcherRawSource(
         feature_version, brand_allowed_feature_enablement_types,
         hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
     actual = matcher.GenerateHWIDFeatureRequirementPayload()
 
-    self.assertEqual(
-        actual,
-        textwrap.dedent("""\
-            # checksum: the_fixed_checksum
-            brand_specs {
-              value {
-                feature_version: 1
-                profiles {
-                  description: "scenario_1"
-                  encoding_requirements {
-                    description: "bit_string_prerequisite1-1"
-                    bit_locations: 2
-                    bit_locations: 4
-                    bit_locations: 5
-                    required_values: "100"
-                    required_values: "101"
-                  }
-                }
-                profiles {
-                  description: "scenario_2"
-                  encoding_requirements {
-                    description: "bit_string_prerequisite2-1"
-                    bit_locations: 2
-                    bit_locations: 4
-                    bit_locations: 5
-                    required_values: "000"
-                  }
-                  encoding_requirements {
-                    description: "bit_string_prerequisite2-1"
-                    bit_locations: 3
-                    bit_locations: 6
-                    required_values: "10"
-                  }
-                }
-                feature_enablement_case: MIXED
-              }
-            }
-            """))
+    self.assertEqual(actual.splitlines()[0], '# checksum: the_fixed_checksum')
+    actual_loaded_spec = text_format.Parse(
+        actual, factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
+    shared_profile_message = """\
+        profiles {
+          description: "scenario_1"
+          encoding_requirements {
+            description: "bit_string_prerequisite1-1"
+            bit_locations: 2
+            bit_locations: 4
+            bit_locations: 5
+            required_values: "100"
+            required_values: "101"
+          }
+        }
+        profiles {
+          description: "scenario_2"
+          encoding_requirements {
+            description: "bit_string_prerequisite2-1"
+            bit_locations: 2
+            bit_locations: 4
+            bit_locations: 5
+            required_values: "000"
+          }
+          encoding_requirements {
+            description: "bit_string_prerequisite2-1"
+            bit_locations: 3
+            bit_locations: 6
+            required_values: "10"
+          }
+        }"""
+    expected_loaded_spec = text_format.Parse(
+        f"""
+        brand_specs {{
+          key: "ABCD"
+          value {{
+            feature_version: 1
+            {shared_profile_message}
+            feature_enablement_case: FEATURE_MUST_ENABLED
+          }}
+        }}
+        brand_specs {{
+          key: "EFGH"
+          value {{
+            feature_version: 1
+            {shared_profile_message}
+            feature_enablement_case: MIXED
+          }}
+        }}
+        brand_specs {{
+          value {{
+            feature_version: 1
+            {shared_profile_message}
+            feature_enablement_case: FEATURE_MUST_NOT_ENABLED
+          }}
+        }}
+        """, factory_hwid_feature_requirement_pb2.FeatureRequirementSpec())
+    self.assertEqual(actual_loaded_spec, expected_loaded_spec)
 
   def testConvertedHWIDFeatureMatcherCanMatchHWIDs(self):
     feature_version = 1
