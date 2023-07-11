@@ -35,7 +35,7 @@ class OutputBigQueryHWID(output_bigquery.OutputBigQuery):
         SchemaField('hwid', 'string', 'REQUIRED', None, ()),
         SchemaField('time', 'timestamp', 'REQUIRED', None, ()),
         SchemaField('featureEnablementType', 'integer', 'NULLABLE', None, ()),
-        SchemaField('xVersion', 'integer', 'NULLABLE', None, ()),
+        SchemaField('hwComplianceVersion', 'integer', 'NULLABLE', None, ()),
         SchemaField('error', 'string', 'NULLABLE', None, ()),
     ]
 
@@ -67,7 +67,7 @@ class OutputBigQueryHWID(output_bigquery.OutputBigQuery):
     row['hwid'] = event.get('hwid')
     row['time'] = event.get('time')
     row['featureEnablementType'] = event.get('featureEnablementType')
-    row['xVersion'] = event.get('xVersion')
+    row['hwComplianceVersion'] = event.get('hwComplianceVersion')
     row['error'] = event.get('error')
 
     return json.dumps(row, allow_nan=False)

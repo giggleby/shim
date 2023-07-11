@@ -109,9 +109,10 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
       if bom['phase'].startswith(phase) or bom['phase'].endswith(phase):
         event['phase'] = phase
     event['components'] = bom['components']
+    enablement_status = bom['xEnablementStatus']
     event['featureEnablementType'] = FEATURE_ENABLEMENT_TYPE_MAP[
-        bom['xEnablementStatus']['enablementType']]
-    event['xVersion'] = bom['xEnablementStatus']['hwComplianceVersion']
+        enablement_status['enablementType']]
+    event['hwComplianceVersion'] = enablement_status['hwComplianceVersion']
     return event
 
   def DecodeHwid(self):
