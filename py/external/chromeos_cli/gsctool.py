@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import collections
 import enum
 import re
 
@@ -14,6 +15,7 @@ from cros.factory.external.chromeos_cli import shell
 # Path to the relied `gsctool` command line utility.
 GSCTOOL_PATH = '/usr/sbin/gsctool'
 
+Wpsr = collections.namedtuple('Wpsr', ['value', 'mask'])
 
 class FirmwareVersion(type_utils.Obj):
 
@@ -474,9 +476,38 @@ class GSCTool:
       cmd = [GSCTOOL_PATH, '-a', '-C', '4byte']
     self._InvokeCommand(cmd, 'Fail to set addressing mode.')
 
+  def GetAddressingMode(self):
+    return self._InvokeCommand([GSCTOOL_PATH, '-a', '-C'],
+                               'Fail to get addressing mode.').stdout.strip()
+
   def SetWpsr(self, wpsr):
     """Sets wpsr for ap ro verification on Ti50."""
     self._InvokeCommand([GSCTOOL_PATH, '-a', '-E', wpsr], 'Fail to set wpsr.')
+
+  def ParseWpsr(self, wpsr_str: str):
+    """Parses the output of `gsctool -a -E`.
+
+    Returns:
+      A list of namedtuple Wpsr.
+    """
+    match = re.finditer(r'[1-9]: (?P<value>\w+) & (?P<mask>\w+)', wpsr_str)
+    if not match:
+      raise GSCToolError(f'Unexpected output from {wpsr_str!r}')
+    wpsr_list = []
+    for m in match:
+      try:
+        value = int(m['value'], 16)
+        mask = int(m['mask'], 16)
+      except Exception as e:
+        raise GSCToolError(e) from None
+      wpsr_list.append(Wpsr(value=value, mask=mask))
+    return wpsr_list
+
+  def GetWpsr(self):
+    """Gets wpsr for ap ro verification on Ti50."""
+    result = self._InvokeCommand([GSCTOOL_PATH, '-a', '-E'],
+                                 'Fail to get wpsr.')
+    return self.ParseWpsr(result.stdout)
 
   def _InvokeCommand(self, cmd, failure_msg, cmd_result_checker=None):
     cmd_result_checker = cmd_result_checker or (lambda result: result.success)

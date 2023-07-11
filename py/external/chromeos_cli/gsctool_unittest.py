@@ -262,5 +262,21 @@ class GSCToolTest(unittest.TestCase):
     self.gsctool.SetAddressingMode(0x1000001)
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-C', '4byte'])
 
+  def testGetAddressingMode(self):
+    self.gsctool.GetAddressingMode()
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-C'])
+
+  def testParseWpsr(self):
+    wpsr = self.gsctool.ParseWpsr('expected values: 1: 94 & fc, 2: 00 & 41')
+    self.assertEqual(wpsr[0].value, 0x94)
+    self.assertEqual(wpsr[0].mask, 0xfc)
+    self.assertEqual(wpsr[1].value, 0x00)
+    self.assertEqual(wpsr[1].mask, 0x41)
+
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool.ParseWpsr')
+  def testGetWpsr(self, _unused_mock_parse_wpsr):
+    self.gsctool.GetWpsr()
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-E'])
+
 if __name__ == '__main__':
   unittest.main()
