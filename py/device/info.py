@@ -24,7 +24,7 @@ from cros.factory.utils import gsc_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils.sys_utils import MountDeviceAndReadFile
 
-from cros.factory.external.chromeos_cli import gsctool
+from cros.factory.external.chromeos_cli import gsctool as gsctool_module
 from cros.factory.external.chromeos_cli import vpd
 
 
@@ -431,23 +431,62 @@ class SystemInfo(device_types.DeviceComponent):
     }
 
   @InfoProperty
-  def gsc_info(self):
-    """Returns the Google Security Chip (GSC) info of the device."""
-    gsctool_ = gsctool.GSCTool(self._device)
-    gsc_info = {}
-    gsc_info['name'] = gsc_utils.GSCUtils().name
-    board_id = gsctool_.GetBoardID()
-    gsc_info['board_id'] = {
-        'type': self._IntToHexStr(board_id.type),
-        'flags': self._IntToHexStr(board_id.flags)
-    }
-    fw_version = gsctool_.GetCr50FirmwareVersion()
-    gsc_info['version'] = {
+  def gsc_sn_bits(self):
+    return self._device.CheckOutput(
+        ['/usr/share/cros/cr50-read-rma-sn-bits.sh']).strip()
+
+  @InfoProperty
+  def gsc_factory_config(self):
+    factory_config = gsctool_module.GSCTool(
+        self._device).GetFeatureManagementFlags()
+    return factory_config.__dict__
+
+  @InfoProperty
+  def gsc_version(self):
+    fw_version = gsctool_module.GSCTool(self._device).GetCr50FirmwareVersion()
+    return {
         'ro_version': fw_version.ro_version,
         'rw_version': fw_version.rw_version,
     }
 
-    return gsc_info
+  @InfoProperty
+  def ap_ro_verify(self):
+    gsctool = gsctool_module.GSCTool(self._device)
+    wpsr_list = gsctool.GetWpsr()
+    wpsr_hex_str_list = []
+    for wpsr_tuple in wpsr_list:
+      wpsr_hex_str_list.append({
+          'value': self._IntToHexStr(wpsr_tuple.value),
+          'mask': self._IntToHexStr(wpsr_tuple.mask)
+      })
+
+    return {
+        'addressing_mode': gsctool.GetAddressingMode(),
+        'wpsr': wpsr_hex_str_list,
+        'result': str(gsctool.GSCGetAPROResult()),
+    }
+
+  @InfoProperty
+  def board_id(self):
+    # Though the board id info from gsctool.GetBoardID() should be sufficient,
+    # we still store all the fields from command `gsctool -a -M -i` to improve
+    # the readability.
+    content = self._device.CheckOutput(
+        [gsctool_module.GSCTOOL_PATH, '-a', '-M', '-i']).strip()
+    return self._ParseStrToDict(self._REGEX_KEY_EQUAL_VALUE, content)
+
+  @InfoProperty
+  def gsc_info(self):
+    """Returns the Google Security Chip (GSC) info of the device."""
+
+    return {
+        'gsc_type': gsc_utils.GSCUtils().name,
+        'board_id': self.board_id,
+        'fw_version': self.gsc_version,
+        'sn_bits': self.gsc_sn_bits,
+        'factory_config': self.gsc_factory_config,
+        'ap_ro_verify': self.ap_ro_verify,
+    }
 
   @InfoProperty
   def cbi_info(self):
