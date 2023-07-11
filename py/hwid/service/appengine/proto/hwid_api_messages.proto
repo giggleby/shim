@@ -499,6 +499,15 @@ message DlmComponentInfo {
 message FeatureInfo {
   reserved 1;
   bool has_legacy_units = 2;
+
+  // Whether the target scope allows soft-branded legacy units.
+  bool allow_soft_branded_legacy = 3;
+  // Whether the target scope allows soft-branded waiver units.
+  bool allow_soft_branded_waiver = 4;
+  // Whether the target scope allows hard-branded units.
+  bool allow_hard_branded = 5;
+  // Whether the target scope allows feature disabled units.
+  bool allow_feature_disabled = 6;
 }
 
 // External resources that HWID DB can refer to.
