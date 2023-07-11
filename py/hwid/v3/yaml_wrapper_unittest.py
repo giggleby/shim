@@ -24,8 +24,8 @@ class ParseRegionFieldUnittest(unittest.TestCase):
   def testDecodeYAMLTag(self):
     doc = 'foo: !region_field'
     decoded = yaml.safe_load(doc)
-    self.assertEqual({'region': 'us'}, decoded['foo'][29])
-    self.assertEqual({'region': 'sa'}, decoded['foo'][128])
+    self.assertDictEqual({'region': 'us'}, decoded['foo'][29])
+    self.assertDictEqual({'region': 'sa'}, decoded['foo'][128])
     self.assertFalse(127 in decoded['foo'])  # region 'zw' is not confirmed yet.
     self.assertTrue(decoded['foo'].is_legacy_style)
 
@@ -33,19 +33,39 @@ class ParseRegionFieldUnittest(unittest.TestCase):
     doc = 'foo: !region_field [us, gb, no]'
     decoded = yaml.safe_load(doc)
     self.assertFalse(decoded['foo'].is_legacy_style)
-    self.assertEqual(decoded['foo'], {
-        0: {'region': []},
-        1: {'region': 'us'},
-        2: {'region': 'gb'},
-        3: {'region': 'no'}})
+    self.assertDictEqual(
+        decoded['foo'], {
+            0: {
+                'region': []
+            },
+            1: {
+                'region': 'us'
+            },
+            2: {
+                'region': 'gb'
+            },
+            3: {
+                'region': 'no'
+            }
+        })
 
     fields = database.EncodedFields(decoded)
     self.assertFalse(fields.region_field_legacy_info['foo'])
-    self.assertEqual(fields.GetField('foo'), {
-        0: {'region': []},
-        1: {'region': ['us']},
-        2: {'region': ['gb']},
-        3: {'region': ['no']}})
+    self.assertDictEqual(
+        fields.GetField('foo'), {
+            0: {
+                'region': []
+            },
+            1: {
+                'region': ['us']
+            },
+            2: {
+                'region': ['gb']
+            },
+            3: {
+                'region': ['no']
+            }
+        })
 
   def testDumpRegionField(self):
     doc = 'foo: !region_field [us, gb]'
@@ -58,11 +78,19 @@ class ParseRegionFieldUnittest(unittest.TestCase):
     dump_str = yaml.safe_dump(decoded, default_flow_style=False).strip()
     self.assertEqual(doc, dump_str)
 
+  def testLegacyRegionFieldHas255MappedToUnknown(self):
+    doc = 'foo: !region_field'
+
+    decoded = yaml.safe_load(doc)
+
+    self.assertDictEqual({'region': 'unknown'}, decoded['foo'][255])
+
 
 class ParseRegionComponentUnittest(unittest.TestCase):
+
   def setUp(self):
-    regions.InitialSetup(
-        region_database_path=_REGIONS_DATABASE_PATH, include_all=False)
+    regions.InitialSetup(region_database_path=_REGIONS_DATABASE_PATH,
+                         include_all=False)
 
   def tearDown(self):
     regions.InitialSetup()
@@ -70,24 +98,66 @@ class ParseRegionComponentUnittest(unittest.TestCase):
   def testLoadRegionComponent(self):
     for s in ('region: !region_component', 'region: !region_component {}'):
       obj = yaml.safe_load(s)['region']
-      self.assertEqual(dict(obj), {
-          'items': {
-              'aa': {'values': {'region_code': 'aa'}},
-              'bb': {'values': {'region_code': 'bb'}},
-              'zz': {'values': {'region_code': 'zz'},
-                     'status': 'unsupported'}}})
+      self.assertDictEqual(
+          dict(obj), {
+              'items': {
+                  'aa': {
+                      'values': {
+                          'region_code': 'aa'
+                      }
+                  },
+                  'bb': {
+                      'values': {
+                          'region_code': 'bb'
+                      }
+                  },
+                  'zz': {
+                      'values': {
+                          'region_code': 'zz'
+                      },
+                      'status': 'unsupported'
+                  },
+                  'unknown': {
+                      'values': {
+                          'region_code': 'unknown'
+                      },
+                      'status': 'unsupported'
+                  }
+              }
+          })
 
   def testLoadRegionComponentStatusLists(self):
     obj = yaml.safe_load('region: !region_component\n'
                          '  unqualified: [aa]\n'
                          '  deprecated: [zz]\n')['region']
-    self.assertEqual(dict(obj), {
-        'items': {
-            'aa': {'values': {'region_code': 'aa'},
-                   'status': 'unqualified'},
-            'bb': {'values': {'region_code': 'bb'}},
-            'zz': {'values': {'region_code': 'zz'},
-                   'status': 'deprecated'}}})
+    self.assertDictEqual(
+        dict(obj), {
+            'items': {
+                'aa': {
+                    'values': {
+                        'region_code': 'aa'
+                    },
+                    'status': 'unqualified'
+                },
+                'bb': {
+                    'values': {
+                        'region_code': 'bb'
+                    }
+                },
+                'zz': {
+                    'values': {
+                        'region_code': 'zz'
+                    },
+                    'status': 'deprecated'
+                },
+                'unknown': {
+                    'values': {
+                        'region_code': 'unknown'
+                    },
+                    'status': 'unsupported'
+                }
+            }
+        })
 
   def testLoadRegionComponentError(self):
     self.assertRaises(Exception, yaml.safe_load,
@@ -118,6 +188,7 @@ class ParseRegionComponentUnittest(unittest.TestCase):
 
 
 class StandardizeUnittest(unittest.TestCase):
+
   def testParseBool(self):
     self.assertEqual(yaml.safe_load('true'), True)
     self.assertEqual(yaml.safe_load('TRUE'), True)
@@ -207,6 +278,7 @@ def AssertStrLen(length):
 
 
 class ValueYAMLTagTest(unittest.TestCase):
+
   def testYAMLParsing(self):
     self.assertEqual(yaml.safe_load('!re abc'), rule.Value('abc', is_re=True))
     self.assertEqual(

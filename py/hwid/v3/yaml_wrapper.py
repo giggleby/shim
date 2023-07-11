@@ -9,6 +9,7 @@ from the origin yaml module.
 
 import collections
 import functools
+import itertools
 
 from yaml import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from yaml import __with_libyaml__
@@ -165,6 +166,10 @@ class _DefaultMappingHandler(_HWIDV3YAMLTagHandler):
     return dumper.represent_dict(data.items())
 
 
+_UNKNOWN_REGION_INDEX = 255
+_UNKNOWN_REGION_CODE = 'unknown'
+
+
 class RegionField(dict):
   """A class for holding the region field data in a HWID database."""
 
@@ -177,6 +182,8 @@ class RegionField(dict):
           })
           for (i, code) in enumerate(regions.LEGACY_REGIONS_LIST, 1)
           if code in regions.REGIONS)
+      fields_dict.setdefault(_UNKNOWN_REGION_INDEX,
+                             {'region': _UNKNOWN_REGION_CODE})
     else:
       self._is_legacy_style = False
       # The numeric ids of valid regions start from 1.
@@ -257,6 +264,13 @@ class _RegionComponent(dict):
         region_comp['status'] = common.ComponentStatus.unsupported
       components_dict['items'][code] = region_comp
 
+    components_dict['items'][_UNKNOWN_REGION_CODE] = {
+        'status': common.ComponentStatus.unsupported,
+        'values': {
+            'region_code': _UNKNOWN_REGION_CODE
+        }
+    }
+
     # Apply customized status lists.
     if status_lists is not None:
       for status in common.ComponentStatus:
@@ -312,12 +326,11 @@ class _RegionComponentYAMLTagHandler(_HWIDV3YAMLTagHandler):
     except schema.SchemaException as e:
       raise constructor.ConstructorError(f'{e}{status_lists!r}')
 
-    for i, s1 in enumerate(status_lists.keys()):
-      for s2 in list(status_lists)[i + 1:]:
-        duplicated_regions = set(status_lists[s1]) & set(status_lists[s2])
-        if duplicated_regions:
-          raise constructor.ConstructorError(
-              f'found ambiguous status for regions {duplicated_regions!r}')
+    for regions1, regions2 in itertools.combinations(status_lists.values(), 2):
+      duplicated_regions = set(regions1) & set(regions2)
+      if duplicated_regions:
+        raise constructor.ConstructorError(
+            f'found ambiguous status for regions {duplicated_regions!r}.')
 
 
 class _RegexpYAMLTagHandler(_HWIDV3YAMLTagHandler):
