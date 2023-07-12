@@ -143,7 +143,8 @@ class CompChange(ChangeUnit):
 
   def __init__(self, analysis_result: _HWIDComponentAnalysisResult,
                probe_values: Optional[builder.ProbedValueType],
-               information: Optional[Mapping[str, Any]], comp_hash: str):
+               information: Optional[Mapping[str, Any]], comp_hash: str,
+               bundle_uuids: Optional[Sequence[str]] = None):
     super().__init__(
         self.CreateDepSpec(analysis_result.comp_cls, comp_hash,
                            _IsNewlyCreatedOrRenamedComp(analysis_result)))
@@ -151,6 +152,7 @@ class CompChange(ChangeUnit):
     self._probe_values = probe_values
     self._information = information
     self._comp_hash = comp_hash
+    self._bundle_uuids = bundle_uuids
 
   def __repr__(self) -> str:
     comp_cls = self._analysis_result.comp_cls
@@ -193,7 +195,7 @@ class CompChange(ChangeUnit):
       db_builder.UpdateComponent(
           comp_cls, self._analysis_result.diff_prev.prev_comp_name, comp_name,
           self._probe_values, self._analysis_result.support_status,
-          self._information)
+          self._information, self._bundle_uuids)
 
   def GetDependedSpecs(self) -> Iterable[ChangeUnitDepSpec]:
     # Adding/Updating components does not depend on other change units.
@@ -458,7 +460,7 @@ def _ExtractCompChanges(analysis_mapping: MutableMapping[Tuple[
     if comp_analysis.is_newly_added or not comp_analysis.diff_prev.unchanged:
       comp_info = new_db.GetComponents(comp_cls)[comp_name]
       yield CompChange(comp_analysis, comp_info.values, comp_info.information,
-                       comp_info.comp_hash)
+                       comp_info.comp_hash, comp_info.bundle_uuids)
 
 
 def _ExtractAddEncodingCombination(

@@ -113,5 +113,13 @@ components:
       comp_3_2:
         values:
           value: '2'
+  comp_cls_4:
+    items:
+      comp_4_1: !from_factory_bundle
+        bundle_uuids:
+        - bundle_uuid_1
+        status: unqualified
+        values:
+          value: '1'
 
 rules: []

@@ -297,10 +297,25 @@ class CompChangeTest(ChangeUnitTestBase):
                  value: '2'
   ''')
 
+  _DIFF_UPDATE_STATUS_REMAIN_BUNDLE_UUIDS = textwrap.dedent('''\
+      ---
+      +++
+      @@ -116,8 +116,8 @@
+         comp_cls_4:
+           items:
+             comp_4_1: !from_factory_bundle
+               bundle_uuids:
+               - bundle_uuid_1
+      -        status: unqualified
+               values:
+                 value: '1'
+  ''')
+
   _DIFFS: Sequence[str] = [
       _DIFF_ADD_COMPONENT,
       _DIFF_ADD_COMPONENT_INTERNAL,
       _DIFF_UPDATE_COMPONENT,
+      _DIFF_UPDATE_STATUS_REMAIN_BUNDLE_UUIDS,
   ]
 
   def testPatchCompChange_New(self):
@@ -662,9 +677,9 @@ class ReplaceRulesTest(ChangeUnitTestBase):
   _DIFF_REPLACE_RULES = textwrap.dedent('''\
       ---
       +++
-      @@ -114,4 +114,10 @@
+      @@ -122,4 +122,10 @@
                values:
-                 value: '2'
+                 value: '1'
 
       -rules: []
       +rules:
@@ -801,9 +816,9 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
          comp_cls_2:
            items:
              comp_2_1:
-      @@ -114,4 +157,10 @@
+      @@ -122,4 +157,10 @@
                values:
-                 value: '2'
+                 value: '1'
 
       -rules: []
       +rules:
