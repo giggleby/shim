@@ -1413,7 +1413,8 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
       new_db = database.Database.LoadData(new_hwid_db_contents_internal)
 
     try:
-      change_unit_manager = change_unit_utils.ChangeUnitManager(old_db, new_db)
+      change_unit_manager = change_unit_utils.ChangeUnitManager(
+          old_db, new_db, self._avl_metadata_manager.SkipAVLCheck)
     except _SplitChangeUnitException as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     self._session_cache_adapter.Put(

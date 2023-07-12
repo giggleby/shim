@@ -1478,6 +1478,34 @@ class ChangeUnitManagerTest(unittest.TestCase):
         database.Database.LoadData(new_db_content),
     )
 
+  def testSkipAVLCheck(self):
+
+    def Checker(category: str, comp: database.ComponentInfo) -> bool:
+      del category, comp
+      return True
+
+    new_db_content = _ApplyUnifiedDiff(
+        self._base_db_content,
+        textwrap.dedent('''\
+            ---
+            +++
+            @@ -118,7 +118,6 @@
+                   comp_4_1: !from_factory_bundle
+                     bundle_uuids:
+                     - bundle_uuid_1
+            -        status: unqualified
+                     values:
+                       value: '1'
+    '''))
+
+    manager = _ChangeUnitManager(self._base_db,
+                                 database.Database.LoadData(new_db_content),
+                                 skip_avl_check_checker=Checker)
+
+    comp_change = next(iter(manager.GetChangeUnits().values()))
+    comp_analysis = comp_change.comp_analysis
+    self.assertTrue(comp_analysis.skip_avl_check)
+
 
 if __name__ == '__main__':
   unittest.main()

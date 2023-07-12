@@ -700,7 +700,10 @@ class ChangeSplitResult(NamedTuple):
 class ChangeUnitManager:
   """Supports topological sort of change units and splitting the HWID change."""
 
-  def __init__(self, old_db: database.Database, new_db: database.Database):
+  def __init__(
+      self, old_db: database.Database, new_db: database.Database,
+      skip_avl_check_checker: Optional[Callable[[str, database.ComponentInfo],
+                                                bool]] = None):
     """Initializer.
 
     Raises:
@@ -708,6 +711,7 @@ class ChangeUnitManager:
     """
     self._old_db = old_db
     self._new_db = new_db
+    self._skip_avl_check_cheker = skip_avl_check_checker
     self._change_units: MutableMapping[ChangeUnitIdentity, ChangeUnit] = {}
     self._by_dep_spec: DefaultDict[ChangeUnitDepSpec,
                                    Set[ChangeUnitIdentity]] = (
@@ -728,7 +732,8 @@ class ChangeUnitManager:
     analyzer = contents_analyzer.ContentsAnalyzer(
         self._new_db.DumpDataWithoutChecksum(internal=True), None,
         self._old_db.DumpDataWithoutChecksum(internal=True))
-    analysis = analyzer.AnalyzeChange(None, False)
+    analysis = analyzer.AnalyzeChange(
+        None, False, skip_avl_check_checker=self._skip_avl_check_cheker)
     analysis_mapping: MutableMapping[Tuple[str, str],
                                      _HWIDComponentAnalysisResult] = {}
     for comp_analysis in analysis.hwid_components.values():
