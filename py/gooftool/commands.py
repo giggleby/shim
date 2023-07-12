@@ -470,6 +470,13 @@ def ClearFactoryVPDEntries(options):
   event_log.Log('clear_factory_vpd_entries', entries=FilterDict(entries))
 
 
+@Command('clear_unknown_vpd_entries')
+def ClearUnknownVPDEntries(options):
+  """Clears unknown RW VPDs, which are VPDs not in py/gooftool/vpd_data.py."""
+  entries = GetGooftool(options).ClearUnknownVPDEntries()
+  event_log.Log('clear_unknown_vpd_entries', entries=FilterDict(entries))
+
+
 @Command('generate_stable_device_secret')
 def GenerateStableDeviceSecret(options):
   """Generates a fresh stable device secret and stores it in the RO VPD."""

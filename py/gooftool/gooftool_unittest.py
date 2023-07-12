@@ -478,7 +478,8 @@ class GooftoolTest(unittest.TestCase):
     self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
 
     # Should fail, since region is missing.
-    self.assertRaisesRegex(Error, 'Missing required RO VPD values: region',
+    self.assertRaisesRegex(core.VPDError,
+                           'Missing required RO VPD values: region',
                            self._gooftool.VerifyVPD)
 
   def testVerifyVPD_InvalidRegion(self):
@@ -486,7 +487,7 @@ class GooftoolTest(unittest.TestCase):
     ro_vpd_value['region'] = 'nonexist'
     self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
 
-    self.assertRaisesRegex(ValueError, 'Unknown region: "nonexist".',
+    self.assertRaisesRegex(core.VPDError, 'Unknown region: "nonexist".',
                            self._gooftool.VerifyVPD)
 
   def testVerifyVPD_InvalidMACKey(self):
@@ -494,7 +495,7 @@ class GooftoolTest(unittest.TestCase):
     ro_vpd_value['wifi_mac'] = '00:11:de:ad:be:ef'
     self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
 
-    self.assertRaisesRegex(KeyError,
+    self.assertRaisesRegex(core.VPDError,
                            'Unexpected RO VPD: wifi_mac=00:11:de:ad:be:ef.',
                            self._gooftool.VerifyVPD)
 
@@ -503,7 +504,7 @@ class GooftoolTest(unittest.TestCase):
     rw_vpd_value['gbind_attribute'] = 'badvalue'
     self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA, rw=rw_vpd_value)
 
-    self.assertRaisesRegex(ValueError, 'gbind_attribute is invalid:',
+    self.assertRaisesRegex(core.VPDError, 'gbind_attribute is invalid:',
                            self._gooftool.VerifyVPD)
 
   def testVerifyVPD_InvalidTestingRegistrationCode(self):
@@ -513,7 +514,7 @@ class GooftoolTest(unittest.TestCase):
         'zbTOX_9OQI_3EAAaCmNocm9tZWJvb2sQouDUgwQ=')
     self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA, rw=rw_vpd_value)
 
-    self.assertRaisesRegex(ValueError, 'gbind_attribute is invalid: ',
+    self.assertRaisesRegex(core.VPDError, 'gbind_attribute is invalid: ',
                            self._gooftool.VerifyVPD)
 
   def testVerifyVPD_UnexpectedValues(self):
@@ -521,7 +522,8 @@ class GooftoolTest(unittest.TestCase):
     ro_vpd_value['initial_locale'] = 'en-US'
     self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
 
-    self.assertRaisesRegex(KeyError, 'Unexpected RO VPD: initial_locale=en-US',
+    self.assertRaisesRegex(core.VPDError,
+                           'Unexpected RO VPD: initial_locale=en-US',
                            self._gooftool.VerifyVPD)
 
   def testVerifyReleaseChannel_CanaryChannel(self):

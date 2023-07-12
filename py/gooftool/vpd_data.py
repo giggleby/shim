@@ -13,8 +13,8 @@ ANY = r'.+'
 ANY_OR_EMPTY = r'.*'
 
 # The data is described in a mapping as key_name: value_re_format.
-# Note value_re_format has implicit '^' and '$' (see MatchWhole in core.py).
-# so when you write r'[A-Z]' it will be evaluated as r'^[A-Z]$'.
+# Note value_re_format has implicit '^' and '$' (we use re.fullmatch in
+# core.py) so when you write r'[A-Z]' it will be evaluated as r'^[A-Z]$'.
 
 # All values should be documented in CPFE:
 #  https://www.google.com/chromeos/partner/fe/docs/factory/vpd.html .
