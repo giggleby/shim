@@ -869,6 +869,38 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/204729913)
   @label_utils.Informational
+  def testAddFirmwareComponent_NameCollision(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddFirmwareComponent('ro_ec_firmware', {
+          'version': 'version_string',
+          'hash': '0'
+      }, 'firmware1')
+      db_builder.AddFirmwareComponent('ro_ec_firmware', {
+          'version': 'version_string',
+          'hash': '1'
+      }, 'firmware1')
+
+    db = db_builder.Build()
+
+    self.assertDictEqual(
+        {
+            0: {
+                'ro_ec_firmware': []
+            },
+            1: {
+                'ro_ec_firmware': ['firmware1']
+            },
+            2: {
+                'ro_ec_firmware': ['firmware1_1']
+            },
+        }, db.GetEncodedField('ro_ec_firmware_field'))
+    self.assertIn(
+        database.PatternField('ro_ec_firmware_field', 1),
+        db.GetPattern().fields)
+
+  # TODO (b/204729913)
+  @label_utils.Informational
   def testAddComponentCheck_AutoDeprecate(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:

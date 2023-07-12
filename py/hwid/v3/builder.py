@@ -382,6 +382,10 @@ class DatabaseBuilder:
 
     comp_info = self.AddComponentCheck(comp_cls, value, comp_name,
                                        supported=supported)
+
+    # Get the comp_name by hash again since it may be renamed if there's
+    # a collision
+    comp_name = self.GetComponentNameByHash(comp_cls, comp_info.comp_hash)
     if field_name not in self._database.encoded_fields:
       self.AddNewEncodedField(comp_cls, [comp_name])
     else:
