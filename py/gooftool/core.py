@@ -105,6 +105,9 @@ class CrosConfigError(Error):
                                                self.cur_identity)
 
 
+class VPDError(Error):
+  pass
+
 class HWWPError(Error):
   pass
 
@@ -655,14 +658,6 @@ class Gooftool:
 
       return dsm_vpd_ro_data
 
-    def MatchWhole(key, pattern, value, raise_exception=True):
-      if re.match(r'^' + pattern + r'$', value):
-        return key
-      if raise_exception:
-        raise ValueError('Incorrect VPD: %s=%s (expected format: %s)' %
-                         (key, value, pattern))
-      return None
-
     def CheckVPDFields(section, data, required, optional, optional_re):
       """Checks if all fields in data fall into given format.
 
@@ -680,25 +675,26 @@ class Gooftool:
         ValueError if some value does not match format_RE.
         KeyError if some unexpected VPD key name is found.
       """
-      checked = []
       known = required.copy()
       known.update(optional)
-      for k, v in data.items():
-        if k in known:
-          checked.append(MatchWhole(k, known[k], v))
-        else:
-          # Try if matches optional_re
-          for rk, rv in optional_re.items():
-            if MatchWhole(k, rk, k, raise_exception=False):
-              checked.append(MatchWhole(k, rv, v))
-              break
-          else:
-            raise KeyError('Unexpected %s VPD: %s=%s.' % (section, k, v))
+      unknown_keys, misformat_key_pattern = self.GetInvalidVPDFields(
+          data, known, optional_re)
 
-      missing_keys = set(required).difference(checked)
+      errors = []
+      for k in unknown_keys:
+        errors.append(f'Unexpected {section} VPD: {k}={data[k]}.')
+
+      for k, pattern in misformat_key_pattern:
+        errors.append(f'Incorrect {section} VPD: {k}={data[k]} '
+                      f'(expected format: {pattern})')
+
+      missing_keys = set(required).difference(set(data.keys()))
       if missing_keys:
-        raise Error('Missing required %s VPD values: %s' %
-                    (section, ','.join(missing_keys)))
+        errors.append(
+            f"Missing required {section} VPD values: {','.join(missing_keys)}")
+
+      if errors:
+        raise VPDError('\n'.join(errors))
 
     def GetDeviceNameForRegistrationCode(project):
 
@@ -751,7 +747,7 @@ class Gooftool:
     # Check known value contents.
     region = ro_vpd['region']
     if region not in regions.REGIONS:
-      raise ValueError('Unknown region: "%s".' % region)
+      raise VPDError(f'Unknown region: "{region}".')
 
     device_name = GetDeviceNameForRegistrationCode(self._project)
 
@@ -764,7 +760,7 @@ class Gooftool:
             rw_vpd[vpd_field_name], type=type_name, device=device_name,
             allow_dummy=(phase.GetPhase() < phase.PVT_DOGFOOD))
       except registration_codes.RegistrationCodeException as e:
-        raise ValueError('%s is invalid: %r' % (vpd_field_name, e)) from None
+        raise VPDError(f'{vpd_field_name} is invalid: {e!r}') from None
 
   def VerifyReleaseChannel(self, enforced_channels=None):
     """Verify that release image channel is correct.
@@ -1128,20 +1124,72 @@ class Gooftool:
 
     rw_vpd = self._vpd.GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME)
     dot_entries = {k: v for k, v in rw_vpd.items() if '.' in k}
+    logging.info('Current special RW VPDs: %r', FilterDict(dot_entries))
     entries = {k: v for k, v in dot_entries.items() if _IsFactoryVPD(k)}
     unknown_keys = set(dot_entries) - set(entries)
     if unknown_keys:
-      raise Error('Found unexpected RW VPD(s): %r' % unknown_keys)
+      raise VPDError(f'Found unexpected RW VPD(s): {unknown_keys!r}')
 
-    logging.info('Removing VPD entries %s', FilterDict(entries))
     if entries:
-      try:
-        self._vpd.UpdateData({k: None for k in entries.keys()},
-                             partition=vpd.VPD_READWRITE_PARTITION_NAME)
-      except Exception as e:
-        raise Error('Failed to remove VPD entries: %r' % e) from None
+      self.ClearRWVPDEntries(entries.keys())
+    else:
+      logging.info('No factory-related RW VPDs are found. Skip clearing.')
 
     return entries
+
+  def ClearUnknownVPDEntries(self):
+    rw_vpd = self._vpd.GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME)
+    known_rw_vpd = dict(vpd_data.REQUIRED_RW_DATA, **vpd_data.KNOWN_RW_DATA)
+    unknown_keys, unused_misformat_key_pattern = self.GetInvalidVPDFields(
+        rw_vpd, known_rw_vpd, vpd_data.KNOWN_RW_DATA_RE)
+    logging.info('Current RW VPDs: %r', FilterDict(rw_vpd))
+    if unknown_keys:
+      self.ClearRWVPDEntries(unknown_keys)
+    else:
+      logging.info('No unknown RW VPDs are found. Skip clearing.')
+
+    return unknown_keys
+
+  def ClearRWVPDEntries(self, keys):
+    logging.info('Removing VPD entries with key %r', keys)
+    try:
+      self._vpd.UpdateData({k: None
+                            for k in keys},
+                           partition=vpd.VPD_READWRITE_PARTITION_NAME)
+    except Exception as e:
+      raise VPDError(f'Failed to remove VPD entries: {e!r}') from None
+
+  def GetInvalidVPDFields(self, data, known_vpd, known_vpd_re):
+    """Gets the invalid VPD fields from `data`.
+
+    Invalid VPDs are VPDs with unknown keys or unmatched value pattern.
+
+    Args:
+      data: a mapping of (key, value) for VPD data.
+      known_vpd: a mapping of (key, format_RE) for known data.
+      known_vpd_re: a mapping of (key_re, format_RE) for known data.
+
+    Returns:
+      A list of unknown keys and a list of (key, pattern) tuple where the
+      value of the key does not match the expected pattern.
+    """
+    unknown_keys = []
+    misformat_key_pattern = []
+    for k, v in data.items():
+      if k in known_vpd:
+        if not re.fullmatch(known_vpd[k], v):
+          misformat_key_pattern.append((k, known_vpd[k]))
+        continue
+
+      for rk, rv in known_vpd_re.items():
+        if re.fullmatch(rk, k):
+          if not re.fullmatch(rv, v):
+            misformat_key_pattern.append((k, rv))
+          break
+      else:
+        unknown_keys.append(k)
+
+    return unknown_keys, misformat_key_pattern
 
   def GenerateStableDeviceSecret(self):
     """Generates a fresh stable device secret and stores it in RO VPD.
