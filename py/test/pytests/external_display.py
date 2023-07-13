@@ -343,8 +343,6 @@ class SysfsDisplayInfo:
 class ExtDisplayTest(test_case.TestCase):
   """Main class for external display test."""
   ARGS = [
-      Arg('main_display', str,
-          "xrandr/modeprint ID for ChromeBook's main display.", default=''),
       Arg('display_info', list,
           ('A list of tuples (display_label, display_id, audio_info, '
            'usbpd_spec) represents an external port to test. display_id and '
@@ -475,8 +473,7 @@ class ExtDisplayTest(test_case.TestCase):
       init_actions = audio_info[2]
     #TODO(jimmysun) Provide more specific instructions on which port to connect
     self.ui.SetState(
-        _('Connect external display and wait until it becomes '
-          'primary.'))
+        _('Connect external display and wait until it becomes primary.'))
 
     usbpd_spec = None
     display_label = info['display_label']
