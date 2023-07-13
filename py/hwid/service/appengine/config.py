@@ -34,8 +34,10 @@ class _Config:
         on CloudStorage.
     hwid_filesystem: An IFileSystemAdapter object, the HWID filesystem on
         CloudStorage.
-    vp_data_manager: A VerificationPayloadDataManager instance responsible for
-        reading/writing payload related metadata.
+    hsp_data_manager: A PayloadDataManager instance responsible for
+        reading/writing HWID selection payload related metadata.
+    vp_data_manager: A PayloadDataManager instance responsible for
+        reading/writing verification payload related metadata.
     decoder_data_manager: A DecoderDataManager instance responsible for
         reading/writing decode-related configs (e.g. AVL names from DLM and
         PrimaryIdentifier).

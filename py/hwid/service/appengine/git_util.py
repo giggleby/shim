@@ -493,6 +493,10 @@ def CreateCL(
   Returns:
     A tuple of (change id, cl number).
     cl number will be None if fail to parse git-push output.
+
+  Raises:
+    GitUtilNoModificationException if no modification is made for commit.
+    GitUtilException if error occurs while querying the Gerrit API.
   """
   if repo is None:
     repo = MemoryRepo(auth_cookie=auth_cookie)
@@ -1168,6 +1172,9 @@ def ReviewCL(review_host: str, auth_cookie: str, cl_number: int,
     approval_case: The approval case.
     reviewers: The additional reviewers to be added.
     ccs: The additional CC reviewers to be added.
+
+  Raises:
+    GitUtilException if error occurs while querying the Gerrit API.
   """
   reviewers = reviewers or []
   ccs = ccs or []
@@ -1202,6 +1209,9 @@ def AbandonCL(review_host, auth_cookie, change_id,
     auth_cookie: Auth cookie
     change_id: Change ID
     reason: An optional string message as the reason to abandon the CL.
+
+  Raises:
+    GitUtilException if error occurs while querying the Gerrit API.
   """
   try:
     _InvokeGerritAPIJSON('POST', f'{review_host}/a/changes/{change_id}/abandon',
@@ -1300,6 +1310,7 @@ def GetGerritCredentials():
   return service_account_name, token
 
 
-def GetGerritAuthCookie():
-  service_account_name, token = GetGerritCredentials()
+def GetGerritAuthCookie(credentials=None):
+  service_account_name, token = GetGerritCredentials(
+  ) if credentials is None else credentials
   return f'o=git-{service_account_name}={token}'
