@@ -711,17 +711,24 @@ class ChangeUnitManager:
     """
     self._old_db = old_db
     self._new_db = new_db
-    self._skip_avl_check_cheker = skip_avl_check_checker
     self._change_units: MutableMapping[ChangeUnitIdentity, ChangeUnit] = {}
     self._by_dep_spec: DefaultDict[ChangeUnitDepSpec,
                                    Set[ChangeUnitIdentity]] = (
                                        collections.defaultdict(set))
     self._dep_nodes: MutableMapping[ChangeUnitIdentity, DependencyNode] = {}
-    change_units = self.ExtractChangeUnits()
+    change_units = self._ExtractChangeUnits(skip_avl_check_checker)
     self._BuildDependencies(change_units)
 
-  def ExtractChangeUnits(self) -> Iterable[ChangeUnit]:
+  def _ExtractChangeUnits(
+      self,
+      skip_avl_check_checker: Optional[Callable[[str, database.ComponentInfo],
+                                                bool]] = None
+  ) -> Iterable[ChangeUnit]:
     """Extracts change units from two HWID DBs.
+
+    Args:
+      skip_avl_check_checker: An optional checker to determine if a component
+        does not require AVL check.
 
     Returns:
       An iterable of change units.
@@ -733,7 +740,7 @@ class ChangeUnitManager:
         self._new_db.DumpDataWithoutChecksum(internal=True), None,
         self._old_db.DumpDataWithoutChecksum(internal=True))
     analysis = analyzer.AnalyzeChange(
-        None, False, skip_avl_check_checker=self._skip_avl_check_cheker)
+        None, False, skip_avl_check_checker=skip_avl_check_checker)
     analysis_mapping: MutableMapping[Tuple[str, str],
                                      _HWIDComponentAnalysisResult] = {}
     for comp_analysis in analysis.hwid_components.values():

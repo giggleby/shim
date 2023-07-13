@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import os.path
+import pickle
 import re
 import textwrap
 from typing import Iterable, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Tuple
@@ -1505,6 +1506,17 @@ class ChangeUnitManagerTest(unittest.TestCase):
     comp_change = next(iter(manager.GetChangeUnits().values()))
     comp_analysis = comp_change.comp_analysis
     self.assertTrue(comp_analysis.skip_avl_check)
+
+  def testChangeUnitManagerIsPickleable(self):
+
+    def DummyChecker(category: str, comp: database.ComponentInfo) -> bool:
+      del category, comp
+      return True
+
+    manager = _ChangeUnitManager(self._base_db, self._base_db,
+                                 skip_avl_check_checker=DummyChecker)
+
+    pickle.dumps(manager)  # without PicklingError
 
 
 if __name__ == '__main__':
