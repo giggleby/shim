@@ -12,7 +12,7 @@ The test is defined by a list ``[display_label, display_id,
 audio_info, usbpd_spec]``. Each item represents an external port:
 
 - ``display_label``: I18n display name. e.g. ``_('DisplayPort)`` or
-  ``_('HDMI External Display')``.
+  ``_('HDMI External Display')`` or ``_('Type-C')``.
 - ``display_id``: (str) ID used to identify target display path.
   e.g. DP-1, HDMI-A-1.
 - ``audio_info``: A list of ``[audio_card, audio_device, init_actions]``,
@@ -253,6 +253,21 @@ def _MigrateDisplayInfo(display_info):
   return display_info
 
 
+def _GetLabel(label):
+  """
+  Returns the label in key `en-US` if `label` is a dictionary.
+
+  Args:
+    label: a string or a dict if it's an internationalized string.
+
+  Returns:
+    The value of key `en-US` if `label` is a dictionary. Otherwise, the label
+    itself.
+  """
+  if isinstance(label, dict) and 'en-US' in label:
+    return label['en-US']
+  return label
+
 class SysfsDisplayInfo:
   """The display info under /sys/class/drm/cardX-YYY."""
 
@@ -476,7 +491,7 @@ class ExtDisplayTest(test_case.TestCase):
         _('Connect external display and wait until it becomes primary.'))
 
     usbpd_spec = None
-    display_label = info['display_label']
+    display_label = _GetLabel(info['display_label'])
     display_type = TYPE_FROM_LABEL.get(display_label)
 
     if 'display_id' not in info:
@@ -494,7 +509,7 @@ class ExtDisplayTest(test_case.TestCase):
                                 _CONNECTION_CHECK_PERIOD_SECS)
       usbpd_spec = usb_c.MigrateUSBPDSpec(port[0])
 
-    return ExtDisplayTaskArg(display_label=display_label,
+    return ExtDisplayTaskArg(display_label=info['display_label'],
                              display_id=info['display_id'],
                              audio_card=audio_card, audio_device=audio_device,
                              init_actions=init_actions, usbpd_spec=usbpd_spec)
