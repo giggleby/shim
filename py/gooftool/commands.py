@@ -77,44 +77,6 @@ _hwdb_path_cmd_arg = CmdArg('--hwdb_path', metavar='PATH',
                             default=hwid_utils.GetDefaultDataPath(),
                             help='Path to the HWID database.')
 
-
-def GetGooftool(options):
-  global _global_gooftool  # pylint: disable=global-statement
-
-  if _global_gooftool is None:
-    with _gooftool_lock:
-      if _global_gooftool is None:
-        project = getattr(options, 'project', None)
-        hwdb_path = getattr(options, 'hwdb_path', None)
-        _global_gooftool = Gooftool(hwid_version=3, project=project,
-                                    hwdb_path=hwdb_path)
-  return _global_gooftool
-
-# Define __args__ to make it easier to propagate the arguments
-GetGooftool.__args__ = (
-    _hwdb_path_cmd_arg,
-    _project_cmd_arg,
-)
-
-
-def HasFpmcu():
-  global _has_fpmcu  # pylint: disable=global-statement
-
-  if _has_fpmcu is None:
-    FPMCU_PATH = '/dev/cros_fp'
-    has_cros_config_fpmcu = False
-    cros_config_output = Shell(['cros_config', '/fingerprint', 'board'])
-    if cros_config_output.success and cros_config_output.stdout:
-      has_cros_config_fpmcu = True
-
-    if not os.path.exists(FPMCU_PATH) and has_cros_config_fpmcu:
-      raise Error(f'FPMCU found in cros_config but missing in {FPMCU_PATH}.')
-
-    _has_fpmcu = has_cros_config_fpmcu
-
-  return _has_fpmcu
-
-
 _waive_list_cmd_arg = CmdArg(
     '--waive_list', nargs='*', default=[], metavar='SUBCMD',
     help=('A list of waived checks, separated by whitespace. '
@@ -126,74 +88,6 @@ _skip_list_cmd_arg = CmdArg(
     help=('A list of skipped checks, separated by whitespace. '
           'Each item should be a sub-command of gooftool. '
           'e.g. "gooftool verify --skip_list verify_tpm clear_gbb_flags".'))
-
-
-def Command(cmd_name, *args, **kwargs):
-  """Decorator for commands in gooftool.
-
-  This is similar to argparse_utils.Command, but all gooftool commands
-  can be waived during `gooftool finalize` or `gooftool verify` using
-  --waive_list or --skip_list option.
-  """
-  args = args + (_skip_list_cmd_arg, _waive_list_cmd_arg)
-
-  def Decorate(fun):
-
-    @functools.wraps(fun)
-    def CommandWithWaiveSkipCheck(options):
-      waive_list = vars(options).get('waive_list', [])
-      skip_list = vars(options).get('skip_list', [])
-      if phase.GetPhase() >= phase.PVT_DOGFOOD and (
-          waive_list != [] or skip_list != []):
-        raise Error('waive_list and skip_list should be empty for phase '
-                    f'{phase.GetPhase()}')
-
-      if cmd_name not in skip_list:
-        try:
-          fun(options)
-        except Exception as e:
-          if cmd_name in waive_list:
-            logging.exception(e)
-          else:
-            raise
-
-    wrapped = argparse_utils.Command(cmd_name, *args, **kwargs)(
-        CommandWithWaiveSkipCheck)
-    wrapped.__args__ = args
-    return wrapped
-  return Decorate
-
-
-@Command('get_release_fs_type', *GetGooftool.__args__)
-def GetReleaseFSType(options):
-  """Get the FS type of the stateful partition of the release image."""
-
-  if GetGooftool(options).IsReleaseLVM():
-    print('Release image has LVM stateful partition.')
-  else:
-    print('Release image has EXT4 stateful partition.')
-
-
-@Command(
-    'write_hwid',
-    CmdArg('hwid', metavar='HWID', help='HWID string'),  # this
-    *GetGooftool.__args__)
-def WriteHWID(options):
-  """Write specified HWID value into the system BB."""
-
-  logging.info('writing hwid string %r', options.hwid)
-  GetGooftool(options).WriteHWID(options.hwid)
-  event_log.Log('write_hwid', hwid=options.hwid)
-  print(f'Wrote HWID: {options.hwid!r}')
-
-
-@Command('read_hwid', *GetGooftool.__args__)
-def ReadHWID(options):
-  """Read the HWID string from GBB."""
-
-  logging.info('reading the hwid string')
-  print(GetGooftool(options).ReadHWID())
-
 
 # TODO(yhong): Replace this argument with `--hwid-material-file` when
 # `cros.factory.hwid.v3.hwid_utils` provides methods to parse such file.
@@ -318,6 +212,212 @@ _fast_cmd_arg = CmdArg('--fast', action='store_true',
 _skip_feature_tiering_steps_cmd_arg = CmdArg(
     '--skip_feature_tiering_steps', action='store_true', default=False,
     help='Skip feature flag provisions for legacy project on features.')
+
+_upload_method_cmd_arg = CmdArg(
+    '--upload_method',
+    metavar='METHOD:PARAM',
+    help=(
+        'How to perform the upload.  METHOD should be one of {'
+        'ftp, factory_server, '
+        # The method `shopfloor` actually uploads the report to the umpire
+        # server, and this method name made some partners confused. Therefore
+        # rename this method to `factory_server`. See b/281573026 and
+        # b/281773658.
+        'shopfloor (deprecated, use factory_server instead; '
+        'see b/281573026 and b/281773658), '
+        'ftps, cpfe, smb}.'))
+
+_upload_max_retry_times_arg = CmdArg(
+    '--upload_max_retry_times', type=int, default=0,
+    help='Number of tries to upload. 0 to retry infinitely.')
+
+_upload_retry_interval_arg = CmdArg('--upload_retry_interval', type=int,
+                                    default=None,
+                                    help='Retry interval in seconds.')
+
+_upload_allow_fail_arg = CmdArg(
+    '--upload_allow_fail', action='store_true',
+    help='Continue finalize if report upload fails.')
+
+_add_file_cmd_arg = CmdArg(
+    '--add_file', metavar='FILE', action='append',
+    help='Extra file to include in report (must be an absolute path)')
+
+
+def GetGooftool(options):
+  global _global_gooftool  # pylint: disable=global-statement
+
+  if _global_gooftool is None:
+    with _gooftool_lock:
+      if _global_gooftool is None:
+        project = getattr(options, 'project', None)
+        hwdb_path = getattr(options, 'hwdb_path', None)
+        _global_gooftool = Gooftool(hwid_version=3, project=project,
+                                    hwdb_path=hwdb_path)
+  return _global_gooftool
+
+
+# Define __args__ to make it easier to propagate the arguments
+GetGooftool.__args__ = (
+    _hwdb_path_cmd_arg,
+    _project_cmd_arg,
+)
+
+
+def HasFpmcu():
+  global _has_fpmcu  # pylint: disable=global-statement
+
+  if _has_fpmcu is None:
+    FPMCU_PATH = '/dev/cros_fp'
+    has_cros_config_fpmcu = False
+    cros_config_output = Shell(['cros_config', '/fingerprint', 'board'])
+    if cros_config_output.success and cros_config_output.stdout:
+      has_cros_config_fpmcu = True
+
+    if not os.path.exists(FPMCU_PATH) and has_cros_config_fpmcu:
+      raise Error(f'FPMCU found in cros_config but missing in {FPMCU_PATH}.')
+
+    _has_fpmcu = has_cros_config_fpmcu
+
+  return _has_fpmcu
+
+
+def CreateReportArchiveBlob(*args, **kwargs):
+  """Creates a report archive and returns it as a blob.
+
+  Args:
+    See CreateReportArchive.
+
+  Returns:
+    An xmlrpc.client.Binary object containing a .tar.xz file.
+  """
+  report_archive = CreateReportArchive(*args, **kwargs)
+  try:
+    return xmlrpc.client.Binary(
+        file_utils.ReadFile(report_archive, encoding=None))
+  finally:
+    os.unlink(report_archive)
+
+
+def CreateReportArchive(device_sn=None, add_file=None):
+  """Creates a report archive in a temporary directory.
+
+  Args:
+    device_sn: The device serial number (optional).
+    add_file: A list of files to add (optional).
+
+  Returns:
+    Path to the archive.
+  """
+  # Flush Testlog data to DATA_TESTLOG_DIR before creating a report archive.
+  result, reason = state.GetInstance().FlushTestlog(uplink=False, local=True,
+                                                    timeout=10)
+  if not result:
+    logging.warning('Failed to flush testlog data: %s', reason)
+
+  def NormalizeAsFileName(token):
+    return re.sub(r'\W+', '', token).strip()
+
+  target_name = (
+      f"{datetime.datetime.utcnow():%Y%m%dT%H%M%SZ}"
+      f"{'' if device_sn is None else '_' + NormalizeAsFileName(device_sn)}"
+      ".tar.xz")
+  target_path = os.path.join(gettempdir(), target_name)
+
+  # Intentionally ignoring dotfiles in EVENT_LOG_DIR.
+  tar_cmd = f'cd {event_log.EVENT_LOG_DIR} ; tar cJf {target_path} * -C /'
+  tar_files = [paths.FACTORY_LOG_PATH, paths.DATA_TESTLOG_DIR]
+  if add_file:
+    tar_files = tar_files + add_file
+  for f in tar_files:
+    # Require absolute paths since we use -C / to change current directory to
+    # root.
+    if not f.startswith('/'):
+      raise Error(f'Not an absolute path: {f}')
+    if not os.path.exists(f):
+      raise Error(f'File does not exist: {f}')
+    tar_cmd += f' {pipes.quote(f[1:])}'
+  cmd_result = Shell(tar_cmd)
+
+  if cmd_result.status == 1:
+    # tar returns 1 when some files were changed during archiving,
+    # but that is expected for log files so should ignore such failure
+    # if the archive looks good.
+    Spawn(['tar', 'tJf', target_path], check_call=True, log=True,
+          ignore_stdout=True)
+  elif not cmd_result.success:
+    raise Error(f'unable to tar event logs, cmd {tar_cmd!r} failed, stderr: '
+                f'{cmd_result.stderr!r}')
+
+  return target_path
+
+
+def Command(cmd_name, *args, **kwargs):
+  """Decorator for commands in gooftool.
+
+  This is similar to argparse_utils.Command, but all gooftool commands
+  can be waived during `gooftool finalize` or `gooftool verify` using
+  --waive_list or --skip_list option.
+  """
+  args = args + (_skip_list_cmd_arg, _waive_list_cmd_arg)
+
+  def Decorate(fun):
+
+    @functools.wraps(fun)
+    def CommandWithWaiveSkipCheck(options):
+      waive_list = vars(options).get('waive_list', [])
+      skip_list = vars(options).get('skip_list', [])
+      if phase.GetPhase() >= phase.PVT_DOGFOOD and (waive_list != [] or
+                                                    skip_list != []):
+        raise Error('waive_list and skip_list should be empty for phase '
+                    f'{phase.GetPhase()}')
+
+      if cmd_name not in skip_list:
+        try:
+          fun(options)
+        except Exception as e:
+          if cmd_name in waive_list:
+            logging.exception(e)
+          else:
+            raise
+
+    wrapped = argparse_utils.Command(cmd_name, *args, **kwargs)(
+        CommandWithWaiveSkipCheck)
+    wrapped.__args__ = args
+    return wrapped
+
+  return Decorate
+
+
+@Command('get_release_fs_type', *GetGooftool.__args__)
+def GetReleaseFSType(options):
+  """Get the FS type of the stateful partition of the release image."""
+
+  if GetGooftool(options).IsReleaseLVM():
+    print('Release image has LVM stateful partition.')
+  else:
+    print('Release image has EXT4 stateful partition.')
+
+
+@Command(
+    'write_hwid',
+    CmdArg('hwid', metavar='HWID', help='HWID string'),  # this
+    *GetGooftool.__args__)
+def WriteHWID(options):
+  """Write specified HWID value into the system BB."""
+
+  logging.info('writing hwid string %r', options.hwid)
+  GetGooftool(options).WriteHWID(options.hwid)
+  event_log.Log('write_hwid', hwid=options.hwid)
+  print(f'Wrote HWID: {options.hwid!r}')
+
+
+@Command('read_hwid', *GetGooftool.__args__)
+def ReadHWID(options):
+  """Read the HWID string from GBB."""
+
+  logging.info('reading the hwid string')
+  print(GetGooftool(options).ReadHWID())
 
 
 @Command('verify_dlc_images', *GetGooftool.__args__)
@@ -963,102 +1063,6 @@ def LogSystemDetails(options):
   """Write miscellaneous system details to the event log."""
 
   event_log.Log('system_details', **GetGooftool(options).GetSystemDetails())
-
-
-def CreateReportArchiveBlob(*args, **kwargs):
-  """Creates a report archive and returns it as a blob.
-
-  Args:
-    See CreateReportArchive.
-
-  Returns:
-    An xmlrpc.client.Binary object containing a .tar.xz file.
-  """
-  report_archive = CreateReportArchive(*args, **kwargs)
-  try:
-    return xmlrpc.client.Binary(
-        file_utils.ReadFile(report_archive, encoding=None))
-  finally:
-    os.unlink(report_archive)
-
-
-def CreateReportArchive(device_sn=None, add_file=None):
-  """Creates a report archive in a temporary directory.
-
-  Args:
-    device_sn: The device serial number (optional).
-    add_file: A list of files to add (optional).
-
-  Returns:
-    Path to the archive.
-  """
-  # Flush Testlog data to DATA_TESTLOG_DIR before creating a report archive.
-  result, reason = state.GetInstance().FlushTestlog(
-      uplink=False, local=True, timeout=10)
-  if not result:
-    logging.warning('Failed to flush testlog data: %s', reason)
-
-  def NormalizeAsFileName(token):
-    return re.sub(r'\W+', '', token).strip()
-
-  target_name = (
-      f"{datetime.datetime.utcnow():%Y%m%dT%H%M%SZ}"
-      f"{'' if device_sn is None else '_' + NormalizeAsFileName(device_sn)}"
-      ".tar.xz")
-  target_path = os.path.join(gettempdir(), target_name)
-
-  # Intentionally ignoring dotfiles in EVENT_LOG_DIR.
-  tar_cmd = f'cd {event_log.EVENT_LOG_DIR} ; tar cJf {target_path} * -C /'
-  tar_files = [paths.FACTORY_LOG_PATH, paths.DATA_TESTLOG_DIR]
-  if add_file:
-    tar_files = tar_files + add_file
-  for f in tar_files:
-    # Require absolute paths since we use -C / to change current directory to
-    # root.
-    if not f.startswith('/'):
-      raise Error(f'Not an absolute path: {f}')
-    if not os.path.exists(f):
-      raise Error(f'File does not exist: {f}')
-    tar_cmd += f' {pipes.quote(f[1:])}'
-  cmd_result = Shell(tar_cmd)
-
-  if cmd_result.status == 1:
-    # tar returns 1 when some files were changed during archiving,
-    # but that is expected for log files so should ignore such failure
-    # if the archive looks good.
-    Spawn(['tar', 'tJf', target_path], check_call=True, log=True,
-          ignore_stdout=True)
-  elif not cmd_result.success:
-    raise Error(f'unable to tar event logs, cmd {tar_cmd!r} failed, stderr: '
-                f'{cmd_result.stderr!r}')
-
-  return target_path
-
-_upload_method_cmd_arg = CmdArg(
-    '--upload_method',
-    metavar='METHOD:PARAM',
-    help=(
-        'How to perform the upload.  METHOD should be one of {'
-        'ftp, factory_server, '
-        # The method `shopfloor` actually uploads the report to the umpire
-        # server, and this method name made some partners confused. Therefore
-        # rename this method to `factory_server`. See b/281573026 and
-        # b/281773658.
-        'shopfloor (deprecated, use factory_server instead; '
-        'see b/281573026 and b/281773658), '
-        'ftps, cpfe, smb}.'))
-_upload_max_retry_times_arg = CmdArg(
-    '--upload_max_retry_times', type=int, default=0,
-    help='Number of tries to upload. 0 to retry infinitely.')
-_upload_retry_interval_arg = CmdArg(
-    '--upload_retry_interval', type=int, default=None,
-    help='Retry interval in seconds.')
-_upload_allow_fail_arg = CmdArg(
-    '--upload_allow_fail', action='store_true',
-    help='Continue finalize if report upload fails.')
-_add_file_cmd_arg = CmdArg(
-    '--add_file', metavar='FILE', action='append',
-    help='Extra file to include in report (must be an absolute path)')
 
 
 @Command('upload_report',
