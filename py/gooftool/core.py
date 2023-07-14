@@ -315,11 +315,14 @@ class Gooftool:
     partition.
     """
     fp_board = self._cros_config.GetFingerPrintBoard()
+    fp_location = self._cros_config.GetFingerPrintLocation()
     if not fp_board:
       db_identity, cur_identity = self.GetIdentity()
       raise CrosConfigError(
           'Failed to probe fingerprint board from cros_config', db_identity,
           cur_identity)
+    if not fp_location or fp_location == 'none':
+      raise Error('Fingerprint sensor is absent')
 
     with sys_utils.MountPartition(
         self._util.GetReleaseRootPartitionPath()) as root:

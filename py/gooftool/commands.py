@@ -103,8 +103,12 @@ def HasFpmcu():
   if _has_fpmcu is None:
     FPMCU_PATH = '/dev/cros_fp'
     has_cros_config_fpmcu = False
-    cros_config_output = Shell(['cros_config', '/fingerprint', 'board'])
-    if cros_config_output.success and cros_config_output.stdout:
+    cros_config_fp_board = Shell(['cros_config', '/fingerprint', 'board'])
+    cros_config_fp_location = Shell(
+        ['cros_config', '/fingerprint', 'sensor-location'])
+    if (cros_config_fp_board.success and cros_config_fp_board.stdout and
+        cros_config_fp_location.success and
+        cros_config_fp_location.stdout != 'none'):
       has_cros_config_fpmcu = True
 
     if not os.path.exists(FPMCU_PATH) and has_cros_config_fpmcu:
