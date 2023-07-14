@@ -27,7 +27,6 @@ Dependency
 - gsctool >= 15287.0.0 to include 'gsctool -a -reboot'.
 - Ti50 >= 0.(24|23).20 (24 for prepvt and 23 for prod)
   to include 'apro result (36)'.
-- That the write protect status register values have been provisioned on ti50.
 - AP firmware is either preMP or MP signed.
   Will not work with test signed AP firmware.
 
