@@ -62,6 +62,10 @@ class CrosConfig:
     result = self.GetValue('/fingerprint', 'board')
     return result.stdout.strip() if result.stdout else ''
 
+  def GetFingerPrintLocation(self):
+    result = self.GetValue('/fingerprint', 'sensor-location')
+    return result.stdout.strip() if result.stdout else ''
+
   def GetProductName(self):
     result_x86 = self.GetValue('/identity', 'smbios-name-match')
     if result_x86:
