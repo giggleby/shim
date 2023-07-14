@@ -66,7 +66,9 @@ class ISSHRunner(abc.ABC):
     raise NotImplementedError
 
   @abc.abstractmethod
-  def SpawnRsyncAndPush(self, src: str, dest: str,
+  def SpawnRsyncAndPush(self, src: Union[str, Sequence[str]], dest: str,
+                        exclude_patterns: Optional[List[str]] = None,
+                        preserve_symlinks=False, exclude_csv=False, force=False,
                         **kwargs) -> subprocess.Popen:
     """Copies a file or directory from local to remote.
 
@@ -74,8 +76,13 @@ class ISSHRunner(abc.ABC):
     sure to check if a trailing slash is required.
 
     Args:
-      src: The path of local file or directory.
+      src: One ore more paths of local files or directories.
       dest: The path of remote file or directory.
+      exclude_patterns: Filename which matches the pattern in excluded.
+      preserve_symlinks: Copy symlinks as symlinks and treat symlinked directory
+                         on receiver as directory.
+      exclude_cvs: Ignore files in the same way CVS does.
+      force: Force deletion of directories even if not empty.
       kwargs: See docstring of Spawn.
 
     Returns: The rsync process.
@@ -141,14 +148,32 @@ class SSHRunner(ISSHRunner):
     return ['ssh'
            ] + self._GetSSHOptions() + additional_ssh_options + [sig] + command
 
-  def _BuildRsyncCommand(self, src: str, dest: str, is_push: bool) -> List[str]:
+  def _BuildRsyncCommand(self, src: Union[str, Sequence[str]], dest: str,
+                         is_push: bool,
+                         exclude_patterns: Optional[List[str]] = None,
+                         preserve_symlinks=False, exclude_csv=False,
+                         force=False) -> List[str]:
     if is_push:
+      src = [src] if isinstance(src, str) else src
       dest = f'{self._GetDeviceSignature()}:{dest}'
     else:
-      src = f'{self._GetDeviceSignature()}:{src}'
+      assert isinstance(src, str)
+      src = [f'{self._GetDeviceSignature()}:{src}']
+
+    rsync_options = ['-az']
+    if preserve_symlinks:
+      rsync_options += ['-lK']
+    if exclude_csv:
+      rsync_options += ['-C']
+    if force:
+      rsync_options += ['--force']
+    if exclude_patterns:
+      rsync_options += sum([['--exclude', pat] for pat in exclude_patterns], [])
 
     ssh_options = 'ssh ' + (' '.join(map(pipes.quote, self._GetSSHOptions())))
-    return ['rsync', '-az', '-e', ssh_options, src, dest]
+    rsh_params = ['-e', ssh_options] + list(src) + [dest]
+
+    return ['rsync'] + rsync_options + rsh_params
 
   @type_utils.Overrides
   def Spawn(self, command: Union[str, Sequence[str]],
@@ -158,10 +183,14 @@ class SSHRunner(ISSHRunner):
     return process_utils.Spawn(ssh_command, **kwargs)
 
   @type_utils.Overrides
-  def SpawnRsyncAndPush(self, src: str, dest: str,
+  def SpawnRsyncAndPush(self, src: Union[str, Sequence[str]], dest: str,
+                        exclude_patterns: Optional[List[str]] = None,
+                        preserve_symlinks=False, exclude_csv=False, force=False,
                         **kwargs) -> subprocess.Popen:
     """See ISSHRunner.SpawnRsyncAndPush."""
-    rsync_command = self._BuildRsyncCommand(src, dest, True)
+    rsync_command = self._BuildRsyncCommand(src, dest, True, exclude_patterns,
+                                            preserve_symlinks, exclude_csv,
+                                            force)
     return process_utils.Spawn(rsync_command, **kwargs)
 
   @type_utils.Overrides
@@ -199,11 +228,14 @@ class ControlMasterSSHRunner(ISSHRunner):
     return ssh_process
 
   @type_utils.Overrides
-  def SpawnRsyncAndPush(self, src: str, dest: str,
+  def SpawnRsyncAndPush(self, src: Union[str, Sequence[str]], dest: str,
+                        exclude_patterns: Optional[List[str]] = None,
+                        preserve_symlinks=False, exclude_csv=False, force=False,
                         **kwargs) -> subprocess.Popen:
     """See ISSHRunner.SpawnRsyncAndPush."""
     rsync_process = self._inner_ssh_runner.SpawnRsyncAndPush(
-        src, dest, **kwargs)
+        src, dest, exclude_patterns, preserve_symlinks, exclude_csv, force,
+        **kwargs)
     self._MonitorProcess(rsync_process)
     return rsync_process
 

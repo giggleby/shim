@@ -13,6 +13,7 @@ import os
 import pipes
 import re
 import sys
+from typing import Union
 
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.test.env import paths
@@ -33,10 +34,11 @@ class GoofyRemoteException(Exception):
   """Goofy remote exception."""
 
 
-def GetBoard(host):
-  logging.info('Checking release board on %s...', host)
-  release = ssh_utils.SpawnSSHToDUT([host, 'cat /etc/lsb-release'],
-                                    check_output=True, log=True).stdout_data
+def GetBoard(ssh_runner: ssh_utils.SSHRunner) -> Union[str, None]:
+  logging.info('Checking release board on %s...', ssh_runner.host)
+  release = ssh_runner.Spawn('cat /etc/lsb-release', check_output=True,
+                             log=True).stdout_data
+  assert isinstance(release, str)
   match = re.search(r'^CHROMEOS_RELEASE_BOARD=(.+)', release, re.MULTILINE)
   if not match:
     logging.warning('Unable to determine release board')
@@ -147,37 +149,47 @@ def main():
 
   process_utils.Spawn(['make', '--quiet'], cwd=paths.FACTORY_DIR,
                       check_call=True, log=True)
-  board = args.board or GetBoard(args.host)
+  ssh_runner = ssh_utils.SSHRunner(args.host)
+  board = args.board or GetBoard(ssh_runner)
+  assert isinstance(board, str)
 
   # We need to rsync the public factory repo first to set up goofy symlink.
   # We need --force to remove the original goofy directory if it's not a
   # symlink, -l for re-creating the symlink on DUT, -K for following the symlink
   # on DUT.
-  ssh_utils.SpawnRsyncToDUT(['-azlKC', '--force', '--exclude', '*.pyc'] + list(
+  local_factory_dirs = list(
       filter(os.path.exists, [
           os.path.join(paths.FACTORY_DIR, x)
           for x in ('bin', 'py', 'py_pkg', 'sh', 'third_party', 'init')
-      ])) + [f'{args.host}:/usr/local/factory'], check_call=True, log=True)
+      ]))
+  ssh_runner.SpawnRsyncAndPush(
+      local_factory_dirs,
+      '/usr/local/factory/',
+      exclude_patterns=['*.pyc'],
+      preserve_symlinks=True,  # -lK
+      exclude_csv=True,  # -C
+      force=True,  # --force
+      check_call=True,
+      log=True)
 
   process_utils.Spawn(['make', f'par-overlay-{board}'], cwd=paths.FACTORY_DIR,
                       check_call=True, log=True)
 
-  ssh_utils.SpawnRsyncToDUT([
-      '-az', f'overlay-{board}/build/par/factory.par',
-      f'{args.host}:/usr/local/factory/'
-  ], cwd=paths.FACTORY_DIR, check_call=True, log=True)
+  local_factory_par = os.path.join(paths.FACTORY_DIR,
+                                   f'overlay-{board}/build/par/factory.par')
+  ssh_runner.SpawnRsyncAndPush(local_factory_par, '/usr/local/factory/',
+                               check_call=True, log=True)
 
-  private_path = cros_board_utils.GetChromeOSFactoryBoardPath(board)
-  if private_path:
-    ssh_utils.SpawnRsyncToDUT(
-        ['-azlKC', '--exclude', 'bundle'] +
-        [private_path + '/', f'{args.host}:/usr/local/factory/'],
-        check_call=True, log=True)
+  local_private_path = cros_board_utils.GetChromeOSFactoryBoardPath(board)
+  if local_private_path:
+    ssh_runner.SpawnRsyncAndPush(
+        local_private_path, '/usr/local/factory/', exclude_patterns=['bundle'],
+        preserve_symlinks=True, exclude_csv=True, check_call=True, log=True)
 
   # Call goofy_remote on the remote host, allowing it to tweak test lists.
-  ssh_utils.SpawnSSHToDUT([args.host, 'goofy_remote', '--local'] +
-                          [pipes.quote(x) for x in sys.argv[1:]],
-                          check_call=True, log=True)
+  ssh_runner.Spawn(
+      ['goofy_remote', '--local'] + [pipes.quote(x) for x in sys.argv[1:]],
+      check_call=True, log=True)
 
   if args.hwid:
     project = args.project
@@ -192,41 +204,37 @@ def main():
     process_utils.Spawn(['./create_bundle', '--version', '3',
                          project.upper()], cwd=chromeos_hwid_path,
                         check_call=True, log=True)
-    ssh_utils.SpawnSSHToDUT(
-        [args.host, 'bash'],
-        stdin=open(  # pylint: disable=consider-using-with
-            os.path.join(chromeos_hwid_path,
-                         hwid_utils.GetHWIDBundleName(project)),
-            encoding='utf8'),
-        check_call=True,
-        log=True)
+    hwid_bundle_script = os.path.join(chromeos_hwid_path,
+                                      hwid_utils.GetHWIDBundleName(project))
+    ssh_runner.Spawn(['bash', hwid_bundle_script], check_call=True, log=True)
 
   # Make sure all the directories and files have correct permissions.  This is
   # essential for Chrome to load the factory test extension.
-  ssh_utils.SpawnSSHToDUT([
-      args.host, 'find', '/usr/local/factory', '-type', 'd', '-exec',
-      'chmod 755 {} +'
+  ssh_runner.Spawn([
+      'find', '/usr/local/factory', '-type', 'd', '-exec', 'chmod', '755', '{}',
+      '+'
   ], check_call=True, log=True)
-  ssh_utils.SpawnSSHToDUT([
-      args.host, 'find', '/usr/local/factory', '-type', 'f', '-exec',
-      'chmod go+r {} +'
+  ssh_runner.Spawn([
+      'find', '/usr/local/factory', '-type', 'f', '-exec', 'chmod', 'go+r',
+      '{}', '+'
   ], check_call=True, log=True)
 
   if args.restart:
-    ssh_utils.SpawnSSHToDUT(
-        [args.host, '/usr/local/factory/bin/factory_restart'] +
-        (['-a'] if args.clear_state else []), check_call=True, log=True)
+    ssh_runner.Spawn(['/usr/local/factory/bin/factory_restart'] +
+                     (['-a'] if args.clear_state else []), check_call=True,
+                     log=True)
 
   if args.run_test:
 
     @sync_utils.RetryDecorator(max_attempt_count=10, interval_sec=5,
                                timeout_sec=float('inf'))
     def GoofyRpcRunTest():
-      return ssh_utils.SpawnSSHToDUT(
-          [args.host, 'goofy_rpc', r'RunTest\(\"' + args.run_test + r'\"\)'],
+      return ssh_runner.Spawn(
+          ['goofy_rpc', r'RunTest\(\"' + args.run_test + r'\"\)'],
           check_call=True, log=True)
 
     GoofyRpcRunTest()
+
 
 if __name__ == '__main__':
   main()
