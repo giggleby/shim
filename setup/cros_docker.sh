@@ -986,6 +986,7 @@ do_run() {
     --env HOST_UMPIRE_DIR="${HOST_UMPIRE_DIR}" \
     --env HOST_TFTP_DIR="${HOST_TFTP_DIR}" \
     --env HOST_LOCALTIME_PATH="${HOST_LOCALTIME_PATH}" \
+    --env RESOURCE_CROS_DOCKER_URL="" \
     --volume /run \
     --volume "${HOST_DOME_DIR}/${db_filename}:${docker_db_dir}/${db_filename}" \
     --volume "${host_log_dir}:${docker_log_dir}" \
