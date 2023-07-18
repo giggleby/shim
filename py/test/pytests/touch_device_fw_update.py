@@ -59,7 +59,12 @@ CONFIG_UPDATER = '/opt/google/touch/scripts/chromeos-touch-config-update.sh'
 
 
 class UpdateTouchDeviceFWTest(unittest.TestCase):
-  related_components = (test_tags.TestCategory.TRACKPAD, )
+  related_components = (
+      test_tags.TestCategory.EMR_IC,
+      test_tags.TestCategory.TOUCHCONTROLLER,
+      test_tags.TestCategory.TRACKPAD,
+      test_tags.TestCategory.USI_CONTROLLER,
+  )
   ARGS = [
       Arg('device_name', str, 'Name of the touch device as in'
           '/sys/bus/i2c/devices/\\*/name)'),

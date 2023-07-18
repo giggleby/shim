@@ -70,6 +70,10 @@ class StylusStatus(str, enum.Enum):
 
 class StylusGarageTest(test_case.TestCase):
   """Stylus garage detection factory test."""
+  related_components = (
+      test_case.TestCategory.EMR_IC,
+      test_case.TestCategory.USI_CONTROLLER,
+  )
   ARGS = [
       Arg('timeout_secs', int, 'Timeout value for the test.', default=180),
       Arg('device_filter', (int, str),

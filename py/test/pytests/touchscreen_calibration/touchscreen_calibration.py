@@ -2,6 +2,42 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""Handles the touchscreen calibration and controls the test fixture.
+
+Description
+-----------
+
+Internal References
+^^^^^^^^^^^^^^^^^^^
+- `go/cros-factory-touchscreen-calibration`_
+
+Test Procedure
+--------------
+
+Internal References
+^^^^^^^^^^^^^^^^^^^
+- `go/cros-factory-touchscreen-calibration`_
+
+.. _go/cros-factory-touchscreen-calibration: \
+http://go/cros-factory-touchscreen-calibration
+
+Dependency
+----------
+- Implementation of sensor_server.py
+- Fixture for calibration. See `README`_.
+
+.. _README: https://chromium.googlesource.com/chromiumos/\
+platform/factory/+/HEAD/py/test/fixture/touchscreen_calibration/README.md
+
+Examples
+--------
+An example::
+
+  {
+    "pytest_name": "touchscreen_calibration.touchscreen_calibration"
+  }
+"""
+
 import collections
 import collections.abc
 from io import StringIO
@@ -51,6 +87,11 @@ def _CreateXMLRPCSensorsClient(addr=('localhost', 8000)):
 
 class TouchscreenCalibration(test_case.TestCase):
   """Handles the calibration and controls the test fixture."""
+  related_components = (
+      test_case.TestCategory.EMR_IC,
+      test_case.TestCategory.TOUCHCONTROLLER,
+      test_case.TestCategory.USI_CONTROLLER,
+  )
   version = 1
 
   DELTAS = 'deltas'

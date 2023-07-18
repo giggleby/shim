@@ -57,14 +57,23 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('CPU', 'cpu'),
         TestCategory.DRAM:
             CategoryProperties('Memory', 'dram'),
+        TestCategory.EMR_IC:
+            CategoryProperties('Touch screen controller (EMR Stylus)',
+                               'touchscreen'),
         TestCategory.ETHERNET:
             CategoryProperties('Ethernet controller', 'ethernet'),
         TestCategory.LCD:
             CategoryProperties('Display Panel', 'display_panel'),
         TestCategory.MIPI_CAMERA:
             CategoryProperties('Camera - MIPI', 'camera'),
+        TestCategory.TOUCHCONTROLLER:
+            CategoryProperties('Touch screen Controller (non stylus)',
+                               'touchscreen'),
         TestCategory.TRACKPAD:
             CategoryProperties('Touchpad Controller', 'touchpad'),
+        TestCategory.USI_CONTROLLER:
+            CategoryProperties('Touch screen controller (USI Stylus)',
+                               'touchscreen'),
         TestCategory.WIFI:
             CategoryProperties('Wifi / Bluetooth', 'wireless'),
     }.get(self, CategoryProperties(None, None))

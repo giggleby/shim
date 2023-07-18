@@ -199,6 +199,11 @@ class TouchscreenTest(test_case.TestCase):
     self._dispatcher: evdev_utils.InputDeviceDispatcher
     self._monitor: StylusMonitor or TouchscreenMonitor
   """
+  related_components = (
+      test_case.TestCategory.EMR_IC,
+      test_case.TestCategory.TOUCHCONTROLLER,
+      test_case.TestCategory.USI_CONTROLLER,
+  )
   ARGS = [
       Arg('x_segments', int, 'Number of segments in x-axis.', default=5),
       Arg('y_segments', int, 'Number of segments in y-axis.', default=5),

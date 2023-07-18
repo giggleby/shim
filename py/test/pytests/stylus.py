@@ -90,6 +90,10 @@ class StylusMonitor(touch_monitor.SingleTouchMonitor):
 class StylusTest(test_case.TestCase):
   """Stylus factory test."""
 
+  related_components = (
+      test_case.TestCategory.EMR_IC,
+      test_case.TestCategory.USI_CONTROLLER,
+  )
   ARGS = [
       Arg('device_filter', (int, str, list), 'Stylus input event id, evdev '
           'name, or evdev events.', default=None),
