@@ -4,6 +4,7 @@ build
 shopfloor_data
 .tests-passed
 .lint-frontend-passed
+.frontend-presubmit-passed
 overlay-*
 go/bin
 go/pkg

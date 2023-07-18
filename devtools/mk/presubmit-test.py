@@ -26,6 +26,10 @@ def CheckTestsPassedInDirectory(folder, files, instruction, checked_file):
       '.lint-frontend-passed': [
           'Lints have not passed.',
           'Files have changed since last time lints have passed:',
+      ],
+      '.frontend-presubmit-passed': [
+          'Presubmit have not passed.',
+          'Files have changed since last time:',
       ]
   }
   messages = messages_mapping[checked_file]
@@ -78,6 +82,13 @@ def CheckEditor(files):
        ' in editor venv outside chroot.'), '.tests-passed')
 
 
+def CheckEditorFrontend(files):
+  return CheckTestsPassedInDirectory(
+      'py/test_list_editor/frontend', files,
+      ('Please run "npm run presubmit" in test_list_editor/frontend'
+       ' in editor venv outside chroot.'), '.frontend-presubmit-passed')
+
+
 def CheckPytestDoc(files):
   all_pytests = json.loads(
       subprocess.check_output(['bin/list_pytests']))
@@ -117,6 +128,7 @@ def main():
   all_passed &= CheckDome(files)
   all_passed &= CheckDomeLint(files)
   all_passed &= CheckEditor(files)
+  all_passed &= CheckEditorFrontend(files)
   if all_passed:
     print('All presubmit test passed.')
   else:
