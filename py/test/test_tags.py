@@ -57,6 +57,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('CPU', 'cpu'),
         TestCategory.DRAM:
             CategoryProperties('Memory', 'dram'),
+        TestCategory.EC:
+            CategoryProperties('EC', 'ec_flash_chip'),
         TestCategory.EMR_IC:
             CategoryProperties('Touch screen controller (EMR Stylus)',
                                'touchscreen'),
@@ -66,6 +68,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('Display Panel', 'display_panel'),
         TestCategory.MIPI_CAMERA:
             CategoryProperties('Camera - MIPI', 'camera'),
+        TestCategory.SPIFLASH:
+            CategoryProperties('SPI Flash', 'flash_chip'),
         TestCategory.TOUCHCONTROLLER:
             CategoryProperties('Touch screen Controller (non stylus)',
                                'touchscreen'),

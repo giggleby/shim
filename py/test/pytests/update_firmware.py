@@ -88,6 +88,10 @@ class NoUpdatesException(Exception):
 
 
 class UpdateFirmwareTest(test_case.TestCase):
+  related_components = (
+      test_case.TestCategory.EC,
+      test_case.TestCategory.SPIFLASH,
+  )
   ARGS = [
       Arg('firmware_updater', str, f'Full path of {_FIRMWARE_UPDATER_NAME}.',
           default=paths.FACTORY_FIRMWARE_UPDATER_PATH),
