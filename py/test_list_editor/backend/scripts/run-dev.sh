@@ -16,4 +16,4 @@ source "$(get_venv_dir)"/bin/activate
 echo "Starting Flask Server";
 cd "${CROS_DIR}" || exit
 python3 -m flask --app cros.factory.test_list_editor.backend.main \
-  --debug run -p "${PORT_NUMBER}"
+  --debug run -p "${PORT_NUMBER}" --host 0.0.0.0

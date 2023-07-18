@@ -17,14 +17,14 @@ setup_by_piptool() {
 if in_chroot && [ ! -d "${CHROOT_VENV_DIR}" ]; then
   # Chroot Case
   echo "Setup env inside chroot."
-  virtualenv -p python3.8 "${CHROOT_VENV_DIR}"
+  virtualenv -p python3 "${CHROOT_VENV_DIR}"
   source "${CHROOT_VENV_DIR}"/bin/activate
   setup_by_piptool
   exit
 elif (! in_chroot) && [ ! -d "${VENV_DIR}" ]; then
   # Outside Case
   echo "Setup env outside chroot."
-  virtualenv -p python3.10 "${VENV_DIR}"
+  virtualenv -p python3 "${VENV_DIR}"
   source "${VENV_DIR}"/bin/activate
   setup_by_piptool
   exit
