@@ -1,0 +1,89 @@
+---
+apiVersion: "v1"
+kind: "Namespace"
+metadata:
+  name: "test-list-editor"
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "test-list-editor-backend"
+  namespace: "test-list-editor"
+  labels:
+    app: "test-list-editor-backend"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "test-list-editor-backend"
+  template:
+    metadata:
+      labels:
+        app: "test-list-editor-backend"
+    spec:
+      securityContext:
+        fsGroup: 3200
+      containers:
+      - name: "test-list-editor-backend"
+        image: ${DEV_IMAGE_NAME}
+        resources:
+          limits:
+            cpu: "1.0"
+            memory: "2G"
+        volumeMounts:
+          - name: data-volume
+            mountPath: /data
+      volumes:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: data-pvc
+---
+apiVersion: "autoscaling/v2"
+kind: "HorizontalPodAutoscaler"
+metadata:
+  name: "test-list-editor-backend-hpa-2stl"
+  namespace: "test-list-editor"
+  labels:
+    app: "test-list-editor-backend"
+spec:
+  scaleTargetRef:
+    kind: "Deployment"
+    name: "test-list-editor-backend"
+    apiVersion: "apps/v1"
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: "Resource"
+    resource:
+      name: "cpu"
+      target:
+        type: "Utilization"
+        averageUtilization: 80
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "test-list-editor-backend-service"
+  namespace: "test-list-editor"
+  labels:
+    app: "test-list-editor-backend"
+spec:
+  ports:
+  - protocol: "TCP"
+    port: 5000
+    targetPort: 5000
+  selector:
+    app: "test-list-editor-backend"
+  type: "LoadBalancer"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: "test-list-editor"
+  name: data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

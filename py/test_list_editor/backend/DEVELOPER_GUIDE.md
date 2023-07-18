@@ -300,3 +300,55 @@ $ scripts/run-unittest.sh
 * `/api/v1/tests` This is used to get / update the "subtests" of a test item.
   * If the details to be updated is placed in `subtests` or `tests` section of a test list, then
   the code should be placed in this directory.
+
+## Deployments
+
+The current test list editor backend is deployed to a Kubernetes cluster managed by ChromeOS
+factory team. Before starting the process to update the current deployment and services, make sure
+you have the access rights to the factory gcp account.
+
+The script in `scripts/run-*.sh` depends on the following tools. Please make sure the
+following dependencies are present before executing.
+
+* `gcloud` CLI
+* `kubectl` CLI
+* `jq`
+
+### Build and push an image
+
+* Build and push the container.
+
+```sh
+# On Host (Outside)
+$ scripts/run-build-and-push.sh
+```
+
+### Deploy to cluster
+
+To deploy to kubernetes cluster, you will need to have `kubectl` ready.
+
+```sh
+# On Host (Outside)
+$ scripts/run-deploy.sh
+```
+
+* Verify the deployment with the following command.
+
+```sh
+# On Host (Outside)
+$ kubectl get service -n test-list-editor
+```
+
+If you see something similar to the following, then it means you have successfully created the dev
+services.
+
+```sh
+NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+test-list-editor-backend    1/1     1            1           10d
+```
+
+### FAQ
+
+#### My docker build command hangs, what should I do?
+
+* `systemctl restart docker` may help.

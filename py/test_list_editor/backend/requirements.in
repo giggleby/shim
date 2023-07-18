@@ -7,3 +7,4 @@ pydantic
 jsonrpclib
 jsonschema
 flask-cors
+gunicorn
