@@ -6,12 +6,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 
-if (!document.getElementById("root")) {
-  const div = document.createElement("div");
-  div.id = "root";
-  document.body.appendChild(div);
-}
-export const root = ReactDOM.createRoot(
+const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement,
 );
 root.render(
