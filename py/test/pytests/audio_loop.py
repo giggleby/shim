@@ -413,7 +413,11 @@ class AudioLoopTest(test_case.TestCase):
   1. Speaker to digital microphone.
   2. Headphone out to headphone in.
   """
-  related_components = (test_case.TestCategory.AUDIOCODEC, )
+  related_components = (
+      test_case.TestCategory.AUDIOCODEC,
+      test_case.TestCategory.SMART_SPEAKER_AMPLIFIER,
+      test_case.TestCategory.SPEAKERAMPLIFIER,
+  )
   ARGS = [
       Arg('audio_conf', str, 'Audio config file path', default=None),
       Arg(

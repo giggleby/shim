@@ -39,7 +39,11 @@ class AudioDiagnosticTest(test_case.TestCase):
   pass/fail result according to the heard audio quality.
   """
 
-  related_components = (test_case.TestCategory.AUDIOCODEC, )
+  related_components = (
+      test_case.TestCategory.AUDIOCODEC,
+      test_case.TestCategory.SMART_SPEAKER_AMPLIFIER,
+      test_case.TestCategory.SPEAKERAMPLIFIER,
+  )
 
   def setUp(self):
     """Setup CRAS and bind events to corresponding tasks at backend."""

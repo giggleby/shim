@@ -68,6 +68,10 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('Display Panel', 'display_panel'),
         TestCategory.MIPI_CAMERA:
             CategoryProperties('Camera - MIPI', 'camera'),
+        TestCategory.SMART_SPEAKER_AMPLIFIER:
+            CategoryProperties('Smart Speaker Amplifier', 'audio_codec'),
+        TestCategory.SPEAKERAMPLIFIER:
+            CategoryProperties('Speaker Amplifier', 'audio_codec'),
         TestCategory.SPIFLASH:
             CategoryProperties('SPI Flash', 'flash_chip'),
         TestCategory.TOUCHCONTROLLER:

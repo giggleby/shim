@@ -145,7 +145,11 @@ class LoopType(str, enum.Enum):
 
 
 class AudioQualityTest(test_case.TestCase):
-  related_components = (test_case.TestCategory.AUDIOCODEC, )
+  related_components = (
+      test_case.TestCategory.AUDIOCODEC,
+      test_case.TestCategory.SMART_SPEAKER_AMPLIFIER,
+      test_case.TestCategory.SPEAKERAMPLIFIER,
+  )
   ARGS = [
       Arg('initial_actions', list, 'List of [card, actions], and card '
           'can be card index number or card name', default=[]),

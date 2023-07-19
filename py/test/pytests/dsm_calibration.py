@@ -48,6 +48,7 @@ import time
 import unittest
 
 from cros.factory.device import device_utils
+from cros.factory.test import test_tags
 from cros.factory.test.utils import audio_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
@@ -57,6 +58,7 @@ _VPD_KEY = 'dsm_calib'
 
 
 class DSMCalibrationTest(unittest.TestCase):
+  related_components = (test_tags.TestCategory.SMART_SPEAKER_AMPLIFIER, )
   ARGS = [
       Arg('output_dev', list,
           'Output ALSA device. [card_name, sub_device].'

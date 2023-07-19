@@ -63,7 +63,11 @@ _SOUND_DIRECTORY = os.path.join(
 
 class AudioBasicTest(test_case.TestCase):
 
-  related_components = (test_case.TestCategory.AUDIOCODEC, )
+  related_components = (
+      test_case.TestCategory.AUDIOCODEC,
+      test_case.TestCategory.SMART_SPEAKER_AMPLIFIER,
+      test_case.TestCategory.SPEAKERAMPLIFIER,
+  )
 
   ARGS = [
       i18n_arg_utils.I18nArg('audio_title', 'Label Title of audio test',
