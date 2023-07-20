@@ -64,12 +64,10 @@ class PayloadManager(abc.ABC):
 
   def __init__(
       self, data_manager: payload_data.PayloadDataManager,
-      hwid_repo_manager: hwid_repo.HWIDRepoManager,
       hwid_action_manager: hwid_action_manager_module.HWIDActionManager):
 
     self._logger = logging.getLogger(self.__class__.__name__)
     self._data_manager = data_manager
-    self._hwid_repo_manager = hwid_repo_manager
     self._hwid_action_manager = hwid_action_manager
     self._gerrit_credentials = None
     self._auth_cookie = None
@@ -107,11 +105,13 @@ class PayloadManager(abc.ABC):
 
   @abc.abstractmethod
   def _GetSupportedModels(
-      self, limit_models: Collection[str]) -> Mapping[str, Collection[str]]:
+      self, limit_models: Collection[str],
+      live_hwid_repo: hwid_repo.HWIDRepo) -> Mapping[str, Collection[str]]:
     """Returns models supported by the generator.
 
     Args:
       limit_models: See Update().
+      live_hwid_repo: See Update().
 
     Returns:
       A dict that maps board names to list of model names.
@@ -157,8 +157,9 @@ class PayloadManager(abc.ABC):
     """
 
   def Update(self, dryrun: bool, limit_models: Collection[str],
-             force_update: bool) -> Mapping[str, UpdatedResult]:
-    """Updates payload with the latest HWID DB.
+             force_update: bool,
+             live_hwid_repo: hwid_repo.HWIDRepo) -> Mapping[str, UpdatedResult]:
+    """Updates payload with the HWID DB.
 
     Args:
       dryrun: Do everything except actually upload the CL.
@@ -166,25 +167,28 @@ class PayloadManager(abc.ABC):
         unlimited.
       force_update: Generate payload change CLs without checking payload hash in
         advance.
+      live_hwid_repo: A HWIDRepo instance being processed.
 
     Returns:
       A dict mapping board names to its updated results.
     """
     self._logger.info('Start syncing')
-    hwid_main_commit = self._hwid_repo_manager.GetMainCommitID()
+
+    hwid_live_commit = live_hwid_repo.hwid_db_commit_id
     hwid_prev_commit = self._data_manager.GetLatestHWIDMainCommit()
-    if hwid_prev_commit == hwid_main_commit and not force_update:
-      self._logger.info('The HWID main commit %s is already processed, skipped',
-                        hwid_main_commit)
+    if hwid_prev_commit == hwid_live_commit and not force_update:
+      self._logger.info('The HWID live commit %s is already processed, skipped',
+                        hwid_live_commit)
       return {}
-    self._logger.info('Sync with HWID commit %s', hwid_main_commit)
+    self._logger.info('Sync with HWID commit %s', hwid_live_commit)
 
     result = {}
     self._RefreshCredential()
     author = self._author
     reviewers = self._reviewers
     cc = self._cc
-    for board, models in self._GetSupportedModels(limit_models).items():
+    for board, models in self._GetSupportedModels(limit_models,
+                                                  live_hwid_repo).items():
       payloads = self._GeneratePayloads(board, models)
       if payloads is not None and self._ShouldUpdatePayload(
           board, payloads, force_update):
@@ -196,7 +200,7 @@ class PayloadManager(abc.ABC):
             setting.prefix, filepath), git_util.NORMAL_FILE_MODE, filecontent)
                      for filepath, filecontent in payloads.contents.items()]
         commit_msg = self._GetCLMessage(board, models, payloads,
-                                        hwid_main_commit, hwid_prev_commit)
+                                        hwid_live_commit, hwid_prev_commit)
         try:
           change_id, unused_cl_number = self._CreateCL(
               dryrun, git_url, self._auth_cookie, branch, git_files, author,
@@ -210,8 +214,8 @@ class PayloadManager(abc.ABC):
           self._logger.error('CL is not created: %r', str(ex))
           raise PayloadGenerationException('CL is not created') from ex
 
-    self._data_manager.SetLatestHWIDMainCommit(hwid_main_commit)
-    self._logger.info('Sync successfully to %s.', hwid_main_commit)
+    self._data_manager.SetLatestHWIDMainCommit(hwid_live_commit)
+    self._logger.info('Sync successfully to %s.', hwid_live_commit)
     return result
 
   def AbandonCLs(self, dryrun: bool, change_ids: Mapping[str, str]):
@@ -307,9 +311,9 @@ class HWIDSelectionPayloadManager(PayloadManager):
   """A class managing payloads for HWID selection generated from HWID DB."""
 
   def _GetSupportedModels(
-      self, limit_models: Collection[str]) -> Mapping[str, Collection[str]]:
+      self, limit_models: Collection[str],
+      live_hwid_repo: hwid_repo.HWIDRepo) -> Mapping[str, Collection[str]]:
     """See base class."""
-    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     board_models = collections.defaultdict(list)
     models = (
         limit_models
@@ -385,19 +389,18 @@ class VerificationPayloadManager(PayloadManager):
 
   def __init__(
       self, data_manager: payload_data.PayloadDataManager,
-      hwid_repo_manager: hwid_repo.HWIDRepoManager,
       hwid_action_manager: hwid_action_manager_module.HWIDActionManager,
       config_data: config_data_module.Config,
       decoder_data_manager: decoder_data_module.DecoderDataManager):
 
-    super().__init__(data_manager, hwid_repo_manager, hwid_action_manager)
+    super().__init__(data_manager, hwid_action_manager)
     self._config_data = config_data
     self._decoder_data_manager = decoder_data_manager
 
   def _GetSupportedModels(
-      self, limit_models: Collection[str]) -> Mapping[str, Collection[str]]:
+      self, limit_models: Collection[str],
+      live_hwid_repo: hwid_repo.HWIDRepo) -> Mapping[str, Collection[str]]:
     """See base class."""
-    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     board_models = collections.defaultdict(list)
     models = set(self._config_data.vpg_targets)
     if limit_models:

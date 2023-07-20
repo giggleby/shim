@@ -126,16 +126,16 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
     self.hwid_repo_manager = config.hwid_repo_manager
     self.goldeneye_filesystem = config.goldeneye_filesystem
     self.vp_manager = payload_management.VerificationPayloadManager(
-        config.vp_data_manager, self.hwid_repo_manager,
-        self.hwid_action_manager, config_data, self.decoder_data_manager)
+        config.vp_data_manager, self.hwid_action_manager, config_data,
+        self.decoder_data_manager)
     self.hsp_manager = payload_management.HWIDSelectionPayloadManager(
-        config.hsp_data_manager, self.hwid_repo_manager,
-        self.hwid_action_manager)
+        config.hsp_data_manager, self.hwid_action_manager)
 
   def _UpdatePayloads(self, payload_manager: payload_management.PayloadManager,
-                      dryrun: bool, limit_models: bool,
-                      force_update: bool) -> Mapping[str, str]:
-    board_result = payload_manager.Update(dryrun, limit_models, force_update)
+                      dryrun: bool, limit_models: bool, force_update: bool,
+                      live_hwid_repo: hwid_repo.HWIDRepo) -> Mapping[str, str]:
+    board_result = payload_manager.Update(dryrun, limit_models, force_update,
+                                          live_hwid_repo)
     change_ids = {
         board: result.change_id
         for board, result in board_result.items()
@@ -207,9 +207,11 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
     response = ingestion_pb2.IngestHwidDbResponse()
     force_update = do_limit
     vp_payload_hash = self._UpdatePayloads(self.vp_manager, dryrun_upload,
-                                           limit_models, force_update)
+                                           limit_models, force_update,
+                                           live_hwid_repo)
     hsp_payload_hash = self._UpdatePayloads(self.hsp_manager, dryrun_upload,
-                                            limit_models, force_update)
+                                            limit_models, force_update,
+                                            live_hwid_repo)
     if force_update:
       # Reply payload hash (e2e test only).
       response.payload_hash.update(vp_payload_hash)
