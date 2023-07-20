@@ -5,12 +5,14 @@
 
 import collections
 import enum
+import io
 import logging
 import re
 from typing import Any, Callable, Dict, Mapping, NamedTuple, Optional, Sequence
 
 from cros.factory.hwid.service.appengine.data.converter import converter_types
 from cros.factory.hwid.v3 import contents_analyzer
+from cros.factory.hwid.v3 import rule as v3_rule
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 
 
@@ -66,6 +68,73 @@ def _ConvertValueWithDefaultTypeFactory(
   if isinstance(value, str):  # basic str type
     return converter_types.StrValueType(value)
   return None
+
+
+_ACCEPTABLE_SPECIAL_CHAR_IN_REGEXP_OF_FIXED_VALUES = (
+    # Accept the following because HWID doesn't use `re.VERBOSE` mode.
+    '#',
+    ' ',
+    # Accept the following because they are normal character outside of `[]`,
+    # which will not be accepted.
+    '-',
+    '~',
+    '&',
+)
+
+
+def _IsCharAcceptableInRegexpOfFixedValues(c: str) -> bool:
+  return (c.isalnum() or
+          c in _ACCEPTABLE_SPECIAL_CHAR_IN_REGEXP_OF_FIXED_VALUES or
+          re.escape(c) == c)
+
+
+def _SplitRegexpOfFixedValues(pattern: str) -> Optional[Sequence[str]]:
+  """Splits regexp pattern of the form "val1|val2|..." to ["val1", "val2", ...]
+
+  Args:
+    pattern: The regular expression pattern to split.
+
+  Returns:
+    A list of strings if the pattern follows the acceptable form.
+    Otherwise `None`.
+  """
+  results = []
+  curr_result_buffer = io.StringIO()
+
+  pattern_char_iter = iter(pattern)
+  for curr_char in pattern_char_iter:
+    if curr_char == '\\':
+      # Only accept "\<non-alnum>" that escapes <non-alnum>.
+      next_char = next(pattern_char_iter, None)
+      if next_char is None or next_char.isalnum():
+        return None
+      curr_result_buffer.write(next_char)
+
+    elif curr_char == '|':  # reaches a splitter
+      results.append(curr_result_buffer.getvalue())
+      curr_result_buffer = io.StringIO()
+
+    elif _IsCharAcceptableInRegexpOfFixedValues(curr_char):
+      curr_result_buffer.write(curr_char)
+
+    else:  # Do not accept any other regexp special character.
+      return None
+
+  results.append(curr_result_buffer.getvalue())
+  return results
+
+
+def _MatchValue(
+    comp_value: Any,
+    converted_values: Sequence[converter_types.ConvertedValueType]) -> bool:
+  if isinstance(comp_value, v3_rule.Value):
+    if comp_value.is_re:
+      values = _SplitRegexpOfFixedValues(comp_value.raw_value)
+      return values is not None and all(v in converted_values for v in values)
+
+    comp_value = comp_value.raw_value
+
+  return comp_value in converted_values
 
 
 class FieldNameConverter(Converter):
@@ -127,7 +196,7 @@ class FieldNameConverter(Converter):
     if not converted.keys() <= comp_values.keys():
       return ProbeValueMatchStatus.KEY_UNMATCHED
     for converted_name, converted_values in converted.items():
-      if comp_values[converted_name] not in converted_values:
+      if not _MatchValue(comp_values[converted_name], converted_values):
         return ProbeValueMatchStatus.VALUE_UNMATCHED
     return ProbeValueMatchStatus.ALL_MATCHED
 

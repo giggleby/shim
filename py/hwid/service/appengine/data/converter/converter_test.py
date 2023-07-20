@@ -125,6 +125,47 @@ class ConverterTest(unittest.TestCase):
 
     self.assertEqual(converter.ProbeValueMatchStatus.ALL_MATCHED, match_case)
 
+  def testFieldNameConverterMatchAlignedToRePatternOfFixedValues(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+        })
+    probe_info = _ProbeInfoFromMapping(
+        {'avl_attr_name1': ['value.1', 'value 2', 'value(3)']})
+    match_case = test_converter.Match(
+        {'converted_key1': v3_rule.Value(r'value 2|value\.1', is_re=True)},
+        probe_info)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.ALL_MATCHED, match_case)
+
+  def testFieldNameConverterMatchNotAlignedToRePatternOfFixedValues(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+        })
+    probe_info = _ProbeInfoFromMapping({'avl_attr_name1': 'value1'})
+    match_case = test_converter.Match(
+        {'converted_key1': v3_rule.Value('value1|value2', is_re=True)},
+        probe_info)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.VALUE_UNMATCHED,
+                     match_case)
+
+  def testFieldNameConverterMatchNotAlignedToComplicatedRegexpPattern(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+        })
+    probe_info = _ProbeInfoFromMapping({'avl_attr_name1': 'value1'})
+    match_case = test_converter.Match(
+        {'converted_key1': v3_rule.Value('value1.*', is_re=True)}, probe_info)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.VALUE_UNMATCHED,
+                     match_case)
+
   def testFieldNameConverterMatchNotAlignedToAllOfTheValues(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
