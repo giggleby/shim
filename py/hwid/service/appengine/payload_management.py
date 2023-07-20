@@ -105,16 +105,6 @@ class PayloadManager(abc.ABC):
       return False
     return True
 
-  def _GetHWIDMainCommitIfChanged(self, force_update: bool) -> Optional[str]:
-    hwid_main_commit = self._hwid_repo_manager.GetMainCommitID()
-    latest_commit = self._data_manager.GetLatestHWIDMainCommit()
-
-    if latest_commit == hwid_main_commit and not force_update:
-      self._logger.info('The HWID main commit %s is already processed, skipped',
-                        hwid_main_commit)
-      return None
-    return hwid_main_commit
-
   @abc.abstractmethod
   def _GetSupportedModels(
       self, limit_models: Collection[str]) -> Mapping[str, Collection[str]]:
@@ -146,7 +136,9 @@ class PayloadManager(abc.ABC):
     """Returns repository settings."""
 
   @abc.abstractmethod
-  def _GetCLMessage(self, board: str, hwid_commit: str) -> str:
+  def _GetCLMessage(self, board: str, models: Collection[str],
+                    payload: _Payload, hwid_commit: str,
+                    hwid_prev_commit: str) -> str:
     """Returns the CL message."""
 
   @abc.abstractmethod
@@ -179,8 +171,11 @@ class PayloadManager(abc.ABC):
       A dict mapping board names to its updated results.
     """
     self._logger.info('Start syncing')
-    hwid_main_commit = self._GetHWIDMainCommitIfChanged(force_update)
-    if hwid_main_commit is None:
+    hwid_main_commit = self._hwid_repo_manager.GetMainCommitID()
+    hwid_prev_commit = self._data_manager.GetLatestHWIDMainCommit()
+    if hwid_prev_commit == hwid_main_commit and not force_update:
+      self._logger.info('The HWID main commit %s is already processed, skipped',
+                        hwid_main_commit)
       return {}
     self._logger.info('Sync with HWID commit %s', hwid_main_commit)
 
@@ -200,7 +195,8 @@ class PayloadManager(abc.ABC):
         git_files = [(os.path.join(
             setting.prefix, filepath), git_util.NORMAL_FILE_MODE, filecontent)
                      for filepath, filecontent in payloads.contents.items()]
-        commit_msg = self._GetCLMessage(board, hwid_main_commit)
+        commit_msg = self._GetCLMessage(board, models, payloads,
+                                        hwid_main_commit, hwid_prev_commit)
         try:
           change_id, unused_cl_number = self._CreateCL(
               dryrun, git_url, self._auth_cookie, branch, git_files, author,
@@ -273,10 +269,8 @@ class PayloadManager(abc.ABC):
           author: {author}
           reviewers: {reviewers}
           cc: {cc}
-          commit msg:
-          {commit_msg}
-          update file paths:
-          {file_paths}
+          commit msg: \n{textwrap.indent(commit_msg, '          ')}
+          update file paths: \n{textwrap.indent(file_paths, '          ')}
       """)
       self._logger.debug(debug_info)
       return None, None
@@ -355,13 +349,31 @@ class HWIDSelectionPayloadManager(PayloadManager):
     """See base class."""
     return config_data_module.CreateHWIDSelectionPayloadSettings(board)
 
-  def _GetCLMessage(self, board: str, hwid_commit: str) -> str:
+  def _GetCLMessage(self, board: str, models: Collection[str],
+                    payload: _Payload, hwid_commit: str,
+                    hwid_prev_commit: Optional[str]) -> str:
     """See base class."""
+    feature_matcher_paths = [
+        f'v3/{model.upper()}.feature_matcher.textproto' for model in models
+    ]
+    if hwid_prev_commit is None:
+      feature_matcher_file_objects = [
+          f'{hwid_commit[:7]}:{path}' for path in feature_matcher_paths
+      ]
+      verification_command = (
+          'git show \\\n' +
+          textwrap.indent(' \\\n'.join(feature_matcher_file_objects), '  '))
+    else:
+      verification_command = (
+          f'git diff {hwid_prev_commit[:7]}..{hwid_commit[:7]} -- \\\n' +
+          textwrap.indent(' \\\n'.join(feature_matcher_paths), '  '))
     return textwrap.dedent(f"""\
         feature-management-bsp: update payload from hwid
 
         From chromeos/chromeos-hwid: {hwid_commit}
-    """)
+
+        This CL is driven by the following HWID repository update:
+    """) + textwrap.indent(verification_command, '  ')
 
   def _PostUpdate(self, board: str, models: Collection[str], change_id: str,
                   payload: _Payload):
@@ -418,7 +430,9 @@ class VerificationPayloadManager(PayloadManager):
     """See base class."""
     return config_data_module.CreateVerificationPayloadSettings(board)
 
-  def _GetCLMessage(self, board: str, hwid_commit: str) -> str:
+  def _GetCLMessage(self, board: str, models: Collection[str],
+                    payload: _Payload, hwid_commit: str,
+                    hwid_prev_commit: str) -> str:
     """See base class."""
     return textwrap.dedent(f"""\
         verification payload: update payload from hwid
