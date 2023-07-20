@@ -5,10 +5,10 @@
 
 import collections
 import enum
-import io
+import itertools
 import logging
 import re
-from typing import Any, Callable, Dict, Mapping, NamedTuple, Optional, Sequence
+from typing import Any, Callable, Collection, Dict, Iterator, Mapping, MutableSequence, NamedTuple, Optional, Sequence, Tuple
 
 from cros.factory.hwid.service.appengine.data.converter import converter_types
 from cros.factory.hwid.v3 import contents_analyzer
@@ -88,8 +88,81 @@ def _IsCharAcceptableInRegexpOfFixedValues(c: str) -> bool:
           re.escape(c) == c)
 
 
-def _SplitRegexpOfFixedValues(pattern: str) -> Optional[Sequence[str]]:
-  """Splits regexp pattern of the form "val1|val2|..." to ["val1", "val2", ...]
+_OPENING_PARENTHESIS, _CLOSING_PARENTHESIS = '()'
+
+
+def _ParseRegexpOfFixedValues(
+    it: Iterator[str]) -> Optional[Tuple[Collection[str], Iterator[str]]]:
+  """Recursively parses the pattern for `_SplitRegexpOfFixedValues()`.
+
+  Args:
+    it: The iterator of the pattern under parsing.  It should point to the first
+      character *in* the (nested) `(...)` closure to parse.  This function
+      then attempts to iterate through the closure until it reaches the closing
+      parenthesis.
+
+  Returns:
+    On success, it returns a tuple of the following 2 items:
+      1. The parsed fixed values.
+      2. The iterator of the pattern under parsing where the parent routine
+         should continue.  I.e. the first character *after* the parsed `(...)`
+         closure.
+    On failure, it returns `None`.
+  """
+  all_values = set()
+  curr_value_parts_list: MutableSequence[Collection[str]] = []
+
+  def _AppendCurrentValuePart(part: str):
+    curr_value_parts_list.append((part, ))
+
+  def _ExtendAllCurrentValues():
+    all_values.update(
+        ''.join(parts) for parts in itertools.product(*curr_value_parts_list))
+
+  while True:
+    curr_char = next(it, None)
+    if curr_char is None:
+      return None  # The `(...)` closure must end with a closing parenthesis.
+
+    if curr_char == '\\':
+      # Only accept "\<non-alnum>" that escapes <non-alnum>.
+      next_char = next(it, None)
+      if next_char is None or next_char.isalnum():
+        return None
+      _AppendCurrentValuePart(next_char)
+
+    elif curr_char == _OPENING_PARENTHESIS:  # reaches a nested `(...)` closure
+      # Disallow the extension annotation `(?...)`.
+      next_char = next(it, None)
+      if next_char is None or next_char == '?':
+        return None
+
+      parse_result = _ParseRegexpOfFixedValues(itertools.chain([next_char], it))
+      if parse_result is None:
+        return None
+      sub_parts, it = parse_result
+      curr_value_parts_list.append(sub_parts)
+
+    elif curr_char == _CLOSING_PARENTHESIS:  # reaches the end of the closure
+      _ExtendAllCurrentValues()
+      return all_values, it
+
+    elif curr_char == '|':  # reaches a splitter
+      _ExtendAllCurrentValues()
+      curr_value_parts_list = []
+
+    elif _IsCharAcceptableInRegexpOfFixedValues(curr_char):
+      _AppendCurrentValuePart(curr_char)
+
+    else:  # Do not accept any other regexp special character.
+      return None
+
+
+def _SplitRegexpOfFixedValues(pattern: str) -> Optional[Collection[str]]:
+  """Splits regexp pattern of the form "val1|val2|..." to {"val1", "val2", ...}
+
+  More specifically, it only supports `()` and `|` for nested branches like
+  "value|(a|b(x|y))(|d)" => {"value", "a", "ad", "bx", "by", "bxd", "byd"}.
 
   Args:
     pattern: The regular expression pattern to split.
@@ -98,30 +171,11 @@ def _SplitRegexpOfFixedValues(pattern: str) -> Optional[Sequence[str]]:
     A list of strings if the pattern follows the acceptable form.
     Otherwise `None`.
   """
-  results = []
-  curr_result_buffer = io.StringIO()
-
-  pattern_char_iter = iter(pattern)
-  for curr_char in pattern_char_iter:
-    if curr_char == '\\':
-      # Only accept "\<non-alnum>" that escapes <non-alnum>.
-      next_char = next(pattern_char_iter, None)
-      if next_char is None or next_char.isalnum():
-        return None
-      curr_result_buffer.write(next_char)
-
-    elif curr_char == '|':  # reaches a splitter
-      results.append(curr_result_buffer.getvalue())
-      curr_result_buffer = io.StringIO()
-
-    elif _IsCharAcceptableInRegexpOfFixedValues(curr_char):
-      curr_result_buffer.write(curr_char)
-
-    else:  # Do not accept any other regexp special character.
-      return None
-
-  results.append(curr_result_buffer.getvalue())
-  return results
+  result = _ParseRegexpOfFixedValues(iter(f'{pattern}{_CLOSING_PARENTHESIS}'))
+  if result is None:
+    return None
+  values, remaining_it = result
+  return values if next(remaining_it, None) is None else None
 
 
 def _MatchValue(

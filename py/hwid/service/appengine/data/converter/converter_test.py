@@ -139,19 +139,39 @@ class ConverterTest(unittest.TestCase):
 
     self.assertEqual(converter.ProbeValueMatchStatus.ALL_MATCHED, match_case)
 
+  def testFieldNameConverterMatchAlignedToFixedValuesWithNestedPattern(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+        })
+    probe_info = _ProbeInfoFromMapping(
+        {'avl_attr_name1': ['value', 'value 1', 'value 2', 'value 999']})
+    match_case = test_converter.Match(
+        {'converted_key1': v3_rule.Value(r'value(| (1|(2)))', is_re=True)},
+        probe_info)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.ALL_MATCHED, match_case)
+
   def testFieldNameConverterMatchNotAlignedToRePatternOfFixedValues(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
             TestAVLAttrs.AVL_ATTR1:
                 converter.ConvertedValueSpec('converted_key1'),
         })
-    probe_info = _ProbeInfoFromMapping({'avl_attr_name1': 'value1'})
-    match_case = test_converter.Match(
-        {'converted_key1': v3_rule.Value('value1|value2', is_re=True)},
-        probe_info)
+    hwid_comp_value = {
+        'converted_key1': v3_rule.Value('value(| 1| 2(a|b))', is_re=True),
+    }
+    all_values = ['value', 'value 1', 'value 2a', 'value 2b']
 
-    self.assertEqual(converter.ProbeValueMatchStatus.VALUE_UNMATCHED,
-                     match_case)
+    for missing_value in all_values:
+      with self.subTest('miss_a_value', missing_value=missing_value):
+        probe_info = _ProbeInfoFromMapping(
+            {'avl_attr_name1': [v for v in all_values if v != missing_value]})
+        match_case = test_converter.Match(hwid_comp_value, probe_info)
+
+        self.assertEqual(converter.ProbeValueMatchStatus.VALUE_UNMATCHED,
+                         match_case)
 
   def testFieldNameConverterMatchNotAlignedToComplicatedRegexpPattern(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
