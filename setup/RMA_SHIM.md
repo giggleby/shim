@@ -409,27 +409,53 @@ universal shim.
     FACTORY_INSTALL_FROM_USB=1
     RMA_AUTORUN=true
     ========================================================================
-    (1) Modify Chrome OS Factory Server address.
-    (2) Modify cutoff config in cros payload (only for old devices).
-    (3) Enable/disable complete prompt in RMA shim.
-    (4) Enable/disable autorun in RMA shim.
-    (q) Quit without saving changes.
+    (1) Modify board to install.
+    (2) Modify Chrome OS Factory Server address.
+    (3) Modify default action (will be overridden by RMA autorun).
+    (4) Enable/disable countdown before default action.
+    (5) Enable/disable complete prompt in RMA shim.
+    (6) Enable/disable autorun in RMA shim.
+    (7) Modify cutoff config in cros payload (only for old devices).
+    (8) Enable or disable qrcode when factory reset.
+    (9) Enable or disable a confirmation before battery cutoff.
     (w) Apply changes and exit.
-    Please select an option [1-4, q, w]:
+    (q) Quit without saving changes.
+    Please select an option [1-9, w, q]:
+
 
 or
 
     $ setup/image_tool edit_lsb -i universal.bin --board soraka
+
+|Flags|Description|Option to modify|release shim version|
+|-|-|-|-|
+|CHROMEOS_RELEASE_BOARD|For using board specific config. (might be overridden by the value in firmware)|(1)|-|
+|CHROMEOS_AUSERVER|Chrome OS Factory Server address.|(2)|-|
+|CHROMEOS_DEVSERVER|Not used.|(2)|-|
+|FACTORY_INSTALL_DEFAULT_ACTION|The factory shim will execute the default action automatically if not interrupted by user.|(3)|-|
+|FACTORY_INSTALL_ACTION_COUNTDOWN|Countdown before doing default action, the countdown is 3 seconds|(4)|12387|
+|FACTORY_INSTALL_COMPLETE_PROMPT|Wait for ENTER after action **(I) Install** is completed.|(5)|11766|
+|RMA_AUTORUN|The factory shim will set the default action to **(I) Install** or **(E) Perform RSU** or **(U) Update TPM firmware**, depending on HWWP status and TPM version. |(6)|11394|
+|CUTOFF_METHOD, CUTOFF_AC_STATE, CUTOFF_BATTERY_MIN_PERCENTAGE, CUTOFF_BATTERY_MAX_PERCENTAGE, CUTOFF_BATTERY_MIN_VOLTAGE, CUTOFF_BATTERY_MAX_VOLTAGE, SHOPFLOOR_URL|[Deprecated](#deprecate_cutoff).|(7)|-|
+|DISPLAY_QRCODE|Display the information of the DUT as a qrcode, to increase the flexibility of customized process of factory reset.|(8)|15448|
+|DISPLAY_INFO|Support fields are: `hwid`, `serial_number`, `mlb_serial_number`, `wifi_mac0`. For example: `hwid serial_number, wifi_mac0` will display hwid and serial_number in the first qrcode, and display wifi_mac0 in the second qrcode. |(8)|15448|
+|CONTINUE_KEY|A string to confirm continuing cutoff after factory reset. User must press the key in order.|(9)|15469|
+|NETBOOT_RAMFS|This flag is automatically set to `1` when using netboot firmware. The factory shim will set the default action to **(I) Install**.|N/A|-|
 
 Note:
 
 * Please do not directly mount the stateful partition and modify `lsb-factory`
   file. The actual config is stored in cros payload, so the modifications in
   the file will be overwritten.
-* Starting from version 12162.0.0, cutoff config is not stored in `lsb-factory`.
+* <div id="deprecate_cutoff">Starting from version 12162.0.0, cutoff config is not stored in `lsb-factory`.
   Using this command to modify cutoff config is only effective for factory shim
   older than this version. For factory shim later than this version, please use
-  `image_tool edit_toolkit_config` command to edit cutoff config.
+  `image_tool edit_toolkit_config` command to edit cutoff config.</div>
+* The install shim also checks `/etc/lsb-factory` for flags that decides the
+default action of the shim menu (listed from high priority to low priority).
+  * `NETBOOT_RAMFS=1`
+  * `RMA_AUTORUN=true`
+  * `DEFAULT_ACTION=<action>`
 
 ### Edit toolkit config in an RMA shim.
 
@@ -462,6 +488,11 @@ active test list and cutoff config (after version 12162.0.0).
 or
 
     $ setup/image_tool edit_toolkit_config -i universal.bin --board soraka
+
+|Flags|Description|Option to modify|
+|-|-|-|
+|active_test_list.id|The default test list when starting toolkit.|(1)|
+|cutoff|Cutoff process is at the end of factory reset. Check [cutoff README](https://chromium.googlesource.com/chromiumos/platform/factory/+/HEAD/sh/cutoff/README.md) for more information.|(2)|
 
 ### Unpack and repack toolkit in an RMA shim.
 
