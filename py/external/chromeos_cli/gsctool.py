@@ -228,6 +228,35 @@ class GSCTool:
     return bool(
         re.search('^Capabilities are modified.$', result.stdout, re.MULTILINE))
 
+  def IsTi50InitialFactoryMode(self):
+    """Queries if the Ti50 is in initial factory mode or not.
+
+    Initial factory mode is a Ti50 specific status where the chip is in
+    the initial factory process and `disable_factory_mode` has never been
+    called. Some of the GSC factory configs like feature management flags
+    can only be written into Ti50 while the chip is in initial factory mode.
+    This differs from the factory mode, as factory mode just represents the
+    state where all the CCD capabilities are open.
+
+    Returns:
+      `True` if it's in initial factory mode.
+
+    Raises:
+      `GSCToolError` on any failures related with gsctool.
+    """
+
+    result = self._InvokeCommand([GSCTOOL_PATH, '-a', '-I', '-M'],
+                                 'Getting CCD info failed.')
+
+    # The machine friendly GSC output of initial factory mode enabled is:
+    # STATE=Locked
+    # ...
+    # ...
+    # INITIAL_FACTORY_MODE=Y
+
+    return bool(
+        re.search('^INITIAL_FACTORY_MODE=Y$', result.stdout, re.MULTILINE))
+
   def GetBoardID(self):
     """Get the board ID of the Cr50 firmware.
 
@@ -457,12 +486,7 @@ class GSCTool:
 
     # Write locked after board ID set / initial factory mode disabled.
     if GSCUtils().IsTi50():
-      # TODO(stevesu) The write operation for Ti50 is actually locked when the
-      # chip left the initial factory mode. However currently we don't have an
-      # OS level API to probe for initial factory mode, only Ti50 console
-      # command `sysinfo`. Discussion is being made with b/286998283 and before
-      # the API is ready we can only use `IsFactoryMode` as an approximation.
-      return not self.IsFactoryMode()
+      return not self.IsTi50InitialFactoryMode()
     return self._IsGSCBoardIdSet()
 
   def SetAddressingMode(self, flash_size):
