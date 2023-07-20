@@ -1,6 +1,7 @@
 # Chrome OS Factory Shopfloor Service Specification
 
 ### History
+
 |Version|Date      |Summary                                                   |
 |-------|----------|----------------------------------------------------------|
 |1.0 r1 |2017/06/20|Initial release                                           |

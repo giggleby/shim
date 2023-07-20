@@ -97,8 +97,11 @@ if py_shopfloor not in sys.path:
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'recommonmark',
-    'cros.factory.doc.factory_docs'
+    'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
+    'recommonmark',
+    'cros.factory.doc.factory_docs',
+    'sphinx_markdown_tables',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
