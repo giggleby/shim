@@ -8,11 +8,18 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import { ErrorPage } from "./pages/error";
 import { Landing } from "./pages/landing";
+import { Upload } from "./pages/upload";
 
+// TODO: Move router to a separate browser.ts
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Landing />,
+    errorElement: <ErrorPage />,
+  },
+  {
+    path: "/upload",
+    element: <Upload />,
     errorElement: <ErrorPage />,
   },
 ]);

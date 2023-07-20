@@ -15,6 +15,11 @@ The folder structure is scaffolded by `create-react-app`. The folder structure c
 
 * `src/`, Stores the source code for the frontend. All the source code (e.g. `.tsx`, `.css`, etc.)
 should be placed in this folder or it would not be built.
+  * `src/components` stores the component that will be used in `src/pages`.
+  * `src/services` stores the API caller to the backend server.
+  * `src/pages` stores the page layout to specific sites.
+  * When you visit `localhost:5100/upload`, you are visiting the element inside `src/pages/upload`.
+  * `src/interfaces` stores the interface definitions used at multiple locations.
 * `public/`, Stores the static files for the web page. Files like `index.html`, pictures will
 be placed here.
 * `node_modules/`, Stores the node module for the frontend.
@@ -22,7 +27,8 @@ be placed here.
 
 ## Start the dev frontend server
 
-* Run `npm ci` to install the dependent packages.
+* If you just want to recover the existing packages, you should run `npm ci`. If you want to run the
+installation process and also update the package when possible, use `npm install`.
 * The frontend default runs on port `5100`. If you want to change the port setting, you can
 modify the `.env` file located in this folder.
 * If you want the page to show up in your browser, you will
@@ -35,6 +41,15 @@ npm run start
 # Now the frontend is running on port 5100.
 # Go to localhost:5100 to see the webpage.
 ```
+
+* If you want to test the functionality of the tool, it is recommended to start the backend server
+as well. You can find the documentation to run the server in `backend` folder.
+
+## Before submitting code changes
+
+* Run tests on code `npm run test` or `npm run coverage`.
+* Run formatter whenever possible `npm run format`.
+* Run linter and fix lint errors `npm run lint`.
 
 ## Production container
 
