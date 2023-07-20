@@ -6,7 +6,7 @@ import abc
 import enum
 import functools
 import hashlib
-from typing import Collection, Mapping, NamedTuple, Set
+from typing import Collection, Mapping, NamedTuple, Optional, Set
 
 import device_selection_pb2  # pylint: disable=import-error
 import factory_hwid_feature_requirement_pb2  # pylint: disable=import-error
@@ -88,6 +88,19 @@ class FeatureEnablementStatus(NamedTuple):
     return cls(features.NO_FEATURE_VERSION, FeatureEnablementType.DISABLED)
 
 
+class LegacyPayloadBuilder:
+
+  def __init__(self):
+    self._bundle = device_selection_pb2.SelectionBundle()
+
+  def AppendDeviceSelection(
+      self, model_legacy_payload: device_selection_pb2.DeviceSelection):
+    self._bundle.selections.append(model_legacy_payload)
+
+  def Build(self) -> str:
+    return text_format.MessageToString(self._bundle)
+
+
 class HWIDFeatureMatcher(abc.ABC):
   """Represents the interface of a matcher of HWID and feature versions."""
 
@@ -96,7 +109,8 @@ class HWIDFeatureMatcher(abc.ABC):
     """Generates the HWID feature requirement payload for factories."""
 
   @abc.abstractmethod
-  def GenerateLegacyPayload(self) -> str:
+  def GenerateLegacyPayload(
+      self) -> Optional[device_selection_pb2.DeviceSelection]:
     """Generates the HWID feature requirement payload for feature management.
     """
 
@@ -213,10 +227,11 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     """See base class."""
     return self._hwid_feature_requirement_payload
 
-  def GenerateLegacyPayload(self) -> str:
+  def GenerateLegacyPayload(
+      self) -> Optional[device_selection_pb2.DeviceSelection]:
     """See base class."""
     if self._spec.feature_version == 0:
-      return ''
+      return None
 
     db_project = self._db.project.upper()
 
@@ -255,9 +270,9 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
       payload_msg.hwid_profiles.append(profile)
 
     if not payload_msg.hwid_profiles:
-      return ''
+      return None
 
-    return text_format.MessageToString(payload_msg)
+    return payload_msg
 
   def _BuildFeatureManagementFlagChecker(
       self, target_field: _FeatureManagementFlagField

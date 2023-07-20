@@ -7,6 +7,7 @@ import textwrap
 import unittest
 from unittest import mock
 
+from google.protobuf import text_format
 import yaml
 
 from cros.factory.hwid.service.appengine import feature_matching
@@ -364,8 +365,9 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
+    self.assertIsNotNone(actual)
     self.assertEqual(
-        actual,
+        text_format.MessageToString(actual),
         textwrap.dedent("""\
             feature_level: 1
             scope: SCOPE_DEVICES_0
@@ -436,8 +438,9 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
+    self.assertIsNotNone(actual)
     self.assertEqual(
-        actual,
+        text_format.MessageToString(actual),
         textwrap.dedent("""\
             feature_level: 1
             scope: SCOPE_DEVICES_0
@@ -499,7 +502,7 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
-    self.assertEqual(actual, '')
+    self.assertIsNone(actual)
 
   def testConvertedHWIDFeatureMatcher_GenerateLegacyPayload_PrefixOnlyForWaiver(
       self):
@@ -526,8 +529,9 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
+    self.assertIsNotNone(actual)
     self.assertEqual(
-        actual,
+        text_format.MessageToString(actual),
         textwrap.dedent("""\
             feature_level: 1
             scope: SCOPE_DEVICES_0
@@ -567,7 +571,7 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     actual = matcher.GenerateLegacyPayload()
-    self.assertEqual(actual, '')
+    self.assertIsNone(actual)
 
 
 if __name__ == '__main__':

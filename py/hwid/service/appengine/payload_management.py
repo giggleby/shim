@@ -15,6 +15,7 @@ from typing import Collection, Mapping, NamedTuple, Optional, Sequence, Tuple, U
 from cros.factory.hwid.service.appengine.data import config_data as config_data_module
 from cros.factory.hwid.service.appengine.data import decoder_data as decoder_data_module
 from cros.factory.hwid.service.appengine.data import payload_data
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action_manager as hwid_action_manager_module
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -331,20 +332,24 @@ class HWIDSelectionPayloadManager(PayloadManager):
   def _GeneratePayloads(self, board: str,
                         models: Collection[str]) -> Optional[_Payload]:
     """See base class."""
-    payloads = {}
+    payload_builder = feature_matching.LegacyPayloadBuilder()
     for model in models:
       try:
         hwid_action = self._hwid_action_manager.GetHWIDAction(model)
-        payload = hwid_action.GetFeatureMatcher().GenerateLegacyPayload()
-        if payload:
-          pathname = (f'feature-management/{model}/device_selection.textproto')
-          payloads[pathname] = payload
+        selection = hwid_action.GetFeatureMatcher().GenerateLegacyPayload()
+        if selection is None:
+          continue
+        payload_builder.AppendDeviceSelection(selection)
       except (KeyError, ValueError, RuntimeError) as ex:
         self._logger.error('Cannot get model data: %r', ex)
         continue
-    if payloads:
-      return _Payload(payloads, _JSONHash(payloads), {})
-    return None
+    payload_msg = payload_builder.Build()
+    if payload_msg is None:
+      return None
+    payloads = {
+        'device_selection.textproto': payload_msg
+    }
+    return _Payload(payloads, _JSONHash(payloads), {})
 
   def _GetCLSetting(self, board: str) -> config_data_module.CLSetting:
     """See base class."""
