@@ -134,6 +134,9 @@ _DATABASE_BUILDER_COMMON_ARGS = _HWID_MATERIAL_COMMON_ARGS + [
         'of the specific number of components. '
         ' E.g. `--fill-combination camera_field:2` will append all '
         'combination of 2 cameras into `camera_field`.'),
+    CmdArg('--add-feature-tiering-components', default=False,
+           action='store_true',
+           help="Add default feature tiering components.\n"),
 ]
 
 _RMA_COMMON_ARGS = [
@@ -416,9 +419,6 @@ def BuildDatabaseWrapper(options):
 
 @Command('update-database',
          CmdArg('--image-id', default=None, help="Name of image_id.\n"),
-         CmdArg('--add-feature-tiering-components', default=False,
-                action='store_true',
-                help="Add default feature tiering components.\n"),
          CmdArg('--output-database', default=None,
                 help='Write into different file.\n'),
          *_DATABASE_BUILDER_COMMON_ARGS)
