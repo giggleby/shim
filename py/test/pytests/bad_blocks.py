@@ -87,6 +87,10 @@ class _TestModes(str, enum.Enum):
 
 
 class BadBlocksTest(test_case.TestCase):
+  related_components = (
+      test_case.TestCategory.BRIDGE_PCIE_EMMC,
+      test_case.TestCategory.STORAGE,
+  )
   ARGS = [
       Arg('mode', _TestModes, 'Specify which operating mode to use.',
           default=_TestModes.stateful_partition_free_space),

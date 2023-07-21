@@ -51,6 +51,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('Audio Jack Codec', 'audio_codec'),
         TestCategory.BATTERY:
             CategoryProperties('Battery', 'battery'),
+        TestCategory.BRIDGE_PCIE_EMMC:
+            CategoryProperties('Storage bridge (PCIE-eMMC)', 'storage_bridge'),
         TestCategory.CAMERA:
             CategoryProperties('Camera - USB', 'camera'),
         TestCategory.CPU:
@@ -74,6 +76,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
             CategoryProperties('Speaker Amplifier', 'audio_codec'),
         TestCategory.SPIFLASH:
             CategoryProperties('SPI Flash', 'flash_chip'),
+        TestCategory.STORAGE:
+            CategoryProperties('Storage', 'storage'),
         TestCategory.TOUCHCONTROLLER:
             CategoryProperties('Touch screen Controller (non stylus)',
                                'touchscreen'),

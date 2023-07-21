@@ -94,8 +94,10 @@ class StressAppTest(unittest.TestCase):
   """Run stressapptest to test the memory and disk is fine."""
 
   related_components = (
+      test_tags.TestCategory.BRIDGE_PCIE_EMMC,
       test_tags.TestCategory.CPU,
       test_tags.TestCategory.DRAM,
+      test_tags.TestCategory.STORAGE,
   )
   ARGS = [
       Arg('seconds', int, 'Time to execute the stressapptest.', default=60),

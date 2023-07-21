@@ -61,6 +61,7 @@ import time
 import unittest
 
 from cros.factory.device import device_utils
+from cros.factory.test import test_tags
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 
@@ -70,6 +71,10 @@ BLOCK_SIZE = 4096
 
 class SimpleStorageStressTest(unittest.TestCase):
 
+  related_components = (
+      test_tags.TestCategory.BRIDGE_PCIE_EMMC,
+      test_tags.TestCategory.STORAGE,
+  )
   ARGS = [
       Arg('dir', str, 'Directory for creating files for random access.'),
       Arg('file_size', int,
