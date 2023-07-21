@@ -96,6 +96,7 @@ class UpdateFpmcuFirmwareTest(test_case.TestCase):
     def __str__(self):
       return self.name
 
+  related_components = (test_case.TestCategory.FINGERPRINT_SENSOR, )
   ARGS = [
       Arg('firmware_file', str, 'The full path of the firmware binary file.',
           default=None),

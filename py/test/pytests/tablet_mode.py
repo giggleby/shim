@@ -9,6 +9,8 @@ Description
 Currently, it check that the lid switch is not triggered and tablet mode event
 is triggered and in correct state.
 
+Turning devices into tablet mode exercises the GMR sensor and the accelerometer.
+
 Test Procedure
 --------------
 
@@ -76,6 +78,7 @@ def FormatMultipleDevicesMessages(arg_name, candidates):
 
 class TabletModeTest(test_case.TestCase):
   """Tablet mode factory test."""
+  related_components = (test_case.TestCategory.ACCELEROMETER, )
   ARGS = [
       Arg('timeout_secs', int, 'Timeout value for the test.', default=30),
       Arg('lid_filter', (int, str),

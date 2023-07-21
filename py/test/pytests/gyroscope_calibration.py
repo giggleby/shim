@@ -39,6 +39,7 @@ from cros.factory.utils.arg_utils import Arg
 
 class Gyroscope(test_case.TestCase):
 
+  related_components = (test_case.TestCategory.ACCELEROMETER, )
   ARGS = [
       Arg('capture_count', int,
           'Number of records to read to compute the average.', default=100),

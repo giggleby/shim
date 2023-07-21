@@ -101,6 +101,7 @@ class ProximityEventType(str, enum.Enum):
 
 
 class ProximitySensor(test_case.TestCase):
+  related_components = (test_case.TestCategory.SAR_SENSOR, )
   ARGS = [
       Arg('device_name', str,
           'If present, the device name specifying which sensor to test. Auto'

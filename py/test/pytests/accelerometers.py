@@ -71,6 +71,7 @@ DEFAULT_LIMITS = {
 
 
 class AccelerometersTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.ACCELEROMETER, )
   ARGS = [
       Arg(
           'autostart', bool,

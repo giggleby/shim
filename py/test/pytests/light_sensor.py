@@ -270,6 +270,7 @@ class iio_generic:
 
 class LightSensorTest(test_case.TestCase):
   """Tests light sensor."""
+  related_components = (test_case.TestCategory.AMBIENTLIGHTSENSOR, )
   ARGS = [
       Arg('device_path', str, 'device path', default=None),
       Arg('device_name', str, 'device name', default=None),

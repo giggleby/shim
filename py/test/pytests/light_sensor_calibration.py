@@ -220,6 +220,7 @@ CHAMBER_CONN_PARAMS_DEFAULT = {
 
 class ALSFixture(test_case.TestCase):
   """ALS fixture main class."""
+  related_components = (test_case.TestCategory.AMBIENTLIGHTSENSOR, )
   ARGS = [
       # chamber connection
       Arg('control_chamber', bool, 'Whether or not to control the chart in the '

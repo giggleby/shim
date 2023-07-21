@@ -61,6 +61,7 @@ _DEFAULT_POLL_INTERVAL = 0
 
 class Gyroscope(test_case.TestCase):
 
+  related_components = (test_case.TestCategory.ACCELEROMETER, )
   ARGS = [
       Arg('rotation_threshold', float,
           'The expected value (rad/s) to read when dut start rotating.'),

@@ -66,6 +66,7 @@ from cros.factory.utils.arg_utils import Arg
 
 class AccelerometersCalibration(test_case.TestCase):
 
+  related_components = (test_case.TestCategory.ACCELEROMETER, )
   ARGS = [
       # TODO(bowgotsai): add six-sided calibration.
       Arg(

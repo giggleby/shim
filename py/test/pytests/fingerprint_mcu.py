@@ -119,6 +119,7 @@ _IMAGE_SIZE_RE = re.compile(r'Image: size (\d+)x(\d+).*', re.MULTILINE)
 
 class FingerprintTest(test_case.TestCase):
   """Tests the fingerprint sensor."""
+  related_components = (test_case.TestCategory.FINGERPRINT_SENSOR, )
   ARGS = [
       Arg('max_dead_pixels', int,
           'The maximum number of dead pixels on the fingerprint sensor.',

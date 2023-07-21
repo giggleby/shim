@@ -30,10 +30,12 @@ from cros.factory.test import test_case
 from cros.factory.test.utils import hps_utils
 from cros.factory.utils.arg_utils import Arg
 
+
 DEFAULT_HPS_FACTORY_TIMEOUT = 3600
 
 
 class HPSTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.HPS, )
   ARGS = [
       Arg('hps_factory_path', str, 'The path of the hps-factory binary.',
           default=hps_utils.DEFAULT_HPS_FACTORY_PATH),

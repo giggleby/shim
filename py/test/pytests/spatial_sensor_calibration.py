@@ -61,6 +61,7 @@ class InvalidPositionError(Exception):
 
 
 class SpatialSensorCalibration(test_case.TestCase):
+  related_components = (test_case.TestCategory.ACCELEROMETER, )
   ARGS = [
       Arg('timeout_secs', int, 'Timeout in seconds when waiting for device.',
           default=60),

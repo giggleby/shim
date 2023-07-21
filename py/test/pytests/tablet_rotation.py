@@ -141,6 +141,7 @@ _ARG_DEGREES_TO_ORIENTATION_SCHEMA = JSONSchemaDict(
 
 class TabletRotationTest(test_case.TestCase):
   """Tablet rotation factory test."""
+  related_components = (test_case.TestCategory.ACCELEROMETER, )
   ARGS = [
       Arg('timeout_secs', int, 'Timeout value for the test.', default=30),
       Arg(
