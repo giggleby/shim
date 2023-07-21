@@ -3,6 +3,7 @@ body {
   flex-flow: column;
   align-items: center;
   justify-content: center;
+  height: 100%;
 }
 
 #test-info-container {

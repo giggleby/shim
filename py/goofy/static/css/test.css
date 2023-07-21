@@ -27,10 +27,15 @@
  * the above equation using media query.
  */
 
+body {
+  height: 100%;
+}
+
 html {
   --width-font-size: calc(0.4 * 1rem);
   --height-font-size: calc(0.6 * 1rem);
   font-size: calc(var(--width-font-size) + var(--height-font-size));
+  height: 100%;
 }
 
 @media screen and (max-width: 48rem) {
