@@ -43,6 +43,7 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
   TRACKPAD = enum.auto()
   USI_CONTROLLER = enum.auto()
   WIFI = enum.auto()
+  WWAN = enum.auto()
 
   @property
   def _properties(self):
@@ -88,6 +89,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
                                'touchscreen'),
         TestCategory.WIFI:
             CategoryProperties('Wifi / Bluetooth', 'wireless'),
+        TestCategory.WWAN:
+            CategoryProperties('WWAN', 'cellular'),
     }.get(self, CategoryProperties(None, None))
 
   @property

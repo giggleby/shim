@@ -36,12 +36,14 @@ import re
 from cros.factory.test import test_case
 from cros.factory.test.utils import serial_utils
 
+
 MODEM_SERIAL_PORT = '/dev/ttyACM0'
 ACCESS_LEVEL_RE = re.compile('^access_level = [0-9]', re.MULTILINE)
 
 
 class ModemSecurity(test_case.TestCase):
 
+  related_components = (test_case.TestCategory.WWAN, )
   def setUp(self):
     self._serial_dev = serial_utils.SerialDevice(
         send_receive_interval_secs=1, log=True)

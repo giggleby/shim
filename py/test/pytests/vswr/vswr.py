@@ -81,7 +81,10 @@ LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class VSWR(test_case.TestCase):
   """A test for antennas using Agilent E5017C Network Analyzer (ENA)."""
-  related_components = (test_case.TestCategory.WIFI, )
+  related_components = (
+      test_case.TestCategory.WIFI,
+      test_case.TestCategory.WWAN,
+  )
   ARGS = [
       Arg(
           'event_log_name', str, 'Name of the event_log, like '

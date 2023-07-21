@@ -4,11 +4,69 @@
 
 """Probes SIM card tray
 
+Description
+-----------
+
 Detects SIM card tray by GPIO.
 
-Args:
-  tray_already_present:SIM card tray is in machine before test starts.
-  tray_detection_gpio: SIM card tray detection gpio number.
+Test Procedure
+--------------
+
+1. Insert sim card.
+2. The test checks the GPIO automatically.
+3. Remove sim card.
+4. The test checks the GPIO automatically.
+
+or
+
+1. Remove sim card.
+2. The test checks the GPIO automatically.
+3. Insert sim card.
+4. The test checks the GPIO automatically.
+
+Dependency
+----------
+
+- /sys/class/gpio
+
+Examples
+--------
+Just check presence::
+
+  {
+    "pytest_name": "probe_sim_card_tray",
+    "args": {
+      "tray_detection_gpio": 159,
+      "tray_already_present": true
+    }
+  }
+
+Ask user to insert then remove tray::
+
+  {
+    "pytest_name": "probe_sim_card_tray",
+    "args": {
+      "tray_detection_gpio": 159,
+      "tray_already_present": false,
+      "insert": true,
+      "remove": true,
+      "only_check_presence": false
+    }
+  }
+
+Ask user to remove then insert tray::
+
+  {
+    "pytest_name": "probe_sim_card_tray",
+    "args": {
+      "tray_detection_gpio": 159,
+      "tray_already_present": true,
+      "insert": true,
+      "remove": true,
+      "only_check_presence": false
+    }
+  }
+
 """
 
 import enum
@@ -40,30 +98,8 @@ class ProbeTrayException(Exception):
 
 
 class ProbeSimCardTrayTest(test_case.TestCase):
-  """Test to probe sim card tray.
-
-  Usage examples:
-    1.Just check presence or absence:
-      tray_already_present=True/False
-    2.Ask user to insert tray:
-      tray_already_present=False,
-      insert=True,
-      only_check_presence=False
-    3.Ask user to remove tray:
-      tray_already_present=True,
-      remove=True,
-      only_check_presence=False
-    4.Ask user to insert then remove tray.
-      tray_already_present=False,
-      insert=True,
-      remove=True,
-      only_check_presence=False
-    5.Ask user to remove then insert tray.
-      tray_already_present=True,
-      insert=True,
-      remove=True,
-      only_check_presence=False
-  """
+  """Test to probe sim card tray."""
+  related_components = (test_case.TestCategory.WWAN, )
   ARGS = [
       Arg('timeout_secs', int,
           'timeout in seconds for insertion/removal', default=10),

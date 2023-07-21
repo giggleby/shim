@@ -4,6 +4,25 @@
 
 """Verifies the LTE module config.
 
+Description
+-----------
+This test doesn't work now since cros.factory.board.modem_utils is missing.
+
+Internal references
+^^^^^^^^^^^^^^^^^^^
+- b/35534119
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+
+Dependency
+----------
+- cros.factory.test.rf.modem
+- cros.factory.board.modem_utils
+
+Examples
+--------
 Usage example::
 
   {
@@ -27,6 +46,7 @@ import unittest
 
 from cros.factory.test.rf import modem
 from cros.factory.test import session
+from cros.factory.test import test_tags
 from cros.factory.utils.arg_utils import Arg
 
 
@@ -38,6 +58,7 @@ except ImportError:
 
 
 class LTEVerifyConfig(unittest.TestCase):
+  related_components = (test_tags.TestCategory.WWAN, )
   ARGS = [
       Arg('modem_path', str,
           'The path of the serial port. If not provided, will fall back to '

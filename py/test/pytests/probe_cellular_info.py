@@ -74,6 +74,7 @@ import unittest
 
 from cros.factory.test import device_data
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
+from cros.factory.test import test_tags
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
@@ -81,6 +82,7 @@ from cros.factory.utils import string_utils
 
 
 class ProbeCellularInfoTest(unittest.TestCase):
+  related_components = (test_tags.TestCategory.WWAN, )
   ARGS = [
       Arg('probe_imei', bool, 'Whether to probe IMEI', True),
       Arg('probe_meid', bool, 'Whether to probe MEID', True),

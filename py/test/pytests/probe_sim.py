@@ -4,6 +4,9 @@
 
 """Probes SIM card information from 'modem status'.
 
+Description
+-----------
+
 The first usage of this test is to insert sim card, record ICCID (IMSI) value,
 then remove sim card.
 A 'modem reset' is needed after plugging SIM card.
@@ -12,6 +15,26 @@ The second usage of this test is to make sure that SIM card is not present.
 A 'modem reset' is needed to avoid the case that SIM card is inserted without
 a 'modem reset'.
 Before running this test, modem carrier should be set to Generic UMTS.
+
+Test Procedure
+--------------
+
+1. Insert sim card.
+2. The test records ICCID (IMSI) value automatically.
+3. Remove sim card.
+
+Dependency
+----------
+- `modem`
+
+Examples
+--------
+An example::
+
+  {
+    "pytest_name": "probe_sim"
+  }
+
 """
 
 import logging
@@ -34,6 +57,7 @@ _INSERT_CHECK_MAX_WAIT = 60
 
 
 class ProbeSIMCardTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.WWAN, )
   ARGS = [
       Arg('only_check_simcard_not_present', bool,
           'Only checks sim card is not present', default=False),
