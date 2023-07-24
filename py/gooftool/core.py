@@ -1911,7 +1911,7 @@ class Gooftool:
     spi_flash_transform manually.
     """
     probe_result = flash_chip.FlashChipFunction.ProbeDevices('host')
-    flash_name = probe_result['name']
+    flash_name = probe_result.get('name') or probe_result.get('partname')
 
     sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
     if 'spi_flash_transform' in sku_config and flash_name in sku_config[
