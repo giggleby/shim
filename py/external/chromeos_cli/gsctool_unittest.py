@@ -297,9 +297,29 @@ class GSCToolTest(unittest.TestCase):
     self.assertEqual(wpsr[1].value, 0x00)
     self.assertEqual(wpsr[1].mask, 0x41)
 
+  def testParseWpsr_unexpected_output(self):
+    self.assertRaises(gsctool.GSCToolError, self.gsctool.ParseWpsr,
+                      'expected values: not provisioned')
+    self.assertRaises(gsctool.GSCToolError, self.gsctool.ParseWpsr,
+                      'expected values: corrupted')
+    self.assertRaises(gsctool.GSCToolError, self.gsctool.ParseWpsr,
+                      'expected values: invalid')
+    self.assertRaises(gsctool.GSCToolError, self.gsctool.ParseWpsr,
+                      'expected values: unexpected output')
+
   @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool.ParseWpsr')
   def testGetWpsr(self, _unused_mock_parse_wpsr):
     self.gsctool.GetWpsr()
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-E'])
+
+  def testIsWpsrProvisioned(self):
+    self._SetGSCToolUtilityResult(stdout=('expected values: not provisioned'))
+    self.assertFalse(self.gsctool.IsWpsrProvisioned())
+    self._SetGSCToolUtilityResult(
+        stdout=('expected values: 1: 94 & fc, 2: 00 & 41'))
+    self.assertTrue(self.gsctool.IsWpsrProvisioned())
+    self._SetGSCToolUtilityResult(stdout=('expected values: corrupted'))
+    self.assertTrue(self.gsctool.IsWpsrProvisioned())
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-E'])
 
 if __name__ == '__main__':
