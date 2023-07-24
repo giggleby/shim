@@ -515,8 +515,6 @@ class GSCTool:
       A list of namedtuple Wpsr.
     """
     match = re.finditer(r'[1-9]: (?P<value>\w+) & (?P<mask>\w+)', wpsr_str)
-    if not match:
-      raise GSCToolError(f'Unexpected output from {wpsr_str!r}')
     wpsr_list = []
     for m in match:
       try:
@@ -525,6 +523,9 @@ class GSCTool:
       except Exception as e:
         raise GSCToolError(e) from None
       wpsr_list.append(Wpsr(value=value, mask=mask))
+
+    if not wpsr_list:
+      raise GSCToolError(f'Unexpected output from {wpsr_str!r}')
     return wpsr_list
 
   def GetWpsr(self):
@@ -532,6 +533,12 @@ class GSCTool:
     result = self._InvokeCommand([GSCTOOL_PATH, '-a', '-E'],
                                  'Fail to get wpsr.')
     return self.ParseWpsr(result.stdout)
+
+  def IsWpsrProvisioned(self):
+    """Checks whether wpsr is provisioned or not."""
+    result = self._InvokeCommand([GSCTOOL_PATH, '-a', '-E'],
+                                 'Fail to get wpsr.')
+    return not re.search(r'not provisioned', result.stdout)
 
   def _InvokeCommand(self, cmd, failure_msg, cmd_result_checker=None):
     cmd_result_checker = cmd_result_checker or (lambda result: result.success)

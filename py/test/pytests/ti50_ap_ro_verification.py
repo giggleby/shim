@@ -70,12 +70,16 @@ class Ti50APROVerficationTest(test_case.TestCase):
         write_protect_target.WriteProtectTargetType.AP)
 
     self.AddTask(self.PreCheck)
-    self.AddTask(self.ProvisionSPIData)
+    # Skip provisioning SPI data only if not in initial factory mode
+    # and wpsr is provisioned.
+    if (self.gsctool.IsTi50InitialFactoryMode() or
+        not self.gsctool.IsWpsrProvisioned()):
+      self.AddTask(self.ProvisionSPIData)
     self.AddTask(self.VerifyAPRO, reboot=True)
     self.AddTask(self.CheckAPROResult)
 
   def PreCheck(self):
-    # Skip the test if thr firmware is not Ti50.
+    # Skip the test if the firmware is not Ti50.
     if not GSCUtils().IsTi50():
       self.WaiveTest('Skip Ti50 AP RO Verification test '
                      'since the firmware is not Ti50.')
