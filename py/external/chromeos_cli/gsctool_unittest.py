@@ -262,5 +262,15 @@ class GSCToolTest(unittest.TestCase):
     self.gsctool.SetAddressingMode(0x1000001)
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-C', '4byte'])
 
+  def testIsWpsrProvisioned(self):
+    self._SetGSCToolUtilityResult(stdout=('expected values: not provisioned'))
+    self.assertFalse(self.gsctool.IsWpsrProvisioned())
+    self._SetGSCToolUtilityResult(
+        stdout=('expected values: 1: 94 & fc, 2: 00 & 41'))
+    self.assertTrue(self.gsctool.IsWpsrProvisioned())
+    self._SetGSCToolUtilityResult(stdout=('expected values: corrupted'))
+    self.assertTrue(self.gsctool.IsWpsrProvisioned())
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-E'])
+
 if __name__ == '__main__':
   unittest.main()
