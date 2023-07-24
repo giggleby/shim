@@ -193,6 +193,7 @@ class Gooftool:
     self._db = None
     self._cros_config = cros_config_module.CrosConfig()
     self._gsctool = gsctool_module.GSCTool()
+    self._futility = futility_module.Futility()
 
   def GetLogicalBlockSize(self):
     """Get the logical block size of a DUT by reading file under /sys/block.
@@ -328,33 +329,7 @@ class Gooftool:
         raise Error(f'{error_messages!r}. {_DLC_ERROR_TEMPLATE}')
 
   def VerifyECKey(self, pubkey_path=None, pubkey_hash=None):
-    """Verify EC public key.
-    Verify by pubkey_path should have higher priority than pubkey_hash.
-
-    Args:
-      pubkey_path: A string for public key path. If not None, it verifies the
-          EC with the given pubkey_path.
-      pubkey_hash: A string for the public key hash. If not None, it verifies
-          the EC with the given pubkey_hash.
-    """
-    with self._named_temporary_file() as tmp_ec_bin:
-      flash_out = self._util.shell(f'flashrom -p ec -r {tmp_ec_bin.name}')
-      if not flash_out.success:
-        raise Error(f'Failed to read EC image: {flash_out.stderr}')
-      if pubkey_path:
-        result = self._util.shell(
-            f'futility show --type rwsig --pubkey {pubkey_path} '
-            f'{tmp_ec_bin.name}')
-        if not result.success:
-          raise Error(f'Failed to verify EC key with pubkey {pubkey_path}: '
-                      f'{result.stderr}')
-      elif pubkey_hash:
-        live_ec_hash = self._util.GetKeyHashFromFutil(tmp_ec_bin.name)
-        if live_ec_hash != pubkey_hash:
-          raise Error(f'Failed to verify EC key: expects ({pubkey_hash}) got '
-                      f'({live_ec_hash})')
-      else:
-        raise ValueError('All arguments are None.')
+    self._futility.VerifyECKey(pubkey_path=pubkey_path, pubkey_hash=pubkey_hash)
 
   def VerifyFpKey(self):
     """Verify Fingerprint firmware public key.
@@ -380,7 +355,7 @@ class Gooftool:
       fp_fw_files = glob.glob(fp_fw_pattern)
       if len(fp_fw_files) != 1:
         raise Error('No uniquely matched fingerprint firmware blob')
-      release_key_id = self._util.GetKeyHashFromFutil(fp_fw_files[0])
+      release_key_id = self._futility.GetKeyHashFromFutil(fp_fw_files[0])
 
     key_id_result = self._util.shell(['ectool', '--name=cros_fp', 'rwsig',
                                       'dump', 'key_id'])
@@ -942,28 +917,19 @@ class Gooftool:
       raise Error('\n'.join(error))
 
   def GetGBBFlags(self):
-    result = self._util.shell('futility gbb --get --flash --flags')
-    if result.success:
-      match = re.match(r'flags: (\S*)', result.stdout)
-      if match:
-        return int(match.group(1), 16)
-
-    raise Error(f'Failed getting GBB flags {result.stdout}')
+    return self._futility.GetGBBFlags()
 
   def SetGBBFlags(self, flags):
-    result = self._util.shell(
-        f'futility gbb --set --flash --flags={flags} 2>&1')
-    if not result.success:
-      raise Error(f'Failed setting GBB flags {result.stdout}')
+    self._futility.SetGBBFlags(flags)
 
   def ClearGBBFlags(self):
-    """Zero out the GBB flags, in preparation for transition to release state.
+    """Zeros out the GBB flags, in preparation for transition to release state.
 
     No GBB flags are set in release/shipping state, but they are useful
     for factory/development.  See "futility gbb --flags" for details.
     """
 
-    self.SetGBBFlags(0)
+    self._futility.SetGBBFlags(0)
 
   def EnableReleasePartition(self, release_rootfs=None):
     """Enables a release image partition on the disk.
@@ -990,10 +956,7 @@ class Gooftool:
     try:
       main_fw = self._crosfw.LoadMainFirmware()
       fw_filename = main_fw.GetFileName(sections=['GBB'])
-      result = self._util.shell(f'futility gbb --get --flags "{fw_filename}"')
-      # The output should look like 'flags: 0x00000000'.
-      unused_prefix, gbb_flags = result.stdout.strip().split(' ')
-      gbb_flags = int(gbb_flags, 16)
+      gbb_flags = self._futility.GetGBBFlags(fw_filename)
     except Exception:
       logging.warning('Failed to get GBB flags, assume it is 0', exc_info=1)
       gbb_flags = 0
@@ -1048,18 +1011,13 @@ class Gooftool:
     assert hwid
     main_fw = self._crosfw.LoadMainFirmware()
     fw_filename = main_fw.GetFileName(sections=['GBB'])
-    self._util.shell(f'futility gbb --set --hwid="{hwid}" "{fw_filename}"')
+    self._futility.WriteHWID(fw_filename, hwid)
     main_fw.Write(fw_filename)
 
   def ReadHWID(self):
     """Reads the HWID string from firmware GBB."""
-
     fw_filename = self._crosfw.LoadMainFirmware().GetFileName(sections=['GBB'])
-    result = self._util.shell(f'futility gbb -g --hwid "{fw_filename}"')
-    if not result.success:
-      raise Error(f'Failed to read the HWID string: {result.stderr}')
-
-    return re.findall(r'hardware_id:(.*)', result.stdout)[0].strip()
+    return self._futility.ReadHWID(fw_filename)
 
   def VerifyWPSwitch(self, has_ectool=True):
     """Verifies hardware write protection switch is enabled.
@@ -1877,8 +1835,7 @@ class Gooftool:
   def Ti50SetAddressingMode(self):
     """Sets addressing mode for ap ro verification on Ti50."""
 
-    futility = futility_module.Futility()
-    self._gsctool.SetAddressingMode(futility.GetFlashSize())
+    self._gsctool.SetAddressingMode(self._futility.GetFlashSize())
 
   def Ti50SetSWWPRegister(self, no_write_protect):
     """Sets wpsr for ap ro verification on Ti50.
@@ -1886,11 +1843,10 @@ class Gooftool:
     If write protect is enabled, the wpsr should be derived from ap_wpsr.
     Otherwise, set zero to ask Ti50 to ignore the write protect status.
     """
-    futility = futility_module.Futility()
     if no_write_protect:
       wpsr = '0 0'
     else:
-      wp_conf = futility.GetWriteProtectInfo()
+      wp_conf = self._futility.GetWriteProtectInfo()
       flash_name = self.GetFlashName()
       res = self._CheckCall([
           'ap_wpsr', f'--name={flash_name}', f'--start={wp_conf["start"]}',

@@ -33,6 +33,7 @@ from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
 
 from cros.factory.external.chromeos_cli import cros_config
+from cros.factory.external.chromeos_cli import futility
 from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
 from cros.factory.external.chromeos_cli import vpd
 
@@ -239,6 +240,7 @@ class GooftoolTest(unittest.TestCase):
         hwid_version=3, project='chromebook', hwdb_path=_TEST_DATA_PATH)
     self._gooftool._util = mock.Mock(core.Util)
     self._gooftool._util.shell = mock.Mock(Shell)
+    self._gooftool._futility = mock.Mock(futility.Futility)
 
     self._gooftool._crosfw = mock.Mock(crosfw)
     self._gooftool._unpack_bmpblock = mock.Mock(unpack_bmpblock)
@@ -255,42 +257,10 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._gsctool.GetFeatureManagementFlags.return_value = (
         FeatureManagementFlags(False, 0))
 
-  def testVerifyECKeyWithPubkeyHash(self):
-    f = MockFile()
-    f.read = lambda: ''
-    stub_result = lambda: None
-    stub_result.success = True
-    _hash = 'abcdefghijklmnopqrstuvwxyz1234567890abcd'
-    self._gooftool._named_temporary_file.return_value = f
-    self._gooftool._util.GetKeyHashFromFutil.return_value = _hash
-    self._gooftool._util.shell.side_effect = [stub_result, stub_result]
-    shell_calls = [
-        mock.call(f'flashrom -p ec -r {f.name}'),
-        mock.call(f'flashrom -p ec -r {f.name}')
-    ]
-
-    self._gooftool.VerifyECKey(pubkey_hash=_hash)
-    self.assertRaises(Error, self._gooftool.VerifyECKey, pubkey_hash='abc123')
-    self.assertEqual(self._gooftool._util.shell.call_args_list, shell_calls)
-
-  def testVerifyECKeyWithPubkeyPath(self):
-    f = MockFile()
-    f.read = lambda: ''
-    pubkey = 'key.vpubk2'
-    stub_result = lambda: None
-    stub_result.success = True
-
-    self._gooftool._named_temporary_file.return_value = f
-    self._gooftool._util.shell.side_effect = [
-        stub_result,
-        Obj(success=True)]
-    shell_calls = [
-        mock.call(f'flashrom -p ec -r {f.name}'),
-        mock.call(f'futility show --type rwsig --pubkey {pubkey} {f.name}')
-    ]
-
-    self._gooftool.VerifyECKey(pubkey_path=pubkey)
-    self.assertEqual(self._gooftool._util.shell.call_args_list, shell_calls)
+  def testVerifyECKey(self):
+    self._gooftool.VerifyECKey(pubkey_hash='hash', pubkey_path='path')
+    self._gooftool._futility.VerifyECKey.assert_called_with(
+        pubkey_path='path', pubkey_hash='hash')
 
   def testLoadHWIDDatabase(self):
     db = self._gooftool.db  # Shouldn't raise any exception.
@@ -554,15 +524,8 @@ class GooftoolTest(unittest.TestCase):
 
 
   def testClearGBBFlags(self):
-    command = 'futility gbb --set --flash --flags=0 2>&1'
-
-    self._gooftool._util.shell.return_value = Obj(success=True)
     self._gooftool.ClearGBBFlags()
-    self._gooftool._util.shell.assert_called_with(command)
-
-    self._gooftool._util.shell.return_value = Obj(stdout='Fail', success=False)
-    self.assertRaises(Error, self._gooftool.ClearGBBFlags)
-    self._gooftool._util.shell.assert_called_with(command)
+    self._gooftool._futility.SetGBBFlags.assert_called_with(0)
 
   def testGenerateStableDeviceSecretSuccess(self):
     self._gooftool._util.GetReleaseImageVersion.return_value = '6887.0.0'
@@ -630,14 +593,9 @@ class GooftoolTest(unittest.TestCase):
   def testWriteHWID(self):
     self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware()
 
-    self._gooftool.WriteHWID('hwid1')
-    self._gooftool._util.shell.assert_called_with(
-        'futility gbb --set --hwid="hwid1" "firmware"')
+    self._gooftool.WriteHWID('hwid')
 
-    self._gooftool.WriteHWID('hwid2')
-    self._gooftool._util.shell.assert_called_with(
-        'futility gbb --set --hwid="hwid2" "firmware"')
-
+    self._gooftool._futility.WriteHWID.assert_called_with('firmware', 'hwid')
     self._gooftool._crosfw.LoadMainFirmware.assert_called()
 
   def testVerifyWPSwitch(self):
