@@ -331,12 +331,14 @@ class HWIDSelectionPayloadManager(PayloadManager):
                         models: Collection[str]) -> Optional[_Payload]:
     """See base class."""
     payload_builder = feature_matching.LegacyPayloadBuilder()
-    for model in models:
+    generated_models = []
+    for model in sorted(models):
       try:
         hwid_action = self._hwid_action_manager.GetHWIDAction(model)
         selection = hwid_action.GetFeatureMatcher().GenerateLegacyPayload()
         if selection is None:
           continue
+        generated_models.append(model)
         payload_builder.AppendDeviceSelection(selection)
       except (KeyError, ValueError, RuntimeError) as ex:
         self._logger.error('Cannot get model data: %r', ex)
@@ -347,7 +349,7 @@ class HWIDSelectionPayloadManager(PayloadManager):
     payloads = {
         'device_selection.textproto': payload_msg
     }
-    return _Payload(payloads, _JSONHash(payloads), {})
+    return _Payload(payloads, _JSONHash(payloads), {'models': generated_models})
 
   def _GetCLSetting(self, board: str) -> config_data_module.CLSetting:
     """See base class."""
@@ -357,8 +359,12 @@ class HWIDSelectionPayloadManager(PayloadManager):
                     payload: _Payload, hwid_commit: str,
                     hwid_prev_commit: Optional[str]) -> str:
     """See base class."""
+
+    generated_models = (
+        payload.metadata['models'] if 'models' in payload.metadata else models)
     feature_matcher_paths = [
-        f'v3/{model.upper()}.feature_matcher.textproto' for model in models
+        f'v3/{model.upper()}.feature_matcher.textproto'
+        for model in sorted(generated_models)
     ]
     if hwid_prev_commit is None:
       feature_matcher_file_objects = [
