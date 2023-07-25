@@ -77,8 +77,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
-from cros.factory.external.chromeos_cli import cros_config
-
 
 _FIRMWARE_UPDATER_NAME = 'chromeos-firmwareupdate'
 _FIRMWARE_RELATIVE_PATH = 'usr/sbin/chromeos-firmwareupdate'
@@ -162,10 +160,8 @@ class UpdateFirmwareTest(test_case.TestCase):
     else:
       command += ['--mode=factory']
 
-    model_name = cros_config.CrosConfig(dut=self._dut).GetModelName()
-    if 'yaviks' in model_name:
-      logging.info('Pass --unlock_me to firmware updater to unlock ME region.')
-      command += ['--unlock_me']
+    logging.info('Pass --unlock_me to firmware updater to unlock ME region.')
+    command += ['--unlock_me']
 
     returncode = self.ui.PipeProcessOutputToUI(command)
 
