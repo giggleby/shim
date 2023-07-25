@@ -2691,6 +2691,7 @@ class ChromeOSFactoryBundle:
             os.path.join(bundle_dir, 'netboot',
                          os.path.basename(netboot_firmware_image)))
       if has_tftp:
+        AddResource('netboot', os.path.join(self.netboot, 'dnsmasq.conf'))
         AddResource('netboot', os.path.join(self.netboot, 'tftp'))
       else:
         AddResource(f'netboot/tftp/chrome-bot/{self.board}', netboot_vmlinuz)
