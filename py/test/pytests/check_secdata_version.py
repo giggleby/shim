@@ -52,6 +52,7 @@ from cros.factory.utils.arg_utils import Arg
 
 class SecdataVersionTest(test_case.TestCase):
   """Checks the secdata version."""
+  related_components = (test_case.TestCategory.TPM, )
   ARGS = [
       Arg('major_version', int, 'Major version of secdata.', default=1),
       Arg('minor_version', int, 'Minor version of secdata.', default=0)

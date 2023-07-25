@@ -20,7 +20,8 @@ class TestCategory(enum.Enum):
 
   The reference for the name of a component in HWID DB is defined in
   go/cros-runtime-probe-and-hardware-verifier?\
-cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
+cl=head#name-policy-enforcements-and-runtime-probe-in-factories and
+  go/AVL-HWID-component-mapping.
   """
 
   ACCELEROMETER = enum.auto()
@@ -45,6 +46,7 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
   SPIFLASH = enum.auto()
   STORAGE = enum.auto()
   TOUCHCONTROLLER = enum.auto()
+  TPM = enum.auto()
   TRACKPAD = enum.auto()
   USI_CONTROLLER = enum.auto()
   WIFI = enum.auto()
@@ -97,6 +99,8 @@ cl=head#name-policy-enforcements-and-runtime-probe-in-factories.
         TestCategory.TOUCHCONTROLLER:
             CategoryProperties('Touch screen Controller (non stylus)',
                                'touchscreen'),
+        TestCategory.TPM:
+            CategoryProperties('TPM', 'tpm'),
         TestCategory.TRACKPAD:
             CategoryProperties('Touchpad Controller', 'touchpad'),
         TestCategory.USI_CONTROLLER:

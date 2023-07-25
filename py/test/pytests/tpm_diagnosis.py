@@ -2,7 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Runs tpm_selftest to perform TPM self-diagnosis."""
+"""Runs tpm_selftest to perform TPM self-diagnosis.
+
+Description
+-----------
+This test stopped working after the tpm_selftest being removed.
+
+Internal references
+^^^^^^^^^^^^^^^^^^^
+- b/35577239
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+
+Dependency
+----------
+- /usr/local/sbin/tpm_selftest
+
+Examples
+--------
+An example::
+
+  {
+    "pytest_name": "tpm_diagnosis"
+  }
+
+"""
 
 import os
 import threading
@@ -13,6 +39,7 @@ from cros.factory.utils.arg_utils import Arg
 
 
 class TpmDiagnosisTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.TPM, )
   ARGS = [
       Arg('tpm_selftest', str, 'Path of tpm_selftest program.',
           default='/usr/local/sbin/tpm_selftest'),

@@ -73,6 +73,7 @@ class OperationError(Exception):
 
 
 class Cr50APROVerficationTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.TPM, )
   ARGS = [
       Arg('timeout_secs', int,
           'How many seconds to wait for the RO verification key combo.',

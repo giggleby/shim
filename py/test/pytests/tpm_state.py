@@ -47,6 +47,7 @@ class TPMStateNotFoundException(Exception):
 class VerifyTPMState(test_case.TestCase):
   """Factory Test for verifying tpm state."""
 
+  related_components = (test_case.TestCategory.TPM, )
   def setUp(self) -> None:
     self._dut = device_utils.CreateDUTInterface()
 

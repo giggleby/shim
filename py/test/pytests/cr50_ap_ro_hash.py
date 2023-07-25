@@ -54,6 +54,7 @@ from cros.factory.utils.arg_utils import Arg
 
 
 class Cr50APROHashTest(test_case.TestCase):
+  related_components = (test_case.TestCategory.TPM, )
   ARGS = [Arg('action', str, "The action for AP RO hash ('set', 'clear').")]
 
   def setUp(self):
