@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import collections
 import functools
 import hashlib
 import itertools
@@ -17,12 +16,6 @@ from cros.factory.hwid.v3 import probe
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import json_utils
 
-
-# The components that are added in order if they exist in the probe results.
-PRIORITY_COMPS = collections.OrderedDict(
-    [(common.FirmwareComps.RO_MAIN_FIRMWARE, 5),
-     (common.FirmwareComps.FIRMWARE_KEYS, 3),
-     (common.FirmwareComps.RO_EC_FIRMWARE, 5)])
 
 ProbedValueType = Dict[str, Union[List, None, 'ProbedValueType', bool, float,
                                   int, str]]
@@ -204,19 +197,18 @@ class DatabaseBuilder:
   _DEFAULT_COMPONENT_SUFFIX = '_default'
 
   def __init__(self, db: database.WritableDatabase, from_empty_database: bool,
-               auto_decline_essential_prompt: Optional[Sequence[str]] = None):
+               auto_accept_essential_prompt: Optional[Sequence[str]] = None):
     """Initializer.
 
     Args:
       db: A cros.factory.hwid.v3.database.WritableDatabase Object.
       from_empty_database: True if this builder is for creating a new database.
-      auto_decline_essential_prompt: A list of essential components that will
-        automatically decline the prompt if an essential component is absent.
+      auto_accept_essential_prompt: A list of essential components that will
+        automatically accept the prompt if an essential component is absent.
     """
     self._database = db
     self._from_empty_database = from_empty_database
-    self._auto_decline_essential_prompt = set(auto_decline_essential_prompt or
-                                              [])
+    self._auto_accept_essential_prompt = set(auto_accept_essential_prompt or [])
     self._in_context = False
 
   def __enter__(self):
@@ -235,7 +227,7 @@ class DatabaseBuilder:
   @classmethod
   def FromFilePath(
       cls, db_path: str,
-      auto_decline_essential_prompt: Optional[Sequence[str]] = None
+      auto_accept_essential_prompt: Optional[Sequence[str]] = None
   ) -> 'DatabaseBuilder':
     """Create a builder from a path of an existing DB."""
 
@@ -244,41 +236,41 @@ class DatabaseBuilder:
       raise ValueError(f'The given HWID database {db_path} is legacy and not '
                        'supported by DatabaseBuilder.')
     return cls(db=db, from_empty_database=False,
-               auto_decline_essential_prompt=auto_decline_essential_prompt)
+               auto_accept_essential_prompt=auto_accept_essential_prompt)
 
   @classmethod
   def FromExistingDB(
       cls, db: database.Database,
-      auto_decline_essential_prompt: Optional[Sequence[str]] = None
+      auto_accept_essential_prompt: Optional[Sequence[str]] = None
   ) -> 'DatabaseBuilder':
     """Create a builder from an existing DB."""
 
     if not isinstance(db, database.WritableDatabase):
       raise ValueError('The database is not writable.')
     return cls(db=db, from_empty_database=False,
-               auto_decline_essential_prompt=auto_decline_essential_prompt)
+               auto_accept_essential_prompt=auto_accept_essential_prompt)
 
   @classmethod
   def FromEmpty(
       cls, project: str, image_name: str,
-      auto_decline_essential_prompt: Optional[Sequence[str]] = None
+      auto_accept_essential_prompt: Optional[Sequence[str]] = None
   ) -> 'DatabaseBuilder':
     """Create a builder to building an empty DB."""
 
     db = cls._BuildEmptyDatabase(project.upper(), image_name)
     return cls(db=db, from_empty_database=True,
-               auto_decline_essential_prompt=auto_decline_essential_prompt)
+               auto_accept_essential_prompt=auto_accept_essential_prompt)
 
   @classmethod
   def FromDBData(
       cls, db_data: str,
-      auto_decline_essential_prompt: Optional[Sequence[str]] = None
+      auto_accept_essential_prompt: Optional[Sequence[str]] = None
   ) -> 'DatabaseBuilder':
     """Create a builder from DB data of an existing DB."""
 
     db = database.WritableDatabase.LoadData(db_data, expected_checksum=None)
     return cls(db=db, from_empty_database=False,
-               auto_decline_essential_prompt=auto_decline_essential_prompt)
+               auto_accept_essential_prompt=auto_accept_essential_prompt)
 
   @_EnsureInBuilderContext
   def AddFeatureManagementFlagComponents(self):
@@ -342,6 +334,10 @@ class DatabaseBuilder:
     Args:
       comp_cls: A string of the component class name.
     """
+    if comp_cls in common.ESSENTIAL_COMPS:
+      raise ValueError(f'{str(comp_cls)!r} is an essential component which must'
+                       ' not be a null component. Did you mean to add default '
+                       'component?')
     field_name = self._database.GetEncodedFieldForComponent(comp_cls)
     if not field_name:
       self.AddNewEncodedField(comp_cls, [])
@@ -822,25 +818,22 @@ class DatabaseBuilder:
           # acceptable.
           continue
 
-        if comp_cls in self._auto_decline_essential_prompt:
-          add_default = False
+        if comp_cls in self._auto_accept_essential_prompt:
+          add_default = True
         else:
-          # Ask user to add a default item or a null item.
+          # Ask user to add a default item.
           add_default = PromptAndAsk(
               f'Component [{comp_cls}] is essential but the probe result is '
               'missing. Do you want to add a default item?\n'
-              'If the probed code is not ready yet, please enter "Y".\n'
-              'If the device does not have the component, please enter "N".',
-              default_answer=True)
+              'If the probed code is not ready yet, please enter "Y".\n',
+              default_answer=False)
 
         if add_default:
           self.AddDefaultComponent(comp_cls)
-
         else:
-          # If there's already an encoded field for this component, leave
-          # the work to `_UpdateEncodedFields` method and do nothing here.
-          if not field_name:
-            self.AddNullComponent(comp_cls)
+          raise BuilderException(
+              f'Missing essential component {str(comp_cls)!r}. If the probe '
+              'function is not ready yet please add a default component.')
 
     return probe.GenerateBOMFromProbedResults(
         self._database, probed_results, device_info, vpd,
@@ -978,27 +971,14 @@ class DatabaseBuilder:
           continue
 
         field_name = self._database.GetEncodedFieldForComponent(comp_cls)
+        if not field_name:
+          raise BuilderException('Unable to update pattern due to missing '
+                                 f'essential component: {str(comp_cls)!r}')
 
         bit_length = 0
         min_bit_length = max(self._GetMinBitLength(field_name), 1)
         while bit_length < min_bit_length:
           bit_length += next(bit_iter)
-        self._database.AppendEncodedFieldBit(field_name, bit_length)
-
-        handled_comp_classes |= set(
-            self._database.GetComponentClasses(field_name))
-        handled_encoded_fields.add(field_name)
-
-      # Put the priority components.
-      for comp_cls, bit_length in PRIORITY_COMPS.items():
-        if comp_cls in handled_comp_classes:
-          continue
-
-        field_name = self._database.GetEncodedFieldForComponent(comp_cls)
-        if not field_name:
-          continue
-
-        bit_length = max(bit_length, self._GetMinBitLength(field_name))
         self._database.AppendEncodedFieldBit(field_name, bit_length)
 
         handled_comp_classes |= set(

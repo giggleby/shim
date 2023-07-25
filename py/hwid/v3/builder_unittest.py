@@ -138,6 +138,11 @@ class BuilderMethodTest(unittest.TestCase):
 
 class DatabaseBuilderTest(unittest.TestCase):
 
+  def setUp(self):
+    patcher = mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
+    self._prompt_and_ask = patcher.start()
+    self.addCleanup(patcher.stop)
+
   # TODO (b/212216855)
   @label_utils.Informational
   def testInit(self):
@@ -204,14 +209,6 @@ class DatabaseBuilderTest(unittest.TestCase):
             }
         }, db.GetEncodedField('comp_cls_1_field'))
 
-    # The database already accepts a device without a cpu component.
-    with db_builder:
-      db_builder.AddNullComponent('cpu')
-    db = db_builder.Build()
-    self.assertEqual({0: {
-        'cpu': []
-    }}, db.GetEncodedField('cpu_field'))
-
     # The given component class was not recorded in the database.
     with db_builder:
       db_builder.AddNullComponent('new_component')
@@ -223,6 +220,18 @@ class DatabaseBuilderTest(unittest.TestCase):
       # Should fail if the encoded field of the specified component class
       # encodes more than one class of components.
       self.assertRaises(ValueError, db_builder.AddNullComponent, 'comp_cls_2')
+
+  # TODO (b/212216855)
+  @label_utils.Informational
+  def testAddNullComponent_EssentialCompValueError(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      with db_builder:
+        with self.assertRaisesRegex(
+            ValueError,
+            "'cpu' is an essential component which must not be a null "
+            'component. Did you mean to add default component?'):
+          db_builder.AddNullComponent('cpu')
 
   # TODO (b/212216855)
   @label_utils.Informational
@@ -270,8 +279,8 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=True)
-  def testExtendEncodedFieldToFullCombination(self, unused_patch):
+  def testExtendEncodedFieldToFullCombination(self):
+    self._prompt_and_ask.return_value = True
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.ExtendEncodedFieldToFullCombination('comp_cls_1_field', 2)
@@ -297,8 +306,8 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
-  def testExtendEncodedFieldToFullCombination_UserRegret(self, unused_patch):
+  def testExtendEncodedFieldToFullCombination_UserRegret(self):
+    self._prompt_and_ask.return_value = False
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.ExtendEncodedFieldToFullCombination('comp_cls_1_field', 2)
@@ -315,9 +324,8 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk',
-              return_value=False)
-  def testUpdateByProbedResultsAddFirmware(self, unused_prompt_and_ask_mock):
+  def testUpdateByProbedResultsAddFirmware(self):
+    self._prompt_and_ask.return_value = True
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.UpdateByProbedResults(
@@ -339,9 +347,8 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
-  def testUpdateByProbedResultsAddFirmware_SkipFirmwareComponents(
-      self, unused_prompt_and_ask_mock):
+  def testUpdateByProbedResultsAddFirmware_SkipFirmwareComponents(self):
+    self._prompt_and_ask.return_value = True
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.UpdateByProbedResults(
@@ -362,66 +369,58 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
-  def testUpdateByProbedResultsWithExtraComponentClasses(self,
-                                                         prompt_and_ask_mock):
-    for add_null_comp in [False, True]:
-      prompt_and_ask_mock.return_value = add_null_comp
-
-      with builder.DatabaseBuilder.FromFilePath(
-          db_path=_TEST_DATABASE_PATH) as db_builder:
-        db_builder.UpdateByProbedResults(
-            {
-                'comp_cls_100': [{
-                    'name': 'generic',
-                    'values': {
-                        'key1': 'value1'
-                    }
-                }, {
-                    'name': 'generic',
-                    'values': {
-                        'key1': 'value1',
-                        'key2': 'value2'
-                    }
-                }, {
-                    'name': 'generic',
-                    'values': {
-                        'key1': 'value1',
-                        'key3': 'value3'
-                    }
-                }, {
-                    'name': 'special',
-                    'values': {
-                        'key4': 'value4'
-                    }
-                }, {
-                    'name': 'special',
-                    'values': {
-                        'key4': 'value5'
-                    }
-                }]
-            }, {}, {}, [], image_name='NEW_IMAGE')
-      db = db_builder.Build()
-      self.assertEqual(
-          sorted([
-              attr.values for attr in db.GetComponents('comp_cls_100').values()
-          ], key=lambda d: sorted(d.items())),
-          sorted([{
-              'key1': 'value1'
-          }, {
-              'key4': 'value4'
-          }, {
-              'key4': 'value5'
-          }], key=lambda d: sorted(d.items())))
-
-      self.assertEqual(add_null_comp, {'comp_cls_100': []}
-                       in db.GetEncodedField('comp_cls_100_field').values())
+  def testUpdateByProbedResultsWithExtraComponentClasses(self):
+    self._prompt_and_ask.return_value = True
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.UpdateByProbedResults(
+          {
+              'comp_cls_100': [{
+                  'name': 'generic',
+                  'values': {
+                      'key1': 'value1'
+                  }
+              }, {
+                  'name': 'generic',
+                  'values': {
+                      'key1': 'value1',
+                      'key2': 'value2'
+                  }
+              }, {
+                  'name': 'generic',
+                  'values': {
+                      'key1': 'value1',
+                      'key3': 'value3'
+                  }
+              }, {
+                  'name': 'special',
+                  'values': {
+                      'key4': 'value4'
+                  }
+              }, {
+                  'name': 'special',
+                  'values': {
+                      'key4': 'value5'
+                  }
+              }]
+          }, {}, {}, [], image_name='NEW_IMAGE')
+    db = db_builder.Build()
+    self.assertEqual(
+        sorted(
+            [attr.values for attr in db.GetComponents('comp_cls_100').values()],
+            key=lambda d: sorted(d.items())),
+        sorted([{
+            'key1': 'value1'
+        }, {
+            'key4': 'value4'
+        }, {
+            'key4': 'value5'
+        }], key=lambda d: sorted(d.items())))
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
-  def testUpdateByProbedResultsWithExtraComponents(self,
-                                                   unused_prompt_and_ask_mock):
+  def testUpdateByProbedResultsWithExtraComponents(self):
+    self._prompt_and_ask.return_value = True
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
 
@@ -456,30 +455,22 @@ class DatabaseBuilderTest(unittest.TestCase):
     self.assertIn({'comp_cls_1': sorted(['comp_1_1', '3'])},
                   list(db.GetEncodedField('comp_cls_1_field').values()))
 
-  # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
-  def testUpdateByProbedResultsMissingEssentialComponentsAddNull(
-      self, prompt_and_ask_mock):
-    # If the user answer "N", the null component will be added.
-    prompt_and_ask_mock.return_value = False
+  def testUpdateByProbedResultsMissingEssentialComponents_PressNo(self):
+    # If the user answer "N", an error will be raised.
+    self._prompt_and_ask.return_value = False
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
-      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE',
-                                       form_factor='CONVERTIBLE')
-    db = db_builder.Build()
-    for comp_cls in common.FORM_FACTOR_COMPS['CONVERTIBLE']:
-      self.assertIn({comp_cls: []},
-                    list(db.GetEncodedField(comp_cls + '_field').values()))
+      with self.assertRaisesRegex(builder.BuilderException,
+                                  "Missing essential component 'mainboard'."):
+        db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE',
+                                         form_factor='CONVERTIBLE')
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
-  def testUpdateByProbedResultsMissingEssentialComponentsAddDefault(
-      self, prompt_and_ask_mock):
-    # If the user answer "Y", the default component will be added if no null
-    # component is recorded.
-    prompt_and_ask_mock.return_value = True
+  def testUpdateByProbedResultsMissingEssentialComponentsAddDefault(self):
+    # If the user answer "Y", the default component will be added.
+    self._prompt_and_ask.return_value = True
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE',
@@ -497,34 +488,31 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
-  def testUpdateByProbedResultsNoEssentialComponentsWithAutoDecline(self):
+  def testUpdateByProbedResultsNoEssentialComponentsWithAutoAccept(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH,
-        auto_decline_essential_prompt=common.ESSENTIAL_COMPS) as db_builder:
+        auto_accept_essential_prompt=common.ESSENTIAL_COMPS) as db_builder:
       db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
       # The test will fail due to timeout without adding unittest assertion.
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
-  def testUpdateByProbedResultsNoEssentialComponentsWithoutAutoDecline(
-      self, prompt_and_ask_mock):
-    prompt_and_ask_mock.return_value = True
-    no_auto_decline_components = set(('mainboard', 'dram'))
-    auto_decline_components = set(
-        common.ESSENTIAL_COMPS) - no_auto_decline_components
+  def testUpdateByProbedResultsNoEssentialComponentsWithoutAutoAccept(self):
+    self._prompt_and_ask.return_value = True
+    no_auto_accept_components = set(('mainboard', 'dram'))
+    auto_accept_components = set(
+        common.ESSENTIAL_COMPS) - no_auto_accept_components
     with builder.DatabaseBuilder.FromFilePath(
-        db_path=_TEST_DATABASE_PATH, auto_decline_essential_prompt=list(
-            auto_decline_components)) as db_builder:
+        db_path=_TEST_DATABASE_PATH, auto_accept_essential_prompt=list(
+            auto_accept_components)) as db_builder:
       db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
     self.assertEqual(
-        len(no_auto_decline_components), prompt_and_ask_mock.call_count)
+        len(no_auto_accept_components), self._prompt_and_ask.call_count)
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
-  def testUpdateByProbedResultsUpdateEncodedFieldsAndPatternCorrectly(
-      self, unused_prompt_and_ask_mock):
+  def testUpdateByProbedResultsUpdateEncodedFieldsAndPatternCorrectly(self):
+    self._prompt_and_ask.return_value = True
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
 
@@ -615,17 +603,16 @@ class DatabaseBuilderTest(unittest.TestCase):
             'chassis_field': 0,
             'firmware_keys_field': 3,
             'ro_main_firmware_field': 5,
-            'ro_fp_firmware_field': 1,
+            'ro_ec_firmware_field': 5,
             'comp_cls_1_field': 2,
             'comp_cls_23_field': 2,
-            'comp_cls_100_field': 0
+            'comp_cls_100_field': 1
         })
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
-  def testUpdateByProbedResultsNoNeedNewPattern(
-      self, unused_prompt_and_ask_mock):
+  def testUpdateByProbedResultsNoNeedNewPattern(self):
+    self._prompt_and_ask.return_value = True
     # No matter if new image name is specified, the pattern will always use
     # the same one if no new encoded fields are added.
     for image_name in [None, 'EVT', 'NEW_IMAGE_NAME']:
@@ -648,8 +635,8 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
-  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
-  def testUpdateByProbedResultsNeedNewPattern(self, unused_prompt_and_ask_mock):
+  def testUpdateByProbedResultsNeedNewPattern(self):
+    self._prompt_and_ask.return_value = True
     # New pattern is required if new encoded fields are added.
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
@@ -668,6 +655,7 @@ class DatabaseBuilderTest(unittest.TestCase):
     self.assertIn('comp_cls_200_field', db.GetEncodedFieldsBitLength())
     self.assertIn('NEW_IMAGE_NAME', db.GetImageName(db.max_image_id))
 
+    self._prompt_and_ask.side_effect = [True] * 6 + [False]
     # Should raise error if new image is needed but no image name.
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
@@ -818,21 +806,21 @@ class DatabaseBuilderTest(unittest.TestCase):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.AddFirmwareComponent(
-          'ro_ec_firmware', {'version': 'version_string'}, 'firmware1')
+          'ro_fp_firmware', {'version': 'version_string'}, 'firmware1')
 
     db = db_builder.Build()
 
     self.assertDictEqual(
         {
             0: {
-                'ro_ec_firmware': []
+                'ro_fp_firmware': []
             },
             1: {
-                'ro_ec_firmware': ['firmware1']
+                'ro_fp_firmware': ['firmware1']
             },
-        }, db.GetEncodedField('ro_ec_firmware_field'))
+        }, db.GetEncodedField('ro_fp_firmware_field'))
     self.assertIn(
-        database.PatternField('ro_ec_firmware_field', 1),
+        database.PatternField('ro_fp_firmware_field', 1),
         db.GetPattern().fields)
 
   # TODO (b/204729913)
@@ -886,7 +874,7 @@ class DatabaseBuilderTest(unittest.TestCase):
     self.assertDictEqual(
         {
             0: {
-                'ro_ec_firmware': []
+                'ro_ec_firmware': ['firmware0']
             },
             1: {
                 'ro_ec_firmware': ['firmware1']
@@ -907,9 +895,8 @@ class DatabaseBuilderTest(unittest.TestCase):
       db_builder.AddComponentCheck('ro_main_firmware',
                                    {'version': 'Google_Proj.2222.2.2'},
                                    'firmware1', True)
-      db_builder.AddComponentCheck('ro_fp_firmware',
-                                   {'version': 'fpboard_v2.0.22222'},
-                                   'firmware1', True)
+      db_builder.AddComponentCheck(
+          'ro_ec_firmware', {'version': 'proj_v2.0.22222'}, 'firmware1', True)
 
     db = db_builder.Build()
 
@@ -917,7 +904,7 @@ class DatabaseBuilderTest(unittest.TestCase):
     self.assertEqual('deprecated', components['firmware0'].status)
     self.assertEqual('supported', components['firmware1'].status)
 
-    components = db.GetComponents('ro_fp_firmware')
+    components = db.GetComponents('ro_ec_firmware')
     self.assertEqual('deprecated', components['firmware0'].status)
     self.assertEqual('supported', components['firmware1'].status)
 
@@ -950,8 +937,8 @@ class DatabaseBuilderTest(unittest.TestCase):
       db_builder.AddComponentCheck('ro_main_firmware',
                                    {'version': 'Google_NotProj.2222.2.2'},
                                    'firmware1', True)
-      db_builder.AddComponentCheck('ro_fp_firmware',
-                                   {'version': 'notfpboard_v2.0.22222'},
+      db_builder.AddComponentCheck('ro_ec_firmware',
+                                   {'version': 'notproj_v2.0.22222'},
                                    'firmware1', True)
 
     db = db_builder.Build()
@@ -959,7 +946,7 @@ class DatabaseBuilderTest(unittest.TestCase):
     components = db.GetComponents('ro_main_firmware')
     self.assertEqual('supported', components['firmware0'].status)
 
-    components = db.GetComponents('ro_fp_firmware')
+    components = db.GetComponents('ro_ec_firmware')
     self.assertEqual('supported', components['firmware0'].status)
 
   @label_utils.Informational

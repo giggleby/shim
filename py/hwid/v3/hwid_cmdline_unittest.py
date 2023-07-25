@@ -243,7 +243,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
       options.add_regions = ['us', 'tw', 'jp']
       options.region_field_name = 'test_region_field'
       options.minimal = False
-      options.auto_decline_essential_prompt = []
+      options.auto_accept_essential_prompt = []
       options.fill_combinations = []
       options.skip_update_by_material_file = False
       options.add_firmware_components = False
@@ -253,7 +253,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
       # Constructor.
       build_database_mock.FromEmpty.assert_called_with(
           project=options.project, image_name=options.image_id,
-          auto_decline_essential_prompt=options.auto_decline_essential_prompt)
+          auto_accept_essential_prompt=options.auto_accept_essential_prompt)
       instance = build_database_mock.FromEmpty.return_value
 
       # Uprev the framework version.
@@ -293,7 +293,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           vpd_data_file=None,
           run_vpd=False,
           config_yaml=None,
-          auto_decline_essential_prompt=[],
+          auto_accept_essential_prompt=[],
           fill_combinations=[],
           skip_update_by_material_file=False,
       )
@@ -317,7 +317,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           vpd_data_file=None,
           run_vpd=False,
           config_yaml=None,
-          auto_decline_essential_prompt=[],
+          auto_accept_essential_prompt=[],
           fill_combinations=[],
           skip_update_by_material_file=False,
       )

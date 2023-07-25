@@ -17,7 +17,21 @@ OLDEST_FRAMEWORK_VERSION = 0
 # in HWID DB.
 FRAMEWORK_VERSION = 0
 
-ESSENTIAL_COMPS = ('mainboard', 'region', 'dram', 'cpu', 'storage')
+
+class FirmwareComps(str, enum.Enum):
+  """The list of firmware component."""
+
+  RO_MAIN_FIRMWARE = 'ro_main_firmware'
+  RO_EC_FIRMWARE = 'ro_ec_firmware'
+  RO_FP_FIRMWARE = 'ro_fp_firmware'
+  FIRMWARE_KEYS = 'firmware_keys'
+
+  @classmethod
+  def has_value(cls, value: str):
+    return value in cls.__members__.values()
+
+  def __str__(self):
+    return self.value
 
 
 class FormFactor(str, enum.Enum):
@@ -31,6 +45,17 @@ class FormFactor(str, enum.Enum):
   def __str__(self):
     return self.name
 
+
+ESSENTIAL_COMPS = (
+    'mainboard',
+    'region',
+    'dram',
+    'cpu',
+    'storage',
+    FirmwareComps.RO_MAIN_FIRMWARE,
+    FirmwareComps.RO_EC_FIRMWARE,
+    FirmwareComps.FIRMWARE_KEYS,
+)
 
 FORM_FACTOR_COMPS = {
     FormFactor.CLAMSHELL:
@@ -74,22 +99,6 @@ class EncodingScheme(str, enum.Enum):
 
   def __str__(self):
     return self.name
-
-
-class FirmwareComps(str, enum.Enum):
-  """The list of firmware component."""
-
-  RO_MAIN_FIRMWARE = 'ro_main_firmware'
-  RO_EC_FIRMWARE = 'ro_ec_firmware'
-  RO_FP_FIRMWARE = 'ro_fp_firmware'
-  FIRMWARE_KEYS = 'firmware_keys'
-
-  @classmethod
-  def has_value(cls, value: str):
-    return value in cls.__members__.values()
-
-  def __str__(self):
-    return self.value
 
 
 class HWIDException(Exception):

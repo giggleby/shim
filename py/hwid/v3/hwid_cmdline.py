@@ -388,8 +388,8 @@ def RunDatabaseBuilder(database_builder, options):
          CmdArg('--minimal', default=False, action='store_true',
                 help="Create a minimal DB."),
          CmdArg(
-             '--auto-decline-essential-prompt', nargs='*', default=[],
-             help="Auto decline the prompt for specified essential components"),
+             '--auto-accept-essential-prompt', nargs='*', default=[],
+             help="Auto accept the prompt for specified essential components"),
          *_DATABASE_BUILDER_COMMON_ARGS)
 def BuildDatabaseWrapper(options):
   '''Build the HWID database from probed result.'''
@@ -400,7 +400,7 @@ def BuildDatabaseWrapper(options):
 
   database_builder = builder.DatabaseBuilder.FromEmpty(
       project=options.project, image_name=options.image_id,
-      auto_decline_essential_prompt=options.auto_decline_essential_prompt)
+      auto_accept_essential_prompt=options.auto_accept_essential_prompt)
   if options.minimal:
     logging.info('Create a minimal DB with region component class only.')
     if any([
