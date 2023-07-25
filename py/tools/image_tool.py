@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import textwrap
 import time
@@ -2579,7 +2580,10 @@ class ChromeOSFactoryBundle:
           # 3 as len('%2F')
           dest_name = dest_name[strip + 3:]
         dest_path = os.path.join(resource_dir, dest_name)
-        if do_copy:
+        if os.path.islink(resource):
+          arcname = os.path.join(dir_name, dest_name)
+          symlink_resources.append((resource, arcname))
+        elif do_copy:
           shutil.copy(resource, dest_path)
         else:
           os.symlink(os.path.abspath(resource), dest_path)
@@ -2588,9 +2592,11 @@ class ChromeOSFactoryBundle:
     if timestamp is None:
       timestamp = time.strftime('%Y%m%d')
     bundle_name = f'{self.board}_{timestamp}_{phase}'
-    output_name = f'factory_bundle_{bundle_name}.tar.bz2'
+    output_tar_name = f'factory_bundle_{bundle_name}.tar'
+    output_tar_path = os.path.join(output_dir, output_tar_name)
     bundle_dir = os.path.join(self._temp_dir, 'bundle')
     SysUtils.CreateDirectories(bundle_dir)
+    symlink_resources = []
 
     try:
       part = Partition(self.release_image, PART_CROS_ROOTFS_A)
@@ -2660,7 +2666,6 @@ class ChromeOSFactoryBundle:
               f'{notes}\n')
     Shell(['cat', readme_path])
 
-    output_path = os.path.join(output_dir, output_name)
     AddResource('toolkit', self.toolkit)
     AddResource('release_image', self.release_image)
     AddResource('test_image', self.test_image)
@@ -2697,13 +2702,16 @@ class ChromeOSFactoryBundle:
         AddResource(f'netboot/tftp/chrome-bot/{self.board}', netboot_vmlinuz)
         self.GenerateTFTP(os.path.join(bundle_dir, 'netboot', 'tftp'))
 
-    Shell([
-        'tar', '-I',
-        SysUtils.FindBZip2(), '-chvf', output_path, '-C', bundle_dir, '.'
-    ])
+    Shell(['tar', '-chvf', output_tar_path, '-C', bundle_dir, '.'])
+    if symlink_resources:
+      with tarfile.open(output_tar_path, 'a') as tar:
+        for resource, arcname in symlink_resources:
+          tar.add(resource, arcname)
+    Shell([SysUtils.FindBZip2(), output_tar_path])
+
     # Print final results again since tar may have flood screen output.
     Shell(['cat', readme_path])
-    return output_path
+    return output_tar_path + '.bz2'
 
   @classmethod
   def _ParseCrosConfig(cls, designs, root_path):
