@@ -108,8 +108,8 @@ def ExtractHWIDAndSerialNumber(cr50_serial_name, board):
   Returns:
     hwid, serial_number. The value may be None.
   """
-  with servod.Servod(serial_name=cr50_serial_name, board=board) as dut_control:
-    return ap_firmware.ExtractHWIDAndSerialNumber(board, dut_control)
+  with servod.Servod(serial_name=cr50_serial_name, board=board):
+    return ap_firmware.ExtractHWIDAndSerialNumber()
 
 
 def Unlock(cr50_serial_name, authcode):

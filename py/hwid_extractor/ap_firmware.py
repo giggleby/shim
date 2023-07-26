@@ -2,20 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import contextlib
 import functools
 import logging
 import os
 import re
 import subprocess
-import time
 
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import schema
 
 
-FLASHROM_BIN = '/usr/sbin/flashrom'
 FUTILITY_BIN = '/usr/bin/futility'
 VPD_BIN = '/usr/sbin/vpd'
 CMD_TIMEOUT_SECOND = 20
@@ -80,18 +77,6 @@ def GetSupportedBoards():
   return sorted(_GetBoardConfigurations())
 
 
-@contextlib.contextmanager
-def _HandleDutControl(dut_on, dut_off, dut_control):
-  """Execute dut_on before and dut_off after the context with dut_control."""
-  try:
-    dut_control.RunAll(dut_on)
-    # Need to wait for SPI chip power to stabilize (for some designs)
-    time.sleep(1)
-    yield
-  finally:
-    dut_control.RunAll(dut_off)
-
-
 def _GetHWID(firmware_binary_file):
   """Get HWID from ap firmware binary."""
   futility_cmd = [FUTILITY_BIN, 'gbb', firmware_binary_file]
@@ -118,45 +103,23 @@ def _GetSerialNumber(firmware_binary_file):
   return None
 
 
-def _CheckServoTypeIsCCD(dut_control):
-  servo_type = dut_control.GetValue('servo_type')
-  if not servo_type.startswith('ccd_'):
-    raise RuntimeError(f'Servo type is not ccd, got: {servo_type}')
-
-
-def ExtractHWIDAndSerialNumber(board, dut_control):
+def ExtractHWIDAndSerialNumber():
   """Extract HWID and serial no. from DUT.
 
   Read the ap firmware binary from DUT and extract the info from it. Only the
-  necessary blocks are read to reduce the reading time. Some dut-control
-  commands are executed before and after `flashrom` to control the DUT status.
-
-  Args:
-    board: The name of the reference board of DUT which is extracted.
-    dut_control: DUTControl interface object for dut-control commands.
+  necessary blocks are read to reduce the reading time.
 
   Returns:
     hwid, serial_number. The value may be None.
   """
-  _CheckServoTypeIsCCD(dut_control)
-
-  boards = _GetBoardConfigurations()
-  if board not in boards:
-    raise ValueError(f'Board "{board}" is not supported.')
-  ap_config = boards[board][SERVO_TYPE_CCD]
-
-  with file_utils.UnopenedTemporaryFile() as tmp_file, _HandleDutControl(
-      ap_config['dut_control_on'], ap_config['dut_control_off'], dut_control):
-    serial_name = dut_control.GetValue('serialname')
-    programmer = ap_config['programmer'] % serial_name
-    flashrom_cmd = [
-        FLASHROM_BIN, '-i', 'FMAP', '-i', 'RO_VPD', '-i', 'GBB', '-p',
-        programmer, '-r', tmp_file
+  with file_utils.UnopenedTemporaryFile() as tmp_file:
+    futility_cmd = [
+        FUTILITY_BIN, 'read', '--servo', '-r', 'FMAP,RO_VPD,GBB', tmp_file
     ]
-    output = subprocess.check_output(flashrom_cmd, encoding='utf-8',
+    output = subprocess.check_output(futility_cmd, encoding='utf-8',
                                      stderr=subprocess.PIPE,
                                      timeout=CMD_TIMEOUT_SECOND)
-    logging.debug('flashrom output:\n%s', output)
+    logging.debug('futility read output:\n%s', output)
     hwid = _GetHWID(tmp_file)
     serial_number = _GetSerialNumber(tmp_file)
     logging.info('Extract result: HWID: "%s", serial number: "%s"', hwid,
