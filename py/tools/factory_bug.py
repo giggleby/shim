@@ -488,10 +488,10 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
                 include_stderr=True),
         ]
       if probe:
-        files += [
-            Run(['hwid', 'probe'], filename='probe_result.json',
-                check_call=False),
-        ]
+        probe_result = 'probe_result.json'
+        Spawn(['hwid', 'collect-material', '--output-file', probe_result],
+              check_call=False, read_stdout=True, read_stderr=True)
+        files += [probe_result]
       if dram:
         files += GenerateDRAMCalibrationLog()
 
