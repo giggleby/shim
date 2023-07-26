@@ -211,21 +211,19 @@ class GSCTool:
     Raises:
       `GSCToolError` if fails.
     """
-    result = self._InvokeCommand([GSCTOOL_PATH, '-a', '-I'],
+    result = self._InvokeCommand([GSCTOOL_PATH, '-a', '-I', '-M'],
                                  'getting ccd info fails in cr50')
 
     # The pattern of output is as below in case of factory mode enabled:
-    # State: Locked
-    # Password: None
-    # Flags: 000000
-    # Capabilities, current and default:
-    #   ...
-    # Capabilities are modified.
+    # STATE=Locked
+    # ...
+    # ...
+    # CCD_FLAG_FACTORY_MODE=Y
     #
-    # If factory mode is disabed then the last line would be
-    # Capabilities are default.
+    # If factory mode is disabled then the output would be
+    # CCD_FLAG_FACTORY_MODE=N
     return bool(
-        re.search('^Capabilities are modified.$', result.stdout, re.MULTILINE))
+        re.search('^CCD_FLAG_FACTORY_MODE=Y$', result.stdout, re.MULTILINE))
 
   def IsTi50InitialFactoryMode(self):
     """Queries if the Ti50 is in initial factory mode or not.

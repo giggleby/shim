@@ -89,12 +89,13 @@ class GSCToolTest(unittest.TestCase):
     self.assertRaises(gsctool.GSCToolError, self.gsctool.SetFactoryMode, True)
 
   def testIsFactoryMode(self):
-    self._SetGSCToolUtilityResult(stdout=('...\nCapabilities are default.\n'))
+    self._SetGSCToolUtilityResult(stdout=('...\nCCD_FLAG_FACTORY_MODE=N\n'))
     self.assertFalse(self.gsctool.IsFactoryMode())
-    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-I'])
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-I', '-M'])
 
-    self._SetGSCToolUtilityResult(stdout=('...\nCapabilities are modified.\n'))
+    self._SetGSCToolUtilityResult(stdout=('...\nCCD_FLAG_FACTORY_MODE=Y\n'))
     self.assertTrue(self.gsctool.IsFactoryMode())
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-I', '-M'])
 
     self._SetGSCToolUtilityResult(status=1)
     self.assertRaises(gsctool.GSCToolError, self.gsctool.IsFactoryMode)
