@@ -2,14 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Fix for bug b/30904731: Import _strptime manually.  Otherwise,
-# threads may initially raise the exception `AttributeError: _strptime`.
 import logging
 import os
 import threading
 import time
-
-import _strptime  # pylint: disable=unused-import
 
 from cros.factory.instalog import flow_policy
 from cros.factory.instalog import json_utils
