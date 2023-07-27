@@ -1814,6 +1814,8 @@ class Gooftool:
     cur_identity['device-tree-compatible-match'] = get_file_if_exist(
         cros_config_module.DEVICE_TREE_COMPATIBLE_PATH)
     firmware_ro_info = get_file_if_exist(
+        cros_config_module.SYSFS_CHROMEOS_ACPI_FRID_LEGACY_PATH
+    ) or get_file_if_exist(
         cros_config_module.SYSFS_CHROMEOS_ACPI_FRID_PATH) or get_file_if_exist(
             cros_config_module.PROC_FDT_CHROMEOS_FRID_PATH) or 'empty'
     cur_identity['frid'] = firmware_ro_info.split('.')[0]

@@ -12,7 +12,9 @@ DEVICE_TREE_COMPATIBLE_PATH = '/proc/device-tree/compatible'
 PRODUCT_NAME_PATH = '/sys/class/dmi/id/product_name'
 DEVICE_TREE_SKU_ID_PATH = '/proc/device-tree/firmware/coreboot/sku-id'
 PRODUCT_SKU_ID_PATH = '/sys/class/dmi/id/product_sku'
-SYSFS_CHROMEOS_ACPI_FRID_PATH = '/sys/devices/platform/chromeos_acpi/FRID'
+SYSFS_CHROMEOS_ACPI_FRID_LEGACY_PATH = \
+    '/sys/devices/platform/chromeos_acpi/FRID'
+SYSFS_CHROMEOS_ACPI_FRID_PATH = '/sys/devices/platform/GOOG0016:00/FRID'
 PROC_FDT_CHROMEOS_FRID_PATH = \
     '/proc/device-tree/firmware/chromeos/readonly-firmware-version'
 
