@@ -267,7 +267,7 @@ class FactoryLogParser:
         is not specified as UTC+0. This is designed for possible batch
         parsing for all logs collected by factory_bug.
     """
-    self._file = open(log_path, 'r', encoding='utf-8')  # pylint: disable=consider-using-with
+    self._file = open(log_path, 'r', encoding='utf-8', errors='ignore')  # pylint: disable=consider-using-with
     self._output_file = sys.stdout
     if output_path:
       self._output_file = open(output_path, 'w', encoding='utf-8')  # pylint: disable=consider-using-with
