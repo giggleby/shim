@@ -108,7 +108,7 @@ def _InvokeRuntimeProbe(probe_config_file_relpath):
         timeout=_SUBPROC_TIMEOUT)
   except subprocess.TimeoutExpired as e:
     logging.error('Timeout for %r: %r.', cmd_args[0], e)
-    result.result_type = result.TIMEOUT
+    result.result_type = result.TIMEOUT_ERROR
     proc.kill()
     try:
       result.raw_stdout, result.raw_stderr = proc.communicate(
