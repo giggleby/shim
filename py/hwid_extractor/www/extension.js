@@ -8,7 +8,7 @@ const hwidExtractorOrigin = 'http://localhost:8000';
  * callback for MutationObserver
  */
 const callback = async () => {
-  const jsAuthCodeDiv = document.getElementsByClassName('js-auth-code')[0];
+  const jsAuthCodeDiv = document.getElementsByClassName('auth-code-wrapper')[0];
   if (!jsAuthCodeDiv) return;
   const child = jsAuthCodeDiv.children[0];
   if (!child) return;
