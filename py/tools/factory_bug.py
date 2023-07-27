@@ -393,7 +393,8 @@ def GenerateDRAMCalibrationLog():
 
 
 def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
-             abt=False, var='/var', usr_local='/usr/local', etc='/etc'):
+             abt=False, test_summary=False, var='/var', usr_local='/usr/local',
+             etc='/etc'):
   """Saves dmesg and relevant log files to a new archive in output_dir.
 
   The archive will be named factory_bug.<description>.zip,
@@ -407,6 +408,7 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
     probe: True to include probe result in the logs.
     dram: True to include DRAM calibration logs.
     abt: True to include abt.txt for Android Bug Tool.
+    test_summary: True to include factory test summary.
     var, usr_local, etc: Paths to the relevant directories.
 
   Returns:
@@ -470,6 +472,14 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
       Spawn(['factory_summary', 'system', '-o', system_summary_fname],
             check_call=False, read_stdout=True, read_stderr=True)
       files += [system_summary_fname]
+
+      if test_summary:
+        logging.warning(
+            'Generating factory test summary which might take a while...')
+        test_summary_fname = 'factory_test_summary'
+        Spawn(['factory_summary', 'test', '-o', test_summary_fname],
+              check_call=False, read_stdout=True, read_stderr=True)
+        files += [test_summary_fname]
 
       if HasEC():
         files += [
@@ -583,11 +593,13 @@ def ParseArgument():
                       help=('Include DRAM calibration info in the logs.'))
   parser.add_argument('--no-abt', action='store_false', dest='abt',
                       help=('Create abt.txt for "Android Bug Tool".'))
+  parser.add_argument('--test_summary', action='store_true',
+                      help=('Generate and store the factory test summary.'))
   parser.add_argument(
       '--full', action='store_true',
       help=('Produce a complete factory_bug. When --full is set --net, --probe'
-            ' and --dram are implied. For details see the description of each '
-            'option.'))
+            ', --dram and --test_summary are implied. For details see the '
+            'description of each option.'))
   parser.add_argument('--verbosity', '-v', action='count', default=0,
                       help=('Change the logging verbosity.'))
   return parser, parser.parse_args()
@@ -642,7 +654,7 @@ def main():
   parser, args = ParseArgument()
   logging.basicConfig(level=logging.WARNING - 10 * args.verbosity)
   options = dict((key, getattr(args, key) or args.full)
-                 for key in ['net', 'probe', 'dram'])
+                 for key in ['net', 'probe', 'dram', 'test_summary'])
   root_is_removable = IsDeviceRemovable(GetRootDevice())
 
   input_device = InputDevice(root_is_removable, args.input_device)
