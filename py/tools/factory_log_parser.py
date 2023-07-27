@@ -44,7 +44,7 @@ Parsing /var/log/messages to stdout:
 factory_log_parser --log_path=path/to/factory_bug/var/log/messages
 
 Saving output to certain file:
-factory_log_parser --log_path=/var/log/messages --output_file=path/to/output
+factory_log_parser --log_path=/var/log/messages --output_path=path/to/output
 
 If the log is logged with timestamps ending with Z, this tool will regard
 this timestamp as UTC+0 zero timezone. Otherwise, this tool will try to convert
