@@ -70,11 +70,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
         write_protect_target.WriteProtectTargetType.AP)
 
     self.AddTask(self.PreCheck)
-    # Skip provisioning SPI data only if not in initial factory mode
-    # and wpsr is provisioned.
-    if (self.gsctool.IsTi50InitialFactoryMode() or
-        not self.gsctool.IsWpsrProvisioned()):
-      self.AddTask(self.ProvisionSPIData)
+    self.AddTask(self.ProvisionSPIData)
     self.AddTask(self.VerifyAPRO, reboot=True)
     self.AddTask(self.CheckAPROResult)
 
@@ -95,10 +91,14 @@ class Ti50APROVerficationTest(test_case.TestCase):
     self.gooftool.GSCSetBoardId(two_stages=self.args.two_stages)
 
     # Set Addressing mode and WPSR.
-    session.console.info('Set Addressing mode and WPSR.')
-    self.gooftool.Ti50SetAddressingMode()
-    self.gooftool.Ti50SetSWWPRegister(
-        no_write_protect=(not self.args.enable_swwp))
+    # Skip provisioning SPI data only if not in initial factory mode
+    # and wpsr is provisioned.
+    if (self.gsctool.IsTi50InitialFactoryMode() or
+        not self.gsctool.IsWpsrProvisioned()):
+      session.console.info('Set Addressing mode and WPSR.')
+      self.gooftool.Ti50SetAddressingMode()
+      self.gooftool.Ti50SetSWWPRegister(
+          no_write_protect=(not self.args.enable_swwp))
 
   def VerifyAPRO(self):
     # Reboot GSC.
