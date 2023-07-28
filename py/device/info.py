@@ -145,15 +145,21 @@ class SystemInfo(device_types.DeviceComponent):
   def storage_type(self):
     return storage.Storage(self._device).GetMainStorageType().value
 
+  def GetLSBData(self, field: str, release: bool):
+    """Gets a field from the test or release LSB data."""
+    if release:
+      return self._release_lsb_data[field]
+    return self._test_lsb_data[field]
+
   @InfoProperty
   def release_image_version(self):
     """Version of the image on release partition."""
-    return self._release_lsb_data['GOOGLE_RELEASE']
+    return self.GetLSBData('GOOGLE_RELEASE', release=True)
 
   @InfoProperty
   def release_image_channel(self):
     """Channel of the image on release partition."""
-    return self._release_lsb_data['CHROMEOS_RELEASE_TRACK']
+    return self.GetLSBData('CHROMEOS_RELEASE_TRACK', release=True)
 
   def ClearSerialNumbers(self):
     """Clears any serial numbers from DeviceData."""
@@ -196,17 +202,17 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def test_image_version(self):
     """Version of the image on factory test partition."""
-    return self._test_lsb_data['GOOGLE_RELEASE']
+    return self.GetLSBData('GOOGLE_RELEASE', release=False)
 
   @InfoProperty
   def test_image_channel(self):
     """Channel of the image on factory test partition."""
-    return self._test_lsb_data['CHROMEOS_RELEASE_TRACK']
+    return self.GetLSBData('CHROMEOS_RELEASE_TRACK', release=False)
 
   @InfoProperty
   def test_image_builder_path(self):
     """Builder path of the image on factory test partition."""
-    return self._test_lsb_data['CHROMEOS_RELEASE_BUILDER_PATH']
+    return self.GetLSBData('CHROMEOS_RELEASE_BUILDER_PATH', release=False)
 
   @InfoProperty
   def factory_image_version(self):
