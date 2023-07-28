@@ -6,8 +6,9 @@ import enum
 import logging
 import re
 
-from cros.factory.gooftool import crosfw
 from cros.factory.utils.type_utils import Error
+
+from cros.factory.external.chromeos_cli import ifdtool
 
 
 _RE_ME_PATTERN = r'^(?:\[DEBUG\]\s+)?ME:\s+(?P<key>.+)\s+:\s+(?P<value>.+)$'
@@ -86,7 +87,7 @@ def _GetSKUFromHFSTS3(me_flags):
 def _VerifySIMESection(sku, fw_image):
   if sku == SKU.Consumer:
     # For Consumer SKU, if ME is locked, it should contain only 0xFFs.
-    data = fw_image.get_section(crosfw.IntelLayout.ME.value).strip(b'\xff')
+    data = fw_image.get_section(ifdtool.IntelLayout.ME.value).strip(b'\xff')
     if data:
       raise ManagementEngineError(
           'ME (ManagementEngine) firmware may be not locked.')
@@ -191,7 +192,7 @@ def _VerifyDescriptorLocked(sku, main_fw):
 def VerifyMELocked(main_fw, shell):
   """Verify if ME is locked by checking the output of cbmem."""
   fw_image = main_fw.GetFirmwareImage()
-  if not fw_image.has_section(crosfw.IntelLayout.ME.value):
+  if not fw_image.has_section(ifdtool.IntelLayout.ME.value):
     logging.info('System does not have Management Engine.')
     return
 

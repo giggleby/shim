@@ -5,7 +5,7 @@
 
 import unittest
 
-from cros.factory.gooftool import interval
+from cros.factory.utils import interval
 
 
 class IntervalTest(unittest.TestCase):

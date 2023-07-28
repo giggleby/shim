@@ -51,10 +51,11 @@ test list::
 import enum
 import logging
 
-from cros.factory.gooftool import crosfw
 from cros.factory.test import device_data
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
+
+from cros.factory.external.chromeos_cli import ifdtool
 
 
 class TestMode(str, enum.Enum):
@@ -84,9 +85,9 @@ class LockIntelDescriptor(test_case.TestCase):
       raise KeyError(f'Mode {mode} is not valid. '
                      f'Valid modes: {valid_modes}')
     logging.info('Test mode is: %s', mode)
-    main_fw = crosfw.LoadIntelMainFirmware()
+    main_fw = ifdtool.LoadIntelMainFirmware()
     fw_image = main_fw.GetFirmwareImage()
-    if not fw_image.has_section(crosfw.IntelLayout.DESC.value):
+    if not fw_image.has_section(ifdtool.IntelLayout.DESC.value):
       self.FailTask('Cannot find descriptor from the firmware image layout. '
                     'Is this an Intel project?')
 

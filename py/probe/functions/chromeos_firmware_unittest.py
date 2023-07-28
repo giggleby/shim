@@ -39,7 +39,8 @@ class ChromeosFirmwareTest(unittest.TestCase):
         'board')
     self.addCleanup(patcher.stop)
 
-    patcher = mock.patch('cros.factory.gooftool.crosfw.FirmwareImage')
+    patcher = mock.patch(
+        'cros.factory.external.chromeos_cli.flashrom.FirmwareImage')
     self.mock_fw_image = patcher.start()
     self.addCleanup(patcher.stop)
 

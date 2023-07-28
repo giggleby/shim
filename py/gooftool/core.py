@@ -20,9 +20,7 @@ import yaml
 
 from cros.factory.gooftool import bmpblk
 from cros.factory.gooftool.common import Util
-from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import gbb
-from cros.factory.gooftool import interval
 from cros.factory.gooftool import management_engine
 from cros.factory.gooftool import vpd_data
 from cros.factory.gooftool import wipe
@@ -42,14 +40,17 @@ from cros.factory.test.utils import smart_amp_utils
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import gsc_utils
+from cros.factory.utils import interval
 from cros.factory.utils import json_utils
 from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 
-from cros.factory.external.chromeos_cli import cros_config as cros_config_module
-from cros.factory.external.chromeos_cli import futility as futility_module
-from cros.factory.external.chromeos_cli import gsctool as gsctool_module
+from cros.factory.external.chromeos_cli import cros_config
+from cros.factory.external.chromeos_cli import flashrom
+from cros.factory.external.chromeos_cli import futility
+from cros.factory.external.chromeos_cli import gsctool
+from cros.factory.external.chromeos_cli import ifdtool
 from cros.factory.external.chromeos_cli import vpd
 
 
@@ -185,15 +186,16 @@ class Gooftool:
       raise ValueError(f'Invalid HWID version: {hwid_version!r}')
 
     self._util = Util()
-    self._crosfw = crosfw
+    self._flashrom = flashrom
     self._vpd = vpd.VPDTool()
     self._unpack_gbb = gbb.UnpackGBB
     self._unpack_bmpblock = bmpblk.unpack_bmpblock
     self._named_temporary_file = tempfile.NamedTemporaryFile
     self._db = None
-    self._cros_config = cros_config_module.CrosConfig()
-    self._gsctool = gsctool_module.GSCTool()
-    self._futility = futility_module.Futility()
+    self._cros_config = cros_config.CrosConfig()
+    self._gsctool = gsctool.GSCTool()
+    self._ifdtool = ifdtool
+    self._futility = futility.Futility()
 
   def GetLogicalBlockSize(self):
     """Get the logical block size of a DUT by reading file under /sys/block.
@@ -460,11 +462,11 @@ class Gooftool:
         release_rootfs)
 
     if firmware_path is None:
-      firmware_path = self._crosfw.LoadMainFirmware().GetFileName()
-      firmware_image = self._crosfw.LoadMainFirmware().GetFirmwareImage()
+      firmware_path = self._flashrom.LoadMainFirmware().GetFileName()
+      firmware_image = self._flashrom.LoadMainFirmware().GetFirmwareImage()
     else:
       with open(firmware_path, 'rb') as f:
-        firmware_image = self._crosfw.FirmwareImage(f.read())
+        firmware_image = self._flashrom.FirmwareImage(f.read())
 
     with file_utils.TempDirectory() as tmpdir:
 
@@ -651,7 +653,7 @@ class Gooftool:
 
   def VerifyManagementEngineLocked(self):
     """Verify Management Engine is locked."""
-    main_fw = self._crosfw.LoadIntelMainFirmware()
+    main_fw = self._ifdtool.LoadIntelMainFirmware()
     management_engine.VerifyMELocked(main_fw, self._util.shell)
 
   def VerifyVPD(self):
@@ -954,7 +956,7 @@ class Gooftool:
     # check current GBB flags to determine if we need to keep .developer_mode
     # after clobber-state.
     try:
-      main_fw = self._crosfw.LoadMainFirmware()
+      main_fw = self._flashrom.LoadMainFirmware()
       fw_filename = main_fw.GetFileName(sections=['GBB'])
       gbb_flags = self._futility.GetGBBFlags(fw_filename)
     except Exception:
@@ -1009,14 +1011,15 @@ class Gooftool:
     """
 
     assert hwid
-    main_fw = self._crosfw.LoadMainFirmware()
+    main_fw = self._flashrom.LoadMainFirmware()
     fw_filename = main_fw.GetFileName(sections=['GBB'])
     self._futility.WriteHWID(fw_filename, hwid)
     main_fw.Write(fw_filename)
 
   def ReadHWID(self):
     """Reads the HWID string from firmware GBB."""
-    fw_filename = self._crosfw.LoadMainFirmware().GetFileName(sections=['GBB'])
+    fw_filename = self._flashrom.LoadMainFirmware().GetFileName(
+        sections=['GBB'])
     return self._futility.ReadHWID(fw_filename)
 
   def VerifyWPSwitch(self, has_ectool=True):
@@ -1115,7 +1118,7 @@ class Gooftool:
       Error, if the initial locale is missing in VPD or the default locale is
       not supported.
     """
-    image_file = self._crosfw.LoadMainFirmware().GetFileName()
+    image_file = self._flashrom.LoadMainFirmware().GetFileName()
     ro_vpd = self._vpd.GetAllData(
         partition=vpd.VPD_READONLY_PARTITION_NAME)
     region = ro_vpd.get('region')
@@ -1328,7 +1331,7 @@ class Gooftool:
     """
     try:
       board_id = self._gsctool.GetBoardID()
-    except gsctool_module.GSCToolError as e:
+    except gsctool.GSCToolError as e:
       raise Error(
           f'Failed to get boardID with gsctool command: {e!r}') from None
     if board_id.type == 0xffffffff:
@@ -1389,7 +1392,7 @@ class Gooftool:
     # before we set the AP-RO hash.
     self.Cr50ClearRoHash()
 
-    firmware_image = self._crosfw.LoadMainFirmware().GetFirmwareImage()
+    firmware_image = self._flashrom.LoadMainFirmware().GetFirmwareImage()
     ro_offset, ro_size = firmware_image.get_section_area('RO_SECTION')
     ro_vpd_offset, ro_vpd_size = firmware_image.get_section_area('RO_VPD')
     gbb_offset, gbb_size = firmware_image.get_section_area('GBB')
@@ -1706,7 +1709,7 @@ class Gooftool:
       try:
         self._gsctool.SetFactoryMode(False)
         factory_mode_disabled = True
-      except gsctool_module.GSCToolError:
+      except gsctool.GSCToolError:
         factory_mode_disabled = False
 
       if not _IsCCDInfoMandatory():
@@ -1720,7 +1723,7 @@ class Gooftool:
 
       is_factory_mode = self._gsctool.IsFactoryMode()
 
-    except gsctool_module.GSCToolError as e:
+    except gsctool.GSCToolError as e:
       raise Error(f'gsctool command fail: {e!r}') from None
 
     except Exception as e:
@@ -1810,22 +1813,22 @@ class Gooftool:
     cur_identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
     # one for x86 device another for ARM device
     cur_identity['smbios-name-match'] = get_file_if_exist(
-        cros_config_module.PRODUCT_NAME_PATH)
+        cros_config.PRODUCT_NAME_PATH)
     cur_identity['device-tree-compatible-match'] = get_file_if_exist(
-        cros_config_module.DEVICE_TREE_COMPATIBLE_PATH)
+        cros_config.DEVICE_TREE_COMPATIBLE_PATH)
     firmware_ro_info = get_file_if_exist(
-        cros_config_module.SYSFS_CHROMEOS_ACPI_FRID_LEGACY_DRIVER_PATH
+        cros_config.SYSFS_CHROMEOS_ACPI_FRID_LEGACY_DRIVER_PATH
     ) or get_file_if_exist(
-        cros_config_module.SYSFS_CHROMEOS_ACPI_FRID_LEGACY_FW_PATH
+        cros_config.SYSFS_CHROMEOS_ACPI_FRID_LEGACY_FW_PATH
     ) or get_file_if_exist(
-        cros_config_module.SYSFS_CHROMEOS_ACPI_FRID_PATH) or get_file_if_exist(
-            cros_config_module.PROC_FDT_CHROMEOS_FRID_PATH) or 'empty'
+        cros_config.SYSFS_CHROMEOS_ACPI_FRID_PATH) or get_file_if_exist(
+            cros_config.PROC_FDT_CHROMEOS_FRID_PATH) or 'empty'
     cur_identity['frid'] = firmware_ro_info.split('.')[0]
     # For some devices (e.g. hayato), there's only one SKU.
     # In this case, sku-id might not be set.
     cur_identity['sku-id'] = get_file_if_exist(
-        cros_config_module.PRODUCT_SKU_ID_PATH) or get_file_if_exist(
-            cros_config_module.DEVICE_TREE_SKU_ID_PATH, True) or 'empty'
+        cros_config.PRODUCT_SKU_ID_PATH) or get_file_if_exist(
+            cros_config.DEVICE_TREE_SKU_ID_PATH, True) or 'empty'
     cur_identity['customization-id'] = get_vpd_val('customization_id')
     cur_identity['custom-label-tag'] = get_vpd_val('custom_label_tag')
 

@@ -1,44 +1,37 @@
 # pylint: disable=attribute-defined-outside-init
-# Copyright 2012 The ChromiumOS Authors
+# Copyright 2023 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """ChromeOS Firmware Utilities
 
 This modules provides easy access to ChromeOS firmware.
 
-To access the contents of a firmware image, use FimwareImage().
+To access the contents of a firmware image, use FirmwareImage().
 To access the flash chipset containing firmware, use Flashrom().
 To get the content of (cacheable) firmware, use LoadMainFirmware() or
   LoadEcFirmware().
 """
 
-import collections
-import enum
-import filecmp
-import logging
 import re
 import tempfile
 
-from cros.factory.gooftool import common
 from cros.factory.utils import fmap
-from cros.factory.utils.type_utils import Error
 
+from cros.factory.external.chromeos_cli import shell
 
 # Names to select target bus.
 TARGET_MAIN = 'main'
 TARGET_EC = 'ec'
 
-# Types of named tuples
-WpStatus = collections.namedtuple('WpStatus', 'enabled offset size')
-
 # All Chrome OS images are FMAP based.
 FirmwareImage = fmap.FirmwareImage
 
 
-class CrosFWError(Error):
-  pass
+class FlashromError(Exception):
+  """All exceptions when calling flashrom."""
 
+
+# TODO(jasonchuang) We should check if we can use futility.py instead.
 class Flashrom:
   """Wrapper for calling system command flashrom(8)."""
 
@@ -51,15 +44,16 @@ class Flashrom:
   _WRITE_FLAGS = '--noverify-all'
   _READ_FLAGS = ''
 
-  def __init__(self, target=None):
+  def __init__(self, target=None, dut=None):
     self._target = target or TARGET_MAIN
+    self._shell = shell.Shell(dut)
 
   def _InvokeCommand(self, param, ignore_status=False):
     command = ' '.join(['flashrom', self._TARGET_MAP[self._target], param])
 
-    result = common.Shell(command)
+    result = self._shell(command)
     if not (ignore_status or result.success):
-      raise CrosFWError(f'Failed in command: {command}\n{result.stderr}')
+      raise FlashromError(f'Failed in command: {command}\n{result.stderr}')
     return result
 
   def GetTarget(self):
@@ -107,8 +101,8 @@ class Flashrom:
       filename: File name of image to write if data is None.
       sections: List of sections to write. None to write whole image.
     """
-    assert ((data is None) ^ (filename is None)), (
-        'Either data or filename should be None.')
+    assert ((data is None) ^
+            (filename is None)), ('Either data or filename should be None.')
     if data is not None:
       with tempfile.NamedTemporaryFile(prefix=f'fw_{self._target}_') as f:
         f.write(data)
@@ -118,6 +112,7 @@ class Flashrom:
     sections_param = [f'-i {name}' for name in sections or []]
     self._InvokeCommand(
         f"-w '{filename}' {' '.join(sections_param)} {self._WRITE_FLAGS}")
+
 
 class FirmwareContent:
   """Wrapper around flashrom for a specific firmware target.
@@ -195,106 +190,6 @@ class FirmwareContent:
       return fmap.FirmwareImage(image.read())
 
 
-class IntelPlatform(str, enum.Enum):
-  AlderLake = 'adl'
-  ApolloLake = 'aplk'
-  CannonLake = 'cnl'
-  LewisburgPCH = 'lbg'
-  Denverton = 'dnv'
-  ElkhartLake = 'ehl'
-  GeminiLake = 'glk'
-  IceLake = 'icl'
-  IFDv2Platform = 'ifd2'
-  JasperLake = 'jsl'
-  SkyLake = 'sklkbl'
-  KabyLake = 'sklkbl'
-  TigerLake = 'tgl'
-
-
-class Ifdtool:
-  """Wrapper for Intel's ifdtool."""
-
-  def __init__(self, platform: IntelPlatform):
-    self._platform = \
-      IntelPlatform.IFDv2Platform.value if platform is None else platform.value
-
-  def _InvokeCommand(self, param, ignore_status=False):
-    command = ' '.join(['ifdtool', '-p', self._platform, param])
-
-    result = common.Shell(command)
-    if not (ignore_status or result.success):
-      raise CrosFWError('Failed in command: {command}\n{result.stderr}}')
-    return result
-
-  def Dump(self, desc_path):
-    """Dump the descriptor binary into human-readable format."""
-    return self._InvokeCommand(f'-d {desc_path}').stdout
-
-  def GenerateLockedDescriptor(self, unlocked_desc_path, prefix='locked_desc_'):
-    """Generate a locked descriptor binary."""
-    locked_desc_path = tempfile.NamedTemporaryFile(prefix=prefix).name  # pylint: disable=consider-using-with
-    self._InvokeCommand(f'-lr -O {locked_desc_path} {unlocked_desc_path}')
-    return locked_desc_path
-
-
-class IntelLayout(str, enum.Enum):
-  """Intel's firmware image layout.
-
-  The firmware image layout is defined under
-  `src/third_party/coreboot/src/mainboard/google/<intel_board>/chromeos.fmd`.
-  """
-  DESC = 'SI_DESC'
-  ME = 'SI_ME'
-
-
-class IntelMainFirmwareContent(FirmwareContent):
-  """Wrapper around FirmwareContent and ifdtool for manipulating descriptor."""
-
-  @classmethod
-  def Load(cls, platform=None):  # pylint: disable=arguments-renamed
-    obj = super(IntelMainFirmwareContent, cls).Load(TARGET_MAIN)
-    obj.ifdtool = Ifdtool(platform)
-    return obj
-
-  def DumpDescriptor(self):
-    desc_bin = self.GetFileName([IntelLayout.DESC.value])
-    return self.ifdtool.Dump(desc_bin)
-
-  def GenerateAndCheckLockedDescriptor(self):
-    """Generate the locked descriptor and check if it is already locked.
-
-    This function generates a locked descriptor using the current descriptor.
-    It then compares the two descriptors to see if the descriptor is already
-    locked.
-
-    Returns:
-      A tuple of (string, bool).
-      string - Path to the locked descriptor binary.
-      bool - The descriptor is already locked or not.
-    """
-    desc_bin = self.GetFileName([IntelLayout.DESC.value])
-    locked_desc_bin = self.ifdtool.GenerateLockedDescriptor(desc_bin)
-    is_locked = filecmp.cmp(desc_bin, locked_desc_bin, shallow=False)
-    return locked_desc_bin, is_locked
-
-  def ReadDescriptor(self):
-    """Read the descriptor data."""
-    return self.flashrom.Read(sections=[IntelLayout.DESC.value])
-
-  def WriteDescriptor(self, *, data=None, filename=None):
-    """Write the given descriptor data or file to the main firmware.
-
-    For the new descriptor to take effect, caller needs to trigger a cold
-    reboot.
-
-    Args:
-      data: Image data to write. None to write given file.
-      filename: File name of image to write if data is None.
-    """
-    logging.info('Write the descriptor...')
-    self.flashrom.Write(data=data, filename=filename,
-                        sections=[IntelLayout.DESC.value])
-
 def LoadEcFirmware():
   """Returns flashrom data from Embedded Controller chipset."""
   return FirmwareContent.Load(TARGET_EC)
@@ -303,8 +198,3 @@ def LoadEcFirmware():
 def LoadMainFirmware():
   """Returns flashrom data from main firmware (also known as BIOS)."""
   return FirmwareContent.Load(TARGET_MAIN)
-
-
-def LoadIntelMainFirmware(platform=None):
-  """Returns Intel's Main firmware."""
-  return IntelMainFirmwareContent.Load(platform)

@@ -1,7 +1,6 @@
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Helper functions for manupulating intervals."""
 
 import copy
@@ -9,6 +8,7 @@ import copy
 
 # Interval class representing [start, end) intervals.
 class Interval:
+
   def __init__(self, start, end):
     self.start = start
     self.end = end
@@ -37,8 +37,8 @@ def MergeIntervals(intervals):
     A minimal sorted Interval list which is the union of all intervals.
   """
   # Filter out empty intervals and sort.
-  intervals = sorted(list(filter(lambda x: x.size, intervals)),
-                     key=lambda x: x.start)
+  intervals = sorted(
+      list(filter(lambda x: x.size, intervals)), key=lambda x: x.start)
   if not intervals:
     return []
   # Merge intervals.

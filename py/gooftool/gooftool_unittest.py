@@ -21,7 +21,6 @@ from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
 from cros.factory.gooftool.core import CrosConfigIdentity
 from cros.factory.gooftool.core import IdentitySourceEnum
-from cros.factory.gooftool import crosfw
 from cros.factory.gooftool.management_engine import ManagementEngineError
 from cros.factory.gooftool.management_engine import SKU
 from cros.factory.test.rules import phase
@@ -34,8 +33,10 @@ from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
 
 from cros.factory.external.chromeos_cli import cros_config
+from cros.factory.external.chromeos_cli import flashrom
 from cros.factory.external.chromeos_cli import futility
 from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
+from cros.factory.external.chromeos_cli import ifdtool
 from cros.factory.external.chromeos_cli import vpd
 
 
@@ -111,10 +112,10 @@ class MockME:
       'RO_SECTION': b''
   }
   FW_ME_READ_LOCKED = {
-      crosfw.IntelLayout.ME.value: b'\xff' * 1024
+      ifdtool.IntelLayout.ME.value: b'\xff' * 1024
   }
   FW_ME_READ_UNLOCKED = {
-      crosfw.IntelLayout.ME.value: b'\x55' * 1024
+      ifdtool.IntelLayout.ME.value: b'\x55' * 1024
   }
   DESCRIPTOR_UNLOCKED = {
       1: 0xffffffff,
@@ -234,7 +235,8 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._util.shell = mock.Mock(Shell)
     self._gooftool._futility = mock.Mock(futility.Futility)
 
-    self._gooftool._crosfw = mock.Mock(crosfw)
+    self._gooftool._flashrom = mock.Mock(flashrom)
+    self._gooftool._ifdtool = mock.Mock(ifdtool)
     self._gooftool._unpack_bmpblock = mock.Mock(unpack_bmpblock)
     self._gooftool._vpd = mock.Mock(self._gooftool._vpd)
     self._gooftool._named_temporary_file = mock.Mock(NamedTemporaryFile)
@@ -265,12 +267,17 @@ class GooftoolTest(unittest.TestCase):
   def testVerifyKey(self, mock_pygpt, mock_mount):
     self._gooftool._util.GetReleaseKernelPathFromRootPartition.return_value = \
         '/dev/zero'
-    self._gooftool._crosfw.LoadMainFirmware.side_effect = [
+    self._gooftool._flashrom.LoadMainFirmware.side_effect = [
         MockMainFirmware(),
         MockMainFirmware(
-            MockFirmwareImage({'GBB': b'GBB', 'FW_MAIN_A': b'MA',
-                               'FW_MAIN_B': b'MB', 'VBLOCK_A': b'VA',
-                               'VBLOCK_B': b'VB'}))]
+            MockFirmwareImage({
+                'GBB': b'GBB',
+                'FW_MAIN_A': b'MA',
+                'FW_MAIN_B': b'MB',
+                'VBLOCK_A': b'VA',
+                'VBLOCK_B': b'VB'
+            }))
+    ]
 
     # TODO(hungte) Improve unit test scope.
     def fake_tmpexc(*unused_args, **unused_kargs):
@@ -288,7 +295,7 @@ class GooftoolTest(unittest.TestCase):
     mock_pygpt.return_value = FakeGPT()
 
     self._gooftool.VerifyKeys('/dev/null', _tmpexec=fake_tmpexc)
-    self._gooftool._crosfw.LoadMainFirmware.assert_called()
+    self._gooftool._flashrom.LoadMainFirmware.assert_called()
 
   def testVerifySystemTime(self):
     self._gooftool._util.GetReleaseRootPartitionPath.return_value = 'root'
@@ -399,12 +406,12 @@ class GooftoolTest(unittest.TestCase):
 
   def testVerifyManagementEngineLockedNoME(self):
     # No ME firmware
-    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+    self._gooftool._ifdtool.LoadIntelMainFirmware.return_value = \
       MockIntelMainFirmware(None, MockFirmwareImage(MockME.FW_NO_ME))
     self._gooftool.VerifyManagementEngineLocked()
 
   def testVerifyManagementEngineLockedUnknownSKU(self):
-    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+    self._gooftool._ifdtool.LoadIntelMainFirmware.return_value = \
       MockIntelMainFirmware(
         MockME.DESCRIPTOR_UNLOCKED,
         MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
@@ -418,7 +425,7 @@ class GooftoolTest(unittest.TestCase):
   def testVerifyManagementEngineLockedConsumerSKU(self):
     consumer = SKU.Consumer
     # Read locked ME section + locked cbmem + locked descriptor
-    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+    self._gooftool._ifdtool.LoadIntelMainFirmware.return_value = \
       MockIntelMainFirmware(
         consumer.flmstr,
         MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
@@ -428,7 +435,7 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool.VerifyManagementEngineLocked()
 
     # Read unlocked ME section + locked cbmem + locked descriptor
-    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+    self._gooftool._ifdtool.LoadIntelMainFirmware.return_value = \
       MockIntelMainFirmware(
         consumer.flmstr,
         MockFirmwareImage(MockME.FW_ME_READ_UNLOCKED))
@@ -439,7 +446,7 @@ class GooftoolTest(unittest.TestCase):
                       self._gooftool.VerifyManagementEngineLocked)
 
     # Read locked ME section + locked cbmem + unlocked descriptor
-    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+    self._gooftool._ifdtool.LoadIntelMainFirmware.return_value = \
       MockIntelMainFirmware(
         MockME().DESCRIPTOR_UNLOCKED,
         MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
@@ -452,7 +459,7 @@ class GooftoolTest(unittest.TestCase):
   def testVerifyManagementEngineLockedLiteSKU(self):
     lite = SKU.Lite
     # Read locked ME section + locked cbmem + locked descriptor
-    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+    self._gooftool._ifdtool.LoadIntelMainFirmware.return_value = \
       MockIntelMainFirmware(
         lite.flmstr,
         MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
@@ -494,7 +501,7 @@ class GooftoolTest(unittest.TestCase):
                       self._gooftool.VerifyManagementEngineLocked)
 
     # Read unlocked ME section + locked cbmem + locked descriptor
-    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+    self._gooftool._ifdtool.LoadIntelMainFirmware.return_value = \
       MockIntelMainFirmware(
         lite.flmstr,
         MockFirmwareImage(MockME.FW_ME_READ_UNLOCKED))
@@ -504,7 +511,7 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool.VerifyManagementEngineLocked()
 
     # Read locked ME section + locked cbmem + unlocked descriptor
-    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+    self._gooftool._ifdtool.LoadIntelMainFirmware.return_value = \
       MockIntelMainFirmware(
         MockME().DESCRIPTOR_UNLOCKED,
         MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
@@ -583,12 +590,12 @@ class GooftoolTest(unittest.TestCase):
         partition=vpd.VPD_READONLY_PARTITION_NAME)
 
   def testWriteHWID(self):
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware()
+    self._gooftool._flashrom.LoadMainFirmware.return_value = MockMainFirmware()
 
     self._gooftool.WriteHWID('hwid')
 
     self._gooftool._futility.WriteHWID.assert_called_with('firmware', 'hwid')
-    self._gooftool._crosfw.LoadMainFirmware.assert_called()
+    self._gooftool._flashrom.LoadMainFirmware.assert_called()
 
   def testVerifyWPSwitch(self):
     shell_calls = [
@@ -829,7 +836,7 @@ class GooftoolTest(unittest.TestCase):
     """Test for a normal process of setting firmware bitmap locale."""
 
     # Stub data from VPD for zh.
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware()
+    self._gooftool._flashrom.LoadMainFirmware.return_value = MockMainFirmware()
     self._SetupVPDMocks(ro=dict(region='tw'))
 
     f = MockFile()
@@ -846,7 +853,7 @@ class GooftoolTest(unittest.TestCase):
     ]
 
     self._gooftool.SetFirmwareBitmapLocale()
-    self._gooftool._crosfw.LoadMainFirmware.assert_any_call()
+    self._gooftool._flashrom.LoadMainFirmware.assert_any_call()
     self.assertEqual(self._gooftool._util.shell.call_args_list, shell_calls)
 
   # TODO (b/212216855)
@@ -855,7 +862,7 @@ class GooftoolTest(unittest.TestCase):
     """Test for legacy firmware, which stores locale in bmpblk."""
 
     # Stub data from VPD for zh.
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware()
+    self._gooftool._flashrom.LoadMainFirmware.return_value = MockMainFirmware()
     self._SetupVPDMocks(ro=dict(region='tw'))
 
     f = MockFile()
@@ -874,7 +881,7 @@ class GooftoolTest(unittest.TestCase):
     ]
 
     self._gooftool.SetFirmwareBitmapLocale()
-    self._gooftool._crosfw.LoadMainFirmware.assert_any_call()
+    self._gooftool._flashrom.LoadMainFirmware.assert_any_call()
     self.assertEqual(self._gooftool._util.shell.call_args_list, shell_calls)
     self._gooftool._unpack_bmpblock.assert_called_once_with(f.read())
 
@@ -885,7 +892,7 @@ class GooftoolTest(unittest.TestCase):
     """
 
     # Stub data from VPD for en.
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware()
+    self._gooftool._flashrom.LoadMainFirmware.return_value = MockMainFirmware()
     self._SetupVPDMocks(ro=dict(region='us'))
 
     f = MockFile()
@@ -896,7 +903,7 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._named_temporary_file.return_value = f
 
     self.assertRaises(Error, self._gooftool.SetFirmwareBitmapLocale)
-    self._gooftool._crosfw.LoadMainFirmware.assert_any_call()
+    self._gooftool._flashrom.LoadMainFirmware.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
         f'cbfstool {image_file} extract -n locales -f {f.name} -r COREBOOT')
 
@@ -904,7 +911,7 @@ class GooftoolTest(unittest.TestCase):
     """Test for setting firmware bitmap locale without default locale in VPD."""
 
     # VPD has no locale data.
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware()
+    self._gooftool._flashrom.LoadMainFirmware.return_value = MockMainFirmware()
     self._SetupVPDMocks(ro={})
 
     self.assertRaises(Error, self._gooftool.SetFirmwareBitmapLocale)

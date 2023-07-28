@@ -11,7 +11,6 @@ import re
 import tempfile
 
 from cros.factory.gooftool import common as gooftool_common
-from cros.factory.gooftool import crosfw
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
@@ -20,6 +19,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
 from cros.factory.external.chromeos_cli import cros_config as cros_config_module
+from cros.factory.external.chromeos_cli import flashrom
 
 
 ROOTFS_FP_FIRMWARE_DIR = 'opt/google/biod/fw'
@@ -160,7 +160,7 @@ def CalculateFirmwareHashes(fw_file_path):
   """
   raw_image = file_utils.ReadFile(fw_file_path, encoding=None)
   try:
-    image = crosfw.FirmwareImage(raw_image)
+    image = flashrom.FirmwareImage(raw_image)
   except Exception:
     return None
 
@@ -269,15 +269,15 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
   @classmethod
   def ProbeDevices(cls, category):
     if category == Fields.firmware_keys:
-      fw_file_path = crosfw.LoadMainFirmware().GetFileName(
+      fw_file_path = flashrom.LoadMainFirmware().GetFileName(
           sections=['RO_SECTION'])
       return GetFirmwareKeys(fw_file_path)
 
     if category == Fields.ro_main_firmware:
-      fw_file_path = crosfw.LoadMainFirmware().GetFileName(
+      fw_file_path = flashrom.LoadMainFirmware().GetFileName(
           sections=['RO_SECTION'])
     elif category == Fields.ro_ec_firmware:
-      fw_file_path = crosfw.LoadEcFirmware().GetFileName()
+      fw_file_path = flashrom.LoadEcFirmware().GetFileName()
     elif category == Fields.ro_fp_firmware:
       fw_file_path = DumpFPFirmware()
     return CalculateFirmwareHashes(fw_file_path)
