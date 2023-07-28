@@ -335,7 +335,7 @@ class DatabaseBuilder:
       comp_cls: A string of the component class name.
     """
     if comp_cls in common.ESSENTIAL_COMPS:
-      raise ValueError(f'{str(comp_cls)!r} is an essential component which must'
+      raise ValueError(f'{comp_cls!r} is an essential component which must'
                        ' not be a null component. Did you mean to add default '
                        'component?')
     field_name = self._database.GetEncodedFieldForComponent(comp_cls)
@@ -832,7 +832,7 @@ class DatabaseBuilder:
           self.AddDefaultComponent(comp_cls)
         else:
           raise BuilderException(
-              f'Missing essential component {str(comp_cls)!r}. If the probe '
+              f'Missing essential component {comp_cls!r}. If the probe '
               'function is not ready yet please add a default component.')
 
     return probe.GenerateBOMFromProbedResults(
@@ -973,7 +973,7 @@ class DatabaseBuilder:
         field_name = self._database.GetEncodedFieldForComponent(comp_cls)
         if not field_name:
           raise BuilderException('Unable to update pattern due to missing '
-                                 f'essential component: {str(comp_cls)!r}')
+                                 f'essential component: {comp_cls!r}')
 
         bit_length = 0
         min_bit_length = max(self._GetMinBitLength(field_name), 1)

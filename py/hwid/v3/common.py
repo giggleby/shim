@@ -33,6 +33,9 @@ class FirmwareComps(str, enum.Enum):
   def __str__(self):
     return self.value
 
+  def __repr__(self):
+    return repr(str(self))
+
 
 class FormFactor(str, enum.Enum):
   CLAMSHELL = 'CLAMSHELL'
