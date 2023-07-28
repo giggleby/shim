@@ -15,6 +15,7 @@ import time
 import unittest
 from unittest import mock
 
+from cros.factory.device import info
 from cros.factory.gooftool.bmpblk import unpack_bmpblock
 from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
@@ -912,6 +913,7 @@ class GooftoolTest(unittest.TestCase):
     """Test for GetSystemDetails to ensure it returns desired keys."""
 
     self._gooftool._util.sys_interface = mock.Mock()
+    self._gooftool._util.sys_interface.info = info.SystemInfo()
     self._gooftool._util.GetSystemInfo.return_value = core.Util.GetSystemInfo(
         self._gooftool._util)
 

@@ -8,7 +8,7 @@ import pipes
 import re
 from subprocess import PIPE
 from subprocess import Popen
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from cros.factory.device import device_utils
 from cros.factory.test.env import paths
@@ -19,6 +19,22 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
 
+
+_DEFAULT_SYSTEM_INFO = (
+    'cbi',
+    'crosid',
+    'crossystem',
+    'device',
+    'factory',
+    'fw',
+    'gsc',
+    'hw',
+    'image',
+    'modem_status',
+    'system',
+    'vpd',
+    'wp',
+)
 
 def Shell(cmd, stdin=None, log=True, sys_interface=None):
   """Run cmd in a shell, return Obj containing stdout, stderr, and status.
@@ -404,7 +420,9 @@ class Util:
       self.SetCgptAttributes(curr_attrs, device)
 
   def GetSystemInfo(
-      self, filter_vpd: bool = False
+      self,
+      filter_vpd: bool = False,
+      properties: List = _DEFAULT_SYSTEM_INFO,
   ) -> Dict[str, Optional[Union[Dict, bool, int, str]]]:
     """Returns the system information in type of dict.
 
@@ -416,24 +434,8 @@ class Util:
       The system information in type of dict.
     """
 
-    dut_info = self.sys_interface.info
-    vpd = dut_info.vpd_info
+    system_info = self.sys_interface.info.GetProperties(properties)
     if filter_vpd:
-      vpd = FilterDict(vpd)
+      system_info['vpd'] = FilterDict(system_info['vpd'])
 
-    system_info = {
-        'cbi': dut_info.cbi_info,
-        'crosid': dut_info.crosid,
-        'crossystem': dut_info.crossystem,
-        'device': dut_info.device_info,
-        'factory': dut_info.factory_info,
-        'fw': dut_info.fw_info,
-        'gsc': dut_info.gsc_info,
-        'hw': dut_info.hw_info,
-        'image': dut_info.image_info,
-        'modem_status': dut_info.modem_status,
-        'system': dut_info.system_info,
-        'vpd': vpd,
-        'wp': dut_info.wp_info,
-    }
     return system_info

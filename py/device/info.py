@@ -9,6 +9,7 @@ import copy
 import logging
 import os
 import re
+from typing import List
 
 from cros.factory.device import device_types
 from cros.factory.device import storage
@@ -95,8 +96,12 @@ class SystemInfo(device_types.DeviceComponent):
 
   def GetAll(self):
     """Returns all properties in a dictionary object."""
-    return copy.deepcopy(
-        {name: getattr(self, name) for name in _INFO_PROP_LIST})
+    return self.GetProperties(_INFO_PROP_LIST)
+
+  def GetProperties(self, properties: List):
+    """Gets a selected set of properties in a dictionary object."""
+    return copy.deepcopy({name: getattr(self, name)
+                          for name in properties})
 
   def Invalidate(self, name=None):
     """Invalidates a property in system information object in cache.
@@ -387,7 +392,7 @@ class SystemInfo(device_types.DeviceComponent):
     }
 
   @InfoProperty
-  def image_info(self):
+  def image(self):
     return {
         'test_image': {
             'version': self.test_image_version,
@@ -402,7 +407,7 @@ class SystemInfo(device_types.DeviceComponent):
     }
 
   @InfoProperty
-  def factory_info(self):
+  def factory(self):
     return {
         'stage': self.stage,
         'toolkit_version': self.toolkit_version,
@@ -410,7 +415,7 @@ class SystemInfo(device_types.DeviceComponent):
     }
 
   @InfoProperty
-  def system_info(self):
+  def system(self):
     return {
         'architecture': self.architecture,
         'kernel_version': self.kernel_version,
@@ -419,7 +424,7 @@ class SystemInfo(device_types.DeviceComponent):
 
   # TODO (phoebewang): collect more fw version from /var/log/message
   @InfoProperty
-  def fw_info(self):
+  def fw(self):
     return {
         'fwid': self.firmware_version,
         'ro_fwid': self.ro_firmware_version,
@@ -432,7 +437,7 @@ class SystemInfo(device_types.DeviceComponent):
     }
 
   @InfoProperty
-  def hw_info(self):
+  def hw(self):
     return {
         'cpu_info': {
             'model_name': self.cpu_model,
@@ -445,7 +450,7 @@ class SystemInfo(device_types.DeviceComponent):
     }
 
   @InfoProperty
-  def device_info(self):
+  def device(self):
     return {
         'name': self.device_name,
         'id': self.device_id,
@@ -501,7 +506,7 @@ class SystemInfo(device_types.DeviceComponent):
     return self._ParseStrToDict(self._REGEX_KEY_EQUAL_VALUE, content)
 
   @InfoProperty
-  def gsc_info(self):
+  def gsc(self):
     """Returns the Google Security Chip (GSC) info of the device."""
 
     return {
@@ -514,19 +519,19 @@ class SystemInfo(device_types.DeviceComponent):
     }
 
   @InfoProperty
-  def cbi_info(self):
+  def cbi(self):
     """Returns the cbi info of the device."""
-    cbi_info = {}
-    cbi_info['board_version'] = cbi_utils.GetCbiData(
+    cbi = {}
+    cbi['board_version'] = cbi_utils.GetCbiData(
         self._device, cbi_utils.CbiDataName.BOARD_VERSION)
-    cbi_info['sku_id'] = self._IntToHexStr(
+    cbi['sku_id'] = self._IntToHexStr(
         cbi_utils.GetCbiData(self._device, cbi_utils.CbiDataName.SKU_ID))
-    cbi_info['fw_config'] = self._IntToHexStr(
+    cbi['fw_config'] = self._IntToHexStr(
         cbi_utils.GetCbiData(self._device, cbi_utils.CbiDataName.FW_CONFIG))
-    return cbi_info
+    return cbi
 
   @InfoProperty
-  def vpd_info(self):
+  def vpd(self):
     """Returns the VPD info of the device."""
     vpd_tool = vpd.VPDTool(self._device)
     return {
@@ -555,7 +560,7 @@ class SystemInfo(device_types.DeviceComponent):
     }
 
   @InfoProperty
-  def wp_info(self):
+  def wp(self):
     software_wp = {}
     for target in set(write_protect_target.WriteProtectTargetType):
       wp_target = write_protect_target.CreateWriteProtectTarget(target)
