@@ -284,26 +284,6 @@ class Util:
     """
     return int(self.shell('crossystem devsw_cur').stdout.strip(), 0)
 
-  def GetCrosSystem(self):
-    """Gets the output of 'crossystem'.
-
-    Returns:
-      A dict for key-value pairs for the output of 'crossystem'.
-      e.g. {'flag_name': 'flag_value'}
-    """
-    crossystem_result = self.shell('crossystem').stdout.strip().splitlines()
-    # The crossytem output contains many lines like:
-    # 'key = value  # description'
-    # Use regexps to pull out the key-value pairs and build a dict.
-    # Note that value could also contain equal signs.
-    output = {}
-    for entry in crossystem_result:
-      # Any unrecognized format should fail here.
-      key, value = re.findall(r'\A(\S+)\s+=\s+(.*)#.*\Z', entry)[0]
-      output[key] = value.strip()
-
-    return output
-
   def GetTPMManagerStatus(self):
     """Gets the output of 'tpm_manager_client status --nonsensitive'.
 
@@ -444,31 +424,18 @@ class Util:
     # Note: Handle the shell commands with care since unit tests cannot
     # ensure the correctness of commands executed in shell.
     system_info = {
-        'cbi':
-            dut_info.cbi_info,
-        'crosid':
-            dut_info.crosid,
-        'device':
-            dut_info.device_info,
-        'factory':
-            dut_info.factory_info,
-        'fw':
-            dut_info.fw_info,
-        'gsc':
-            dut_info.gsc_info,
-        'hw':
-            dut_info.hw_info,
-        'image':
-            dut_info.image_info,
-        'system':
-            dut_info.system_info,
-        'vpd':
-            vpd,
-        'wp':
-            dut_info.wp_info,
-        'crossystem':
-            self.GetCrosSystem(),
-        'modem_status':
-            self.shell('modem status').stdout.splitlines(),
+        'cbi': dut_info.cbi_info,
+        'crosid': dut_info.crosid,
+        'crossystem': dut_info.crossystem,
+        'device': dut_info.device_info,
+        'factory': dut_info.factory_info,
+        'fw': dut_info.fw_info,
+        'gsc': dut_info.gsc_info,
+        'hw': dut_info.hw_info,
+        'image': dut_info.image_info,
+        'system': dut_info.system_info,
+        'vpd': vpd,
+        'wp': dut_info.wp_info,
+        'modem_status': self.shell('modem status').stdout.splitlines(),
     }
     return system_info

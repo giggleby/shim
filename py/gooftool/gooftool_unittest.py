@@ -198,15 +198,6 @@ class UtilTest(unittest.TestCase):
     self._util.FindAndRunScript('script', None, ['c=d'])
     self._util.shell.assert_called_with('c=d script')
 
-  def testGetCrosSystem(self):
-    self._util.shell.return_value = StubStdout(
-        'first_flag   =   123  # fake comment\n'
-        'second_flag  =   flag_2_value  # another fake comment')
-
-    self.assertEqual({'first_flag': '123', 'second_flag': 'flag_2_value'},
-                     self._util.GetCrosSystem())
-    self._util.shell.assert_called_once_with('crossystem')
-
 
 class GooftoolTest(unittest.TestCase):
   """Unit test for Gooftool."""
@@ -922,7 +913,6 @@ class GooftoolTest(unittest.TestCase):
 
     self._gooftool._util.shell.return_value = StubStdout('stub_value')
     self._gooftool._util.sys_interface = mock.Mock()
-    self._gooftool._util.GetCrosSystem.return_value = {'key': 'value'}
     self._gooftool._util.GetSystemInfo.return_value = core.Util.GetSystemInfo(
         self._gooftool._util)
 

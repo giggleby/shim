@@ -286,36 +286,36 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def firmware_version(self):
     """Version of main firmware."""
-    return self._crossystem['fwid']
+    return self.crossystem['fwid']
 
   @InfoProperty
   def ro_firmware_version(self):
     """Version of RO main firmware."""
-    return self._crossystem['ro_fwid']
+    return self.crossystem['ro_fwid']
 
   @InfoProperty
   def mainfw_type(self):
     """Type of main firmware."""
-    return self._crossystem['mainfw_type']
+    return self.crossystem['mainfw_type']
 
   @InfoProperty
   def mainfw_act(self):
-    return self._crossystem['mainfw_act']
+    return self.crossystem['mainfw_act']
 
   @InfoProperty
   def ecfw_act(self):
-    return self._crossystem['ecfw_act']
+    return self.crossystem['ecfw_act']
 
   @InfoProperty
   def hwwp(self):
-    return self._crossystem['wpsw_cur']
+    return self.crossystem['wpsw_cur']
 
   @InfoProperty
   def hwid(self):
-    return self._crossystem['hwid']
+    return self.crossystem['hwid']
 
   @InfoProperty
-  def _crossystem(self):
+  def crossystem(self):
     output = self._device.CheckOutput(['crossystem']).strip()
     return self._ParseStrToDict(self._REGEX_CROSSYSTEM, output)
 
