@@ -11,7 +11,7 @@ board: CHROMEBOOK
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: c2a98858ae21b5e19b8f46c4f73bdcc86f98ff4a
+checksum:
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 

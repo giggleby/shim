@@ -341,8 +341,10 @@ class ContentsAnalyzer:
       if (pattern_id not in visited_patterns and
           re.fullmatch(r'(PVT|MP).*', image_name, flags=re.IGNORECASE)):
         visited_patterns.add(pattern_id)
-        old_field_set = set(mapping.field for mapping in old_bit_mapping)
-        new_field_set = set(mapping.field for mapping in new_bit_mapping)
+        old_field_set = set(
+            self._prev_db.instance.GetEncodedFieldsBitLength(image_id))
+        new_field_set = set(
+            self._curr_db.instance.GetEncodedFieldsBitLength(image_id))
         added_fields = new_field_set - old_field_set
         if added_fields:
           report.errors.append(

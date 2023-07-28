@@ -31,7 +31,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testLoadFile(self):
     database.Database.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
     database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db_bad_checksum.yaml'),
         verify_checksum=False)
@@ -50,7 +51,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testLoadInternal(self):
     internal_db = database.Database.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'),
+        verify_checksum=False)
 
     self.assertIsInstance(
         internal_db.GetComponents('cls4')['comp6'].values, rule.AVLProbeValue)
@@ -60,7 +62,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testSetLinkAVLProbeValue(self):
     db = database.WritableDatabase.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
 
     db.SetLinkAVLProbeValue('cls4', 'comp7', 'converter-identifier1', True)
     db.SetLinkAVLProbeValue('cls3', 'comp5', 'converter-identifier2', False)
@@ -84,7 +87,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testSetLinkAVLProbeValue_NoneValue(self):
     db = database.WritableDatabase.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
 
     db.SetLinkAVLProbeValue('cls4', 'comp8', 'converter-identifier1', False)
     loaded_db = database.Database.LoadData(
@@ -98,7 +102,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testSetBundleUUIDs(self):
     db = database.WritableDatabase.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
 
     db.SetBundleUUIDs('cls4', 'comp7', ['uuid1'])
 
@@ -109,34 +114,39 @@ class DatabaseTest(unittest.TestCase):
 
   def testLoadDump(self):
     db = database.Database.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
     db2 = database.Database.LoadData(db.DumpDataWithoutChecksum())
 
     self.assertEqual(db, db2)
 
     db = database.Database.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
     with file_utils.UnopenedTemporaryFile() as path:
       db.DumpFileWithoutChecksum(path)
       database.Database.LoadFile(path, verify_checksum=False)
 
   def testLoadInternalDumpExternal(self):
     db = database.Database.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'),
+        verify_checksum=False)
     db2 = database.Database.LoadData(db.DumpDataWithoutChecksum())
 
     self.assertNotEqual(db, db2)
 
   def testLoadInternalDumpInternal(self):
     db = database.Database.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'),
+        verify_checksum=False)
     db2 = database.Database.LoadData(db.DumpDataWithoutChecksum(internal=True))
 
     self.assertEqual(db, db2)
 
   def testUpdateComponentNameUnchanged(self):
     db = database.WritableDatabase.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
     db.UpdateComponent('cls4', 'comp6', 'comp6', {
         'field1': 'value1',
         'field2': 'value2'
@@ -158,7 +168,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testUpdateComponentNameChanged(self):
     db = database.WritableDatabase.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
     db.UpdateComponent('cls4', 'comp6', 'comp9', {
         'field1': 'value1',
         'field2': 'value2'
@@ -187,7 +198,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testUpdateComponentNameCollision(self):
     db = database.WritableDatabase.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
     self.assertRaises(common.HWIDException, db.UpdateComponent, 'cls4', 'comp6',
                       'comp7', {
                           'field1': 'value1',
@@ -196,7 +208,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testReplaceRules(self):
     db = database.WritableDatabase.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
     db.ReplaceRules([{
         'name': 'device_info.set_image_id',
         'evaluate': "SetImageId('TEST')",
@@ -208,7 +221,8 @@ class DatabaseTest(unittest.TestCase):
 
   def testDatabasePicklable(self):
     db = database.WritableDatabase.LoadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
 
     serialized_db = pickle.dumps(db)
     deserialized_db = pickle.loads(serialized_db)

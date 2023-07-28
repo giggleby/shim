@@ -20,34 +20,58 @@ encoding_patterns:
   0: default
 
 image_id:
-  0: TEST
+  0: PVT
 
 pattern:
   - image_ids: [0]
     encoding_scheme: base8192
     fields:
+    - zero_bit_comp_field: 0
     - display_panel_field: 1
+    - zero_bit_comp_field: 1
 
 encoded_fields:
+  zero_bit_comp_field:
+    0: { zero_bit_comp: zero_bit_comp_0 }
+    1: { zero_bit_comp: zero_bit_comp_1 }
   display_panel_field:
     0: { display_panel: display_panel_0 }
     1: { display_panel: display_panel_1 }
 
 components:
+  zero_bit_comp:
+    items:
+      zero_bit_comp_0:
+        values:
+          attr1: AAA
+      zero_bit_comp_1:
+        values:
+          attr1: BBB
   display_panel:
     items:
       display_panel_0:
         values:
-          cores: '1'
-          model: 'x'
+          the_attribute: AAA
       display_panel_1:
         values:
-          cores: '4'
-          model: 'abc'
-      display_panel_z:
+          the_attribute: BBB
+      display_panel_invalid1:
         values:
-          cores: '5'
-          model: 'def'
+          the_attribute: CCC
+      display_panel_invalid2:
+        values:
+          the_attribute: DDD
+      display_panel_100_200:
+        status: unqualified
+        values:
+          the_attribute: EEE
+  ro_ec_firmware:
+    items:
+      ro_ec_firmware_1: !from_factory_bundle
+        bundle_uuids:
+        - uuid1
+        status: unqualified
+        values: null
 
 rules:
 - name: device_info.set_image_id

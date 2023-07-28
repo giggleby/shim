@@ -1,6 +1,6 @@
 board: CHROMEBOOK
 
-checksum: f15db949ca4578e66e95610ebfee21ad76ba86a6
+checksum:
 
 encoding_patterns:
   0: default
@@ -12,10 +12,13 @@ pattern:
   - image_ids: [0]
     encoding_scheme: base8192
     fields:
+    - zero_bit_comp_field: 0
     - display_panel_field: 1
     - dram_field: 1
 
 encoded_fields:
+  zero_bit_comp_field:
+    0: { zero_bit_comp: zero_bit_comp_0 }
   display_panel_field:
     0: { display_panel: display_panel_0 }
     1: { display_panel: display_panel_1 }
@@ -26,6 +29,11 @@ encoded_fields:
       dram: dram_type_256mb_and_real_is_512mb
 
 components:
+  zero_bit_comp:
+    items:
+      zero_bit_comp_0:
+        values:
+          attr1: AAA
   display_panel:
     items:
       display_panel_0:
