@@ -267,17 +267,6 @@ class Util:
     """Returns the current release image version."""
     return self.GetReleaseImageLsbData().get('GOOGLE_RELEASE')
 
-  def GetReleaseImageBoardName(self):
-    """Returns the current release image board name."""
-
-    board_name = self.GetReleaseImageLsbData().get(
-      'CHROMEOS_RELEASE_BOARD', '')
-    signed_board_name = re.match(r'(\S+)-signed-.*keys', board_name)
-    if signed_board_name:
-      board_name = signed_board_name.group(1)
-
-    return board_name
-
   def GetVBSharedDataFlags(self):
     """Gets VbSharedData flags.
 
@@ -477,8 +466,6 @@ class Util:
             vpd,
         'wp':
             dut_info.wp_info,
-        'platform_name':
-            self.GetReleaseImageBoardName(),
         'crossystem':
             self.GetCrosSystem(),
         'modem_status':

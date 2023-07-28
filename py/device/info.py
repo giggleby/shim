@@ -151,6 +151,15 @@ class SystemInfo(device_types.DeviceComponent):
       return self._release_lsb_data[field]
     return self._test_lsb_data[field]
 
+  def GetLSBBoardName(self, release: bool):
+    """Gets the board name field from the test or release LSB data."""
+    board_name = self.GetLSBData('CHROMEOS_RELEASE_BOARD', release=release)
+    signed_board_name = re.match(r'(\S+)-signed-.*keys', board_name)
+    if signed_board_name:
+      board_name = signed_board_name.group(1)
+
+    return board_name
+
   @InfoProperty
   def release_image_version(self):
     """Version of the image on release partition."""
@@ -160,6 +169,10 @@ class SystemInfo(device_types.DeviceComponent):
   def release_image_channel(self):
     """Channel of the image on release partition."""
     return self.GetLSBData('CHROMEOS_RELEASE_TRACK', release=True)
+
+  @InfoProperty
+  def release_board_name(self):
+    return self.GetLSBBoardName(release=True)
 
   def ClearSerialNumbers(self):
     """Clears any serial numbers from DeviceData."""
@@ -213,6 +226,10 @@ class SystemInfo(device_types.DeviceComponent):
   def test_image_builder_path(self):
     """Builder path of the image on factory test partition."""
     return self.GetLSBData('CHROMEOS_RELEASE_BUILDER_PATH', release=False)
+
+  @InfoProperty
+  def test_board_name(self):
+    return self.GetLSBBoardName(release=False)
 
   @InfoProperty
   def factory_image_version(self):
@@ -375,10 +392,12 @@ class SystemInfo(device_types.DeviceComponent):
         'test_image': {
             'version': self.test_image_version,
             'channel': self.test_image_channel,
+            'board': self.test_board_name,
         },
         'release_image': {
             'version': self.release_image_version,
             'channel': self.release_image_channel,
+            'board': self.release_board_name,
         },
     }
 
