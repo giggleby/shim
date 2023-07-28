@@ -421,8 +421,6 @@ class Util:
     if filter_vpd:
       vpd = FilterDict(vpd)
 
-    # Note: Handle the shell commands with care since unit tests cannot
-    # ensure the correctness of commands executed in shell.
     system_info = {
         'cbi': dut_info.cbi_info,
         'crosid': dut_info.crosid,
@@ -433,9 +431,9 @@ class Util:
         'gsc': dut_info.gsc_info,
         'hw': dut_info.hw_info,
         'image': dut_info.image_info,
+        'modem_status': dut_info.modem_status,
         'system': dut_info.system_info,
         'vpd': vpd,
         'wp': dut_info.wp_info,
-        'modem_status': self.shell('modem status').stdout.splitlines(),
     }
     return system_info

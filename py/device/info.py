@@ -574,6 +574,10 @@ class SystemInfo(device_types.DeviceComponent):
         'software_wp': software_wp,
     }
 
+  @InfoProperty
+  def modem_status(self):
+    return self._device.CheckOutput(['modem', 'status']).splitlines()
+
 def main():
   import pprint
 

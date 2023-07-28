@@ -911,7 +911,6 @@ class GooftoolTest(unittest.TestCase):
   def testGetSystemDetails(self):
     """Test for GetSystemDetails to ensure it returns desired keys."""
 
-    self._gooftool._util.shell.return_value = StubStdout('stub_value')
     self._gooftool._util.sys_interface = mock.Mock()
     self._gooftool._util.GetSystemInfo.return_value = core.Util.GetSystemInfo(
         self._gooftool._util)
