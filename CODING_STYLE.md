@@ -52,7 +52,7 @@ that acronyms are written in upper-case: `HTTPServerError` not
 You should also read and abide by the [Google Python style
 guide](https://google.github.io/styleguide/pyguide.html), especially the
 sections about
-[comments](https://google.github.io/styleguide/pyguide.html?showone=Comments#Comments).
+[comments](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
 (The "official" ChromiumOS policy says that the Google Python style guide isn't
 an authority, but in general it has lots of good points and you should follow it
 unless there is a strong reason not to do so.) There are a few places where you
@@ -102,7 +102,7 @@ If you want to catch "most exceptions", do `except Exception:` instead of
 
 The existing guidelines didn't set a very precise rule about how to name unused
 variables. There were some
-[discussion](https://chromium-review.googlesource.com/#/c/409197/) and here's
+[discussion](https://chromium-review.googlesource.com/c/409197/) and here's
 our conclusion.
 
 For variables inside a function, follow **`unused_*`** naming style.
@@ -193,7 +193,7 @@ implementation to sort imports alphabetically.
         opinion: you can write relatively readable/maintainable shell scripts
         (just as you can write *un*readable/*un*maintainable Python). But see
         the
-        [Google3 Shell Style Guide](https://www.corp.google.com/eng/doc/shell.xml?showone=When_to_use_Shell#When_to_use_Shell)
+        [Google3 Shell Style Guide](http://go/shell-style#when-to-use-shell)
         for a good discussion of the issues here.
     *   **Exception**: your script needs to be able to run in an environment
         without python, e.g. initramfs.

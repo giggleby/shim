@@ -11,12 +11,9 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 : "${SPHINX_REQUIREMENTS:="${SCRIPT_DIR}/sphinx.requirements.txt"}"
 
 main(){
-  local make="$1"
-  local doc_tmp_dir="$2"
-
   load_venv "${SPHINX_VENV}" "${SPHINX_REQUIREMENTS}" || exit 1
 
-  "${make}" -C "${doc_tmp_dir}" html
+  "$@"
 
   mk_success
 }

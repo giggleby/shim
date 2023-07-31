@@ -25,7 +25,7 @@ Start the test and it will reflash system firmware using specified image.
 
 Dependency
 ----------
-- Utility `flashrom` (https://www.flashrom.org/Flashrom).
+- Utility `flashrom` (https://www.flashrom.org/).
 - System firmware is structured with FMAP.
 - Chrome OS Verified Boot firmware utility 'futility'.
 

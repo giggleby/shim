@@ -320,6 +320,31 @@ texinfo_documents = [
 
 autodoc_member_order = 'bysource'
 
+# -- Options for the linkcheck builder -----------------------------------------
+
+linkcheck_ignore = [
+    # We have too many links to the site so it reaches rate limits and blocks
+    # the verification process.
+    r'https://chromium\.googlesource\.com/chromiumos/platform/factory/\+/.*',
+    # Skip internal links because the way to check links with credential is not
+    # found and it fails to resolve anchors in the links without credential.
+    r'http://b/.*',
+    r'http://go/.*',
+    r'http://goto/.*',
+    r'https://chrome-internal\.googlesource\.com/chromeos/.*',
+    r'https://chromeos\.google\.com/partner/.*',
+    r'https?://crbug\.com/.*',
+    r'https://docs\.google\.com/document/.*',
+    r'https://www\.google\.com/chromeos/partner/.*',
+    # Skip made up links in shopfloor_api.
+    r'http://umpire_server_address:umpire_port/.*',
+    # Skip a made up link in pytests/plankton_display.
+    r'http://192\.168\.0\.1:9999',
+    # CommonMark cannot resolve md with anchor for some reason.
+    # It should convert it into `../../setup/FACTORY_SERVER.html#Installation`.
+    # Skip these for now.
+    r'\.\./\.\./setup/FACTORY_SERVER\.md#.*',
+]
 
 # app setup hook
 def setup(app):

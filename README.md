@@ -233,7 +233,7 @@ steps sare optional:
 All of the methods will make sure the internal storage and firmware flash chip
 are having right contents. A typical factory installation places the factory
 test image in the first slot of Chrome OS image partitions
-([#2 and #3](http://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format#TOC-Drive-partitions)),
+([#2 and #3](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/disk_format.md#drive-partitions)),
 and the release image in the second slot (#4 and #5).
 
 For all imaging methods listed below, you will need resource files (release
@@ -464,4 +464,4 @@ possible approaches:
 ### Work with both public repo and private board repo
 Read [devtools/aufs](devtools/aufs/README.md) for more details.
 
-[1]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#initialize-the-build-for-a-board
+[1]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#select-a-board

@@ -62,7 +62,7 @@ Make sure to follow the `Chromium Python Style Guide
 
 In the factory repository, we also try to follow the `Google Python
 Style Guide
-<http://google-styleguide.googlecode.com/svn/trunk/pyguide.html>`_ as
+<https://google.github.io/styleguide/pyguide.html>`_ as
 much as possible. If there is a conflict between the two, the Chromium
 Python Style Guide wins.
 

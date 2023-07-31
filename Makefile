@@ -415,25 +415,32 @@ project-toolkits: $(WEBGL_AQUARIUM_DIR) resource par
 	$(call func-prepare-toolkit)
 	$(MAKE) --output-sync=target parallel-build-project-toolkits
 
-# Creates build/doc and build/doc.zip, containing the factory SDK docs.
-doc:
+$(DOC_TEMP_DIR): .phony
 	rm -rf $(DOC_TEMP_DIR); mkdir -p $(DOC_TEMP_DIR)
 	# Do the actual build in the DOC_TEMP_DIR directory, since we need to
 	# munge the docs a bit.
 	rsync -a doc/ $(DOC_TEMP_DIR)
 	# Generate rst sources for test cases
-	bin/generate_rsts -o $(DOC_TEMP_DIR)
+	CROS_FACTORY_PY_ROOT=$(realpath py_pkg) $(MK_DIR)/sphinx.sh \
+	  bin/generate_rsts -o $(DOC_TEMP_DIR)
 	# Copy Markdown files to temp dir
 	rsync -am --files-from=<(git ls-tree -r HEAD --name-only |\
 	  grep "\.\(md\|png\)$$") . \
 	  $(DOC_TEMP_DIR)/$(DOC_MD_DIR)
-	CROS_FACTORY_PY_ROOT=$(realpath py_pkg) $(MK_DIR)/sphinx.sh $(MAKE) \
-	                     $(DOC_TEMP_DIR)
+
+# Creates build/doc and build/doc.zip, containing the factory SDK docs.
+doc: $(DOC_TEMP_DIR)
+	CROS_FACTORY_PY_ROOT=$(realpath py_pkg) $(MK_DIR)/sphinx.sh $(MAKE) -C \
+	                     $(DOC_TEMP_DIR) html
 	mkdir -p $(dir $(DOC_ARCHIVE_PATH))
 	rm -rf $(DOC_OUTPUT_DIR)
 	cp -r $(DOC_TEMP_DIR)/_build/html $(DOC_OUTPUT_DIR)
 	(cd $(DOC_OUTPUT_DIR)/..; zip -qr9 - $(notdir $(DOC_OUTPUT_DIR))) \
 	  >$(DOC_ARCHIVE_PATH)
+
+linkcheck: $(DOC_TEMP_DIR)
+	CROS_FACTORY_PY_ROOT=$(realpath py_pkg) $(MK_DIR)/sphinx.sh $(MAKE) -C \
+	                     $(DOC_TEMP_DIR) linkcheck
 
 # Publishes doc to https://storage.googleapis.com/chromeos-factory-docs/sdk/
 publish-docs: clean

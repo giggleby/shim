@@ -91,7 +91,7 @@
     },
     "RunInItems": {
       "inherit": "FlattenGroup",
-      "__comment": "RunIn is a stage to stress all ports for checking system stability. This stage may have many test barriers to let it fail early and reduce wasted test time.\n\nThe Factory Requirements (https://chromeos.google.com/partner/dlm/docs/factory/factoryrequirements.htm) states that suspend resume is required as an essential part of Run-In testing. The purpose is to measure the ability of a device to transition between ACPI power states. To be more specific, ODM is required to perform RunInDozingStress.",
+      "__comment": "RunIn is a stage to stress all ports for checking system stability. This stage may have many test barriers to let it fail early and reduce wasted test time.\n\nThe Factory Requirements (https://chromeos.google.com/partner/dlm/docs/factory/factoryrequirements.html) states that suspend resume is required as an essential part of Run-In testing. The purpose is to measure the ability of a device to transition between ACPI power states. To be more specific, ODM is required to perform RunInDozingStress.",
       "subtests": [
         "TPMVerifyEK",
         "ClearTPMOwnerRequest",
