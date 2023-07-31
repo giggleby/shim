@@ -1,0 +1,40 @@
+#chromebook_img {
+  display: inline-block;
+  max-width: 50%;
+  float: left;
+}
+
+#progress {
+  width: 85vw;
+  height: 35vh;
+  margin-right: auto;
+  margin-left: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+#xaxis_instruction, #yaxis_instruction, #zaxis_instruction {
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 70%;
+}
+
+#xaxis_progress, #yaxis_progress, #zaxis_progress {
+  border-radius: 50%;
+  width: 80%;
+  height: 90%;
+}
+
+@keyframes x_rotation {
+  50% {transform: rotateX(80deg);}
+}
+
+@keyframes y_rotation {
+  50% {transform: rotateY(80deg);}
+}
+
+@keyframes z_rotation {
+  50% {transform: rotateZ(80deg);}
+}
