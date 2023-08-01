@@ -493,7 +493,6 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
 
       if HasEC():
         files += [
-            Run(['ectool', 'version'], filename='ec_version'),
             Run(['ectool', 'console'], filename='ec_console', check_call=False,
                 include_stderr=True),
         ]
@@ -513,11 +512,6 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
       for test_list_id in parent_test_list_id_set:
         files += [(f'usr/local/factory/py/test/test_lists/{test_list_id}'
                    '.test_list.json')]
-
-      file_utils.WriteFile(
-          os.path.join(tmp, 'release_image_version'),
-          _dut.info.release_image_version)
-      files += ['release_image_version']
 
       files += GlobAll(
           'etc/lsb-release',
