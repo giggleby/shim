@@ -7,10 +7,15 @@
 This module provides accessing Embedded Controller (EC) on a device.
 """
 
+import enum
 import re
 
 from cros.factory.device import device_types
 
+
+class ECFWCopy(str, enum.Enum):
+  RO = 'RO'
+  RW = 'RW'
 
 class EmbeddedController(device_types.DeviceComponent):
   """System module for embedded controller."""
@@ -36,12 +41,12 @@ class EmbeddedController(device_types.DeviceComponent):
     if not match:
       raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
 
-    if match.group(1) == 'RO':
+    active_firmware_copy = ECFWCopy(match.group(1))
+    if active_firmware_copy == ECFWCopy.RO:
       return self.GetROVersion()
-    if match.group(1) == 'RW':
+    if active_firmware_copy == ECFWCopy.RW:
       return self.GetRWVersion()
-    raise self.Error(
-        f'Unexpected firmware copy from "ectool version": {ec_version}')
+    raise self.Error(f'Unhandled firmware copy: {active_firmware_copy.value}')
 
   def GetROVersion(self):
     """Gets the EC RO firmware version.
