@@ -392,18 +392,36 @@ class SystemInfo(device_types.DeviceComponent):
         'root_device': self.root_device,
     }
 
+  @InfoProperty
+  def ec(self):
+    return {
+        'active': self.ecfw_act,
+        'version': self.ec_version,
+    }
+
+  @InfoProperty
+  def ap(self):
+    return {
+        'active': self.mainfw_act,
+        'ro_version': self.firmware_version,
+        'rw_version': self.ro_firmware_version,
+        'type': self.mainfw_type,
+    }
+
+  @InfoProperty
+  def pd(self):
+    return {
+        'version': self.pd_version,
+    }
+
   # TODO (phoebewang): collect more fw version from /var/log/message
   @InfoProperty
   def fw_info(self):
     return {
-        'fwid': self.firmware_version,
-        'ro_fwid': self.ro_firmware_version,
-        'mainfw_act': self.mainfw_act,
-        'mainfw_type': self.mainfw_type,
-        'ecfw_act': self.ecfw_act,
-        'ec_version': self.ec_version,
-        'pd_version': self.pd_version,
+        'ap': self.ap,
+        'ec': self.ec,
         'hwid': self.hwid,
+        'pd': self.pd,
     }
 
   @InfoProperty
