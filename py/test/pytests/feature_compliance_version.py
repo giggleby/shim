@@ -34,6 +34,7 @@ from cros.factory.hwid.v3 import feature_compliance
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.test import device_data
 from cros.factory.test import test_case
+from cros.factory.test.utils import gsc_utils
 from cros.factory.utils.arg_utils import Arg
 
 from cros.factory.external.chromeos_cli.gsctool import GSCTool
@@ -136,7 +137,7 @@ class FeatureComplianceVersionTest(test_case.TestCase):
                               feature_compliance.FEATURE_INCOMPLIANT_VERSION)
 
     # Add further checks for RMA but the above asserts should always be True.
-    if (self.args.rma_mode and GSCTool().IsGSCFeatureManagementFlagsLocked()):
+    if (self.args.rma_mode and gsc_utils.GSCUtils().IsGSCFieldLocked()):
       self.CheckFeatureComplianceForRMACr50Locked(checker_hw_compliance_version)
     else:
       device_data.SetHWComplianceVersionData(checker_hw_compliance_version)

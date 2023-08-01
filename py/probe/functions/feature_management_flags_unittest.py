@@ -6,15 +6,16 @@
 import unittest
 from unittest import mock
 
-from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
 from cros.factory.probe.functions import feature_management_flags
+
+from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
 
 
 class FeatureManagementFlagsFunctionTest(unittest.TestCase):
 
   def setUp(self):
     self._func = feature_management_flags.FeatureManagementFlagsFunction()
-    patcher = mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool'
+    patcher = mock.patch('cros.factory.test.utils.gsc_utils.GSCUtils'
                          '.IsGSCFeatureManagementFlagsLocked')
     self._mock_gsc_flags_locked = patcher.start()
     self.addCleanup(self._mock_gsc_flags_locked.stop)

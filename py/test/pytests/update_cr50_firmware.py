@@ -132,9 +132,9 @@ from cros.factory.test import device_data
 from cros.factory.test.rules import phase
 from cros.factory.test import session
 from cros.factory.test import test_case
+from cros.factory.test.utils import gsc_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import gsc_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 

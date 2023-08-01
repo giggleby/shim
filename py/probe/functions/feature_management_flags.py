@@ -4,6 +4,7 @@
 
 from cros.factory.probe.lib import probe_function
 from cros.factory.test import device_data
+from cros.factory.test.utils import gsc_utils
 
 from cros.factory.external.chromeos_cli import gsctool as gsctool_module
 
@@ -24,7 +25,7 @@ class FeatureManagementFlagsFunction(probe_function.ProbeFunction):
     # we view flags collected from GSC vendor command as source of truth.
     # Otherwise, if either device data related with feature flags is None,
     # return a valid default value pair (False, 0) for HWID to work.
-    if self._gsctool.IsGSCFeatureManagementFlagsLocked():
+    if gsc_utils.GSCUtils().IsGSCFeatureManagementFlagsLocked():
       feature_flags_gsc = self._gsctool.GetFeatureManagementFlags()
       chassis_branded = feature_flags_gsc.is_chassis_branded
       hw_compliance_version = feature_flags_gsc.hw_compliance_version

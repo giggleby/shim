@@ -26,8 +26,6 @@ from cros.factory.gooftool import vpd_data
 from cros.factory.gooftool import wipe
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
-from cros.factory.probe.functions import flash_chip
-from cros.factory.test import device_data
 from cros.factory.test.l10n import regions
 from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
@@ -35,12 +33,11 @@ from cros.factory.test.rules import registration_codes
 from cros.factory.test.rules.registration_codes import RegistrationCode
 from cros.factory.test.utils import bluetooth_utils
 from cros.factory.test.utils import cbi_utils
+from cros.factory.test.utils import gsc_utils
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.test.utils import smart_amp_utils
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
-from cros.factory.utils import gsc_utils
-from cros.factory.utils import interval
 from cros.factory.utils import json_utils
 from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
@@ -194,6 +191,7 @@ class Gooftool:
     self._db = None
     self._cros_config = cros_config.CrosConfig()
     self._gsctool = gsctool.GSCTool()
+    self._gsc_util = gsc_utils.GSCUtils()
     self._ifdtool = ifdtool
     self._futility = futility.Futility()
 
@@ -1043,28 +1041,7 @@ class Gooftool:
       raise Error('write protectioin switch of EC is disabled.')
 
   def VerifySnBits(self):
-    # Add '-n' to dry run.
-    result = self._util.shell(['/usr/share/cros/cr50-set-sn-bits.sh', '-n'])
-    stdout = result.stdout.strip()
-    stderr = result.stderr.strip()
-    logging.info('status: %d', result.status)
-    logging.info('stdout: %s', stdout)
-    logging.info('stderr: %s', stderr)
-
-    if result.status != 0:
-      # Fail reason, either:
-      # - attested_device_id is not set
-      # - SN bits has been set differently
-      # cr50-set-sn-bits.sh prints errors on stdout instead of stderr.
-      raise Error(stdout)
-
-    if 'This device has been RMAed' in stdout:
-      logging.warning('SN Bits cannot be set anymore.')
-      return
-
-    if 'SN Bits have not been set yet' in stdout:
-      if 'BoardID is set' in stdout:
-        logging.warning('SN Bits cannot be set anymore.')
+    self._gsc_util.VerifySnBits()
 
   def VerifyCBIEEPROMWPStatus(self, cbi_eeprom_wp_status):
     """Verifies CBI EEPROM write protection status."""
@@ -1318,286 +1295,14 @@ class Gooftool:
            codecs.encode(secret_bytes, 'hex').decode('utf-8')},
           partition=vpd.VPD_READONLY_PARTITION_NAME)
 
-  def IsGSCBoardIDSet(self):
-    """Check if GSC board ID is set.
-
-    Returns:
-      True if GSC board ID is set and consistent with RLZ.
-      False if GSC board ID is not set.
-
-    Raises:
-      Error if failed to get board ID, failed to get RLZ, or GSC board ID is
-      different from RLZ.
-    """
-    try:
-      board_id = self._gsctool.GetBoardID()
-    except gsctool.GSCToolError as e:
-      raise Error(
-          f'Failed to get boardID with gsctool command: {e!r}') from None
-    if board_id.type == 0xffffffff:
-      return False
-
+  def VerifyGSCBoardID(self):
+    board_id = self._gsctool.GetBoardID()
     RLZ = self._cros_config.GetBrandCode()
     if RLZ == '':
       db_identity, cur_identity = self.GetIdentity()
       raise CrosConfigError('RLZ code is empty', db_identity, cur_identity)
     if board_id.type != int(codecs.encode(RLZ.encode('ascii'), 'hex'), 16):
       raise Error('RLZ does not match Board ID.')
-    return True
-
-  def Cr50ClearRoHash(self):
-    if self.IsGSCBoardIDSet():
-      logging.warning('GSC boardID is already set. Skip clearing RO hash.')
-      return
-    if not self._gsctool.IsCr50ROHashSet():
-      logging.info('AP-RO hash is already cleared, do nothing.')
-      return
-
-    self._gsctool.ClearROHash()
-    logging.info('Successfully clear AP-RO hash on Cr50.')
-
-  def _Cr50SetROHashForShipping(self):
-    """Calculate and set the hash as in release/shipping state.
-
-    Since the hash range includes GBB flags, we need to calculate hash with
-    the same GBB flags as in release/shipping state.
-    We might not want to clear GBB flags in early phase, so we need to clear it
-    explicitly in this function.
-    """
-
-    gbb_flags_in_factory = self.GetGBBFlags()
-    self.ClearGBBFlags()
-    try:
-      self.Cr50SetROHash()
-    finally:
-      self.SetGBBFlags(gbb_flags_in_factory)
-
-
-  def Cr50SetROHash(self):
-    """Set the AP-RO hash on the Cr50 chip.
-
-    Cr50 after 0.5.5 and 0.6.5 supports RO verification, which needs the factory
-    to write the RO hash to Cr50 before setting board ID.
-    """
-    # If board ID is set, we cannot set RO hash. This happens when a device
-    # reflows in the factory and goes through finalization twice.
-    # TODO(chenghan): Check if the RO hash range in cr50 is the same as what
-    #                 we want to set, after this feature is implemented in cr50.
-    #                 Maybe we can bind it with `GSCSetBoardId`.
-    if self.IsGSCBoardIDSet():
-      logging.warning('Cr50 boardID is already set. Skip setting RO hash.')
-      return
-
-    # We cannot set AP-RO hash if it's already set, so always try to clear it
-    # before we set the AP-RO hash.
-    self.Cr50ClearRoHash()
-
-    firmware_image = self._flashrom.LoadMainFirmware().GetFirmwareImage()
-    ro_offset, ro_size = firmware_image.get_section_area('RO_SECTION')
-    ro_vpd_offset, ro_vpd_size = firmware_image.get_section_area('RO_VPD')
-    gbb_offset, gbb_size = firmware_image.get_section_area('GBB')
-    gbb_content = self._unpack_gbb(firmware_image.get_blob(), gbb_offset)
-    hwid = gbb_content.hwid
-    hwid_digest = gbb_content.hwid_digest
-
-    # Calculate address intervals of
-    # RO_SECTION + GBB - RO_VPD - HWID - HWID_DIGEST.
-    include_intervals = [
-        interval.Interval(ro_offset, ro_offset + ro_size),
-        interval.Interval(gbb_offset, gbb_offset + gbb_size)]
-    exclude_intervals = [
-        interval.Interval(ro_vpd_offset, ro_vpd_offset + ro_vpd_size),
-        interval.Interval(hwid.offset, hwid.offset + hwid.size),
-        interval.Interval(hwid_digest.offset,
-                          hwid_digest.offset + hwid_digest.size)]
-    hash_intervals = interval.MergeAndExcludeIntervals(
-        include_intervals, exclude_intervals)
-
-    # Cr50 cannot store hash intervals with size larger than 4MB.
-    hash_intervals = sum(
-        [interval.SplitInterval(i, 0x400000) for i in hash_intervals], [])
-
-    # ap_ro_hash.py takes offset:size in hex as range parameters.
-    cmd = ('ap_ro_hash.py ' +
-           ' '.join([(f'{i.start:x}:{i.size:x}') for i in hash_intervals]))
-    result = self._util.shell(cmd)
-    if result.status == 0:
-      if 'SUCCEEDED' in result.stdout:
-        logging.info('Successfully set AP-RO hash on Cr50.')
-      else:
-        logging.error(result.stderr)
-        raise Error('Failed to set AP-RO hash on Cr50.')
-    else:
-      raise Error('Failed to run ap_ro_hash.py.')
-
-  def GSCSetSnBits(self):
-    """Set the serial number bits on the GSC chip.
-
-    Serial number bits along with the board id allow a device to attest to its
-    identity and participate in Chrome OS Zero-Touch.
-
-    A script located at /usr/share/cros/cr50-set-sn-bits.sh helps us
-    to set the proper serial number bits in the GSC chip.
-    """
-
-    script_path = '/usr/share/cros/cr50-set-sn-bits.sh'
-
-    vpd_key = 'attested_device_id'
-    has_vpd_key = self._vpd.GetValue(vpd_key) is not None
-
-    # The script exists, Zero-Touch is enabled.
-    if not has_vpd_key:
-      # TODO(stimim): What if Zero-Touch is enabled on a program (e.g. hatch),
-      # but not expected for a project (e.g. kohaku).
-      raise Error(f'Zero-Touch is enabled, but {vpd_key!r} is not set')
-
-    if phase.GetPhase() >= phase.PVT_DOGFOOD:
-      arg_phase = 'pvt'
-    else:
-      arg_phase = 'dev'
-
-    result = self._util.shell([script_path])
-    if result.status == 0:
-      logging.info('Successfully set serial number bits on GSC.')
-    elif result.status == 2:
-      logging.error('Serial number bits have already been set on GSC!')
-    elif result.status == 3:
-      error_msg = 'Serial number bits have been set DIFFERENTLY on GSC!'
-      if arg_phase == 'pvt':
-        raise Error(error_msg)
-      logging.error(error_msg)
-    else:  # General errors.
-      raise Error(
-          f'Failed to set serial number bits on GSC. (args={arg_phase})')
-
-  def GSCSetFeatureManagementFlagsWithHwSecUtils(self, chassis_branded: bool,
-                                                 hw_compliance_version: int):
-    """Leverages HwSec utils to set feature management flags.
-
-    According to https://crrev.com/c/4483473, the return codes of
-    /usr/share/cros/hwsec-utils/cr50_set_factory_config are
-      0: Success
-      1: General Error
-      2: Config Already Set Error
-
-    Args:
-      chassis_branded: chassis_branded set in device data.
-      hw_compliance_version: hw_compliance_version set in device data.
-
-    Raises:
-      `cros.factory.utils.type_utils.Error` if fails.
-    """
-
-    bin_path = '/usr/share/cros/hwsec-utils/cr50_set_factory_config'
-    if not os.path.exists(bin_path):
-      raise FileNotFoundError(f'Required binary {bin_path} not existed.')
-
-    cmd = [bin_path, str(chassis_branded).lower(), str(hw_compliance_version)]
-    result = self._util.shell(cmd)
-
-    if result.status == 0:
-      logging.info('Successfully set feature management flags with `%s`.',
-                   ' '.join(cmd))
-      return
-
-    if result.status == 2:
-      logging.error('Feature management flags already set.')
-
-    raise Error(
-        f"Feature management flags cannot be set. (cmd=`{' '.join(cmd)}`)")
-
-  def GSCSetFeatureManagementFlags(self):
-    """ Sets the feature management flags to GSC.
-
-    Please be noted that this is a write-once operation.
-    For details, please refer to b/275356839.
-
-    Raises:
-      `cros.factory.utils.type_utils.Error` if cr50_set_factory_config fails.
-      `GSCToolError` if GSC tool fails.
-    """
-
-    chassis_branded = device_data.GetDeviceData(
-        device_data.KEY_FM_CHASSIS_BRANDED)
-    hw_compliance_version = device_data.GetDeviceData(
-        device_data.KEY_FM_HW_COMPLIANCE_VERSION)
-    feature_flags = self._gsctool.GetFeatureManagementFlags()
-
-    # In RMA scene, in cases where the feature flags unchanged,
-    # we shouldn't try to set it, otherwise the finalize will fail.
-    # By default the feature flags should be (False, 0) in raw bit form,
-    # so it is also safe not setting it at all.
-    if (feature_flags.is_chassis_branded == chassis_branded and
-        feature_flags.hw_compliance_version == hw_compliance_version):
-      return
-
-    # If the DUT has HwSec utils, we should prioritize using it.
-    try:
-      self.GSCSetFeatureManagementFlagsWithHwSecUtils(chassis_branded,
-                                                      hw_compliance_version)
-    except FileNotFoundError:
-      self._gsctool.SetFeatureManagementFlags(chassis_branded,
-                                              hw_compliance_version)
-
-  def GSCSetBoardId(self, two_stages, is_flags_only=False):
-    """Set the board id and flags on the GSC chip.
-
-    The GSC image need to be lock down for a certain subset of devices for
-    security reason. To achieve this, we need to tell the GSC which board
-    it is running on, and which phase is it, during the factory flow.
-
-    A script located at /usr/share/cros/cr50-set-board-id.sh helps us
-    to set the board id and phase to the GSC chip.
-
-    To the detail design of the lock-down mechanism, please refer to
-    go/cr50-boardid-lock for more details.
-
-    Args:
-      two_stages: The MLB part is sent to a different location for assembly,
-          such as RMA or local OEM. And we need to set a different board ID
-          flags in this case.
-      is_flags_only: Set board ID flags only, this should only be true in the
-          first stage in a two stages project. The board ID type still should be
-          set in the second stage.
-    """
-
-    script_path = '/usr/share/cros/cr50-set-board-id.sh'
-    if not os.path.exists(script_path):
-      logging.warning('%r is not found.', script_path)
-      return
-
-    if phase.GetPhase() >= phase.PVT_DOGFOOD:
-      arg_phase = 'pvt'
-    else:
-      arg_phase = 'dev'
-
-    mode = arg_phase
-    if two_stages:
-      mode = 'whitelabel_' + mode
-      if is_flags_only:
-        mode += '_flags'
-
-    cmd = [script_path, mode]
-    try:
-      result = self._util.shell(cmd)
-      if result.status == 0:
-        logging.info('Successfully set board ID on GSC with `%s`.',
-                     ' '.join(cmd))
-      elif result.status == 2:
-        logging.error('Board ID has already been set on GSC!')
-      elif result.status == 3:
-        error_msg = 'Board ID and/or flag has been set DIFFERENTLY on GSC!'
-        if arg_phase == 'dev':
-          logging.error(error_msg)
-        else:
-          raise Error(error_msg)
-      else:  # General errors.
-        raise Error(
-            f"Failed to set board ID and flag on GSC. (cmd=`{' '.join(cmd)}`)")
-    except Exception:
-      logging.exception('Failed to set GSC Board ID.')
-      raise
-
 
   def VerifyCustomLabel(self):
     model_sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
@@ -1635,7 +1340,7 @@ class Gooftool:
     # The MLB is still not finalized, and some dependencies of
     # SN bits or AP RO Hash might be uncertain at this time.
     # So we only set Board ID flags for security issue.
-    self.GSCSetBoardId(two_stages=True, is_flags_only=True)
+    self._gsc_util.GSCSetBoardId(two_stages=True, is_flags_only=True)
 
   def GSCWriteFlashInfo(
       self, enable_zero_touch=False, factory_process=FactoryProcessEnum.FULL,
@@ -1653,33 +1358,31 @@ class Gooftool:
 
     set_sn_bits = enable_zero_touch and not rma_mode
     if set_sn_bits:
-      self.GSCSetSnBits()
+      self._gsc_util.GSCSetSnBits()
 
-    gsc = gsc_utils.GSCUtils()
-    if gsc.IsTi50():
-      self.Ti50SetAddressingMode()
-      self.Ti50SetSWWPRegister(no_write_protect)
+    if self._gsc_util.IsTi50():
+      self._gsc_util.Ti50ProvisionSPIData(no_write_protect)
     else:
-      self._Cr50SetROHashForShipping()
+      self._gsc_util.Cr50SetROHashForShipping()
 
     skip_feature_tiering_steps |= (
-        rma_mode and self._gsctool.IsGSCFeatureManagementFlagsLocked())
+        rma_mode and self._gsc_util.IsGSCFeatureManagementFlagsLocked())
 
     # Setting the feature management flags to GSC is a write-once operation,
     # so we should set these flags right before GSCSetBoardId.
     if not skip_feature_tiering_steps:
-      self.GSCSetFeatureManagementFlags()
+      self._gsc_util.GSCSetFeatureManagementFlags()
 
     if not rma_mode:
-      self.GSCSetBoardId(
+      self._gsc_util.GSCSetBoardId(
           two_stages=factory_process == FactoryProcessEnum.TWOSTAGES)
       return
 
     # In RMA center, we don't know the process that the device was produced.
     try:
-      self.GSCSetBoardId(two_stages=True)
+      self._gsc_util.GSCSetBoardId(two_stages=True)
     except Exception:
-      self.GSCSetBoardId(two_stages=False)
+      self._gsc_util.GSCSetBoardId(two_stages=False)
 
   def GSCDisableFactoryMode(self):
     """Disable GSC Factory mode.
@@ -1689,48 +1392,10 @@ class Gooftool:
     disabled.
     """
 
-    def _IsCCDInfoMandatory():
-      gsc_version = self._gsctool.GetGSCFirmwareVersion().rw_version
-      # If second number is odd in version then it is prod version.
-      is_prod = int(gsc_version.split('.')[1]) % 2
-
-      res = True
-      if is_prod and LooseVersion(gsc_version) < LooseVersion('0.3.9'):
-        res = False
-      elif not is_prod and LooseVersion(gsc_version) < LooseVersion('0.4.5'):
-        res = False
-
-      return res
-
-    if not self.IsGSCBoardIDSet():
-      raise Error('GSC boardID not set.')
-
-    try:
-      try:
-        self._gsctool.SetFactoryMode(False)
-        factory_mode_disabled = True
-      except gsctool.GSCToolError:
-        factory_mode_disabled = False
-
-      if not _IsCCDInfoMandatory():
-        logging.warning(
-            'Command of disabling factory mode %s and can not get '
-            'CCD info so there is no way to make sure factory mode '
-            'status. GSC version RW %s',
-            'succeeds' if factory_mode_disabled else 'fails',
-            self._gsctool.GetGSCFirmwareVersion().rw_version)
-        return
-
-      is_factory_mode = self._gsctool.IsFactoryMode()
-
-    except gsctool.GSCToolError as e:
-      raise Error(f'gsctool command fail: {e!r}') from None
-
-    except Exception as e:
-      raise Error(f'Unknown exception from gsctool: {e!r}') from None
-
-    if is_factory_mode:
-      raise Error('Failed to disable GSC factory mode.')
+    if not self._gsctool.IsGSCBoardIdTypeSet():
+      raise Error('GSC board ID not set.')
+    self.VerifyGSCBoardID()
+    self._gsc_util.GSCDisableFactoryMode()
 
   def FpmcuInitializeEntropy(self):
     """Initialze entropy of FPMCU.
@@ -1838,53 +1503,3 @@ class Gooftool:
     """Returns the smart amp info by parsing sound-card-init-conf."""
 
     return smart_amp_utils.GetSmartAmpInfo()
-
-  def Ti50SetAddressingMode(self):
-    """Sets addressing mode for ap ro verification on Ti50."""
-
-    self._gsctool.SetAddressingMode(self._futility.GetFlashSize())
-
-  def Ti50SetSWWPRegister(self, no_write_protect):
-    """Sets wpsr for ap ro verification on Ti50.
-
-    If write protect is enabled, the wpsr should be derived from ap_wpsr.
-    Otherwise, set zero to ask Ti50 to ignore the write protect status.
-    """
-    if no_write_protect:
-      wpsr = '0 0'
-    else:
-      wp_conf = self._futility.GetWriteProtectInfo()
-      flash_name = self.GetFlashName()
-      res = self._CheckCall([
-          'ap_wpsr', f'--name={flash_name}', f'--start={wp_conf["start"]}',
-          f'--length={wp_conf["length"]}'
-      ]).stdout
-      logging.info('WPSR: %s', res)
-      match = re.search(r'SR Value\/Mask = (.+)', res)
-      if match:
-        wpsr = match[1]
-      else:
-        raise Error(f'Fail to parse the wpsr from ap_wpsr tool {res}')
-    self._gsctool.SetWpsr(wpsr)
-
-  def GetFlashName(self):
-    """Probes the flash chip for ap_wpsr tool to derive wpsr.
-
-    If there's any ambiguity, we need to config a mapping in
-    spi_flash_transform manually.
-    """
-    probe_result = flash_chip.FlashChipFunction.ProbeDevices('host')
-    flash_name = probe_result.get('name') or probe_result.get('partname')
-
-    sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
-    if 'spi_flash_transform' in sku_config and flash_name in sku_config[
-        'spi_flash_transform']:
-      flash_name = sku_config['spi_flash_transform'][flash_name]
-    logging.info('Flash name: %s', flash_name)
-    return flash_name
-
-  def _CheckCall(self, cmd):
-    proc = self._util.shell(cmd)
-    if proc.status != 0:
-      raise Error(f'Fail to call {cmd}. Log:\n{proc.stderr}')
-    return proc

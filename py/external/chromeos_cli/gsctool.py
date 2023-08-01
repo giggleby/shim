@@ -6,7 +6,6 @@ import collections
 import enum
 import re
 
-from cros.factory.utils.gsc_utils import GSCUtils
 from cros.factory.utils import type_utils
 
 from cros.factory.external.chromeos_cli import shell
@@ -451,43 +450,14 @@ class GSCTool:
                                  'Failed to get feature flags.')
     return self.ParseFeatureManagementConfigs(result.stdout)
 
-  def _IsGSCBoardIdSet(self) -> bool:
-    """A simpler implementation of `IsGSCBoardIDSet` in gooftool.Core."""
-    # TODO(stevesu): The current formal way of checking BoardID is to leverage
-    # `Gooftool.Core.IsGSCBoardIDSet()` however this complicates the whole
-    # issue as when probing we shouldn't care about the correctness of
-    # the RLZ code. Requires a refactor to make `IsGSCBoardIDSet` in
-    # gooftool.Core leverages this function.
+  def IsGSCBoardIdTypeSet(self) -> bool:
+    """Checks if board ID type is set"""
     try:
       board_id = self.GetBoardID()
     except GSCToolError as e:
       raise RuntimeError(
           f'Failed to get boardID with gsctool command: {e!r}') from None
     return board_id.type != 0xffff_ffff
-
-  def IsGSCFeatureManagementFlagsLocked(self) -> bool:
-    """Check if GSC feature management flags locked to write operation.
-
-    GSC is locked to feature management flags write operation if:
-      1. It has been written once already, or
-      2. the chip is Cr50 and Board ID is set, or
-      3. the chip is Ti50 and initial factory mode is disabled.
-
-    This function checks if the above case is true.
-
-    Returns:
-      `True` if the write operation to GSC is locked.
-    """
-
-    # Flags already been set.
-    feature_flags = self.GetFeatureManagementFlags()
-    if feature_flags != FeatureManagementFlags(False, 0):
-      return True
-
-    # Write locked after board ID set / initial factory mode disabled.
-    if GSCUtils().IsTi50():
-      return not self.IsTi50InitialFactoryMode()
-    return self._IsGSCBoardIdSet()
 
   def SetAddressingMode(self, flash_size):
     """Sets addressing mode for ap ro verification on Ti50.

@@ -43,6 +43,7 @@ from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.test import state
 from cros.factory.test.utils.cbi_utils import CbiEepromWpStatus
+from cros.factory.test.utils import gsc_utils
 from cros.factory.test.utils import hps_utils
 from cros.factory.utils import argparse_utils
 from cros.factory.utils.argparse_utils import CmdArg
@@ -860,7 +861,7 @@ def VerifyFeatureManagementFlags(options):
   # TODO(stevesu) We should refactor this function to a Verifier class to
   # have better flow control and cleaner code.
   rma_mode = options.factory_process == FactoryProcessEnum.RMA
-  if (rma_mode and gsctool.GSCTool().IsGSCFeatureManagementFlagsLocked()):
+  if (rma_mode and gsc_utils.GSCUtils().IsGSCFeatureManagementFlagsLocked()):
     feature_flags = gsctool.GSCTool().GetFeatureManagementFlags()
     # In RMA scene, when GSC feature flags already set, we let (False, 0)
     # bypass compliance version verification for the checker part, as no

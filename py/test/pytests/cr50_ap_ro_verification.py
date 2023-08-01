@@ -60,8 +60,8 @@ from cros.factory.gooftool.core import Gooftool
 from cros.factory.test.i18n import _
 from cros.factory.test import state
 from cros.factory.test import test_case
+from cros.factory.test.utils.gsc_utils import GSCUtils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils.gsc_utils import GSCUtils
 
 from cros.factory.external.chromeos_cli import gsctool as gsctool_module
 

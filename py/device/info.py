@@ -20,8 +20,8 @@ from cros.factory.test.env import paths
 from cros.factory.test.rules import phase
 from cros.factory.test import session
 from cros.factory.test.utils import cbi_utils
+from cros.factory.test.utils import gsc_utils
 from cros.factory.utils import file_utils
-from cros.factory.utils import gsc_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils.sys_utils import MountDeviceAndReadFile
 

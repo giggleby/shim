@@ -234,11 +234,7 @@ class GSCToolTest(unittest.TestCase):
     with self.assertRaises(ValueError):
       self.gsctool.SetFeatureManagementFlags(True, 16)
 
-  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCUtils')
-  def testTi50InitialFactoryMode_NotInInitialFactoryMode(self, mock_gsc_utils):
-    mock_gsc_utils_object = mock.MagicMock()
-    mock_gsc_utils.return_value = mock_gsc_utils_object
-    mock_gsc_utils_object.IsTi50.return_value = True
+  def testTi50InitialFactoryMode_NotInInitialFactoryMode(self):
     self._SetGSCToolUtilityResult(
         stdout=('STATE=Opened\n'
                 'FLASH_AP=Y\n'
@@ -246,11 +242,7 @@ class GSCToolTest(unittest.TestCase):
     self.assertFalse(self.gsctool.IsTi50InitialFactoryMode())
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-I', '-M'])
 
-  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCUtils')
-  def testTi50InitialFactoryMode_IsInInitialFactoryMode(self, mock_gsc_utils):
-    mock_gsc_utils_object = mock.MagicMock()
-    mock_gsc_utils.return_value = mock_gsc_utils_object
-    mock_gsc_utils_object.IsTi50.return_value = True
+  def testTi50InitialFactoryMode_IsInInitialFactoryMode(self):
     self._SetGSCToolUtilityResult(
         stdout=('STATE=Opened\n'
                 'FLASH_AP=Y\n'

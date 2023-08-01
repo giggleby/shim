@@ -49,8 +49,8 @@ To set/clear AP RO hash, add this to test list::
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.test import session
 from cros.factory.test import test_case
+from cros.factory.test.utils.gsc_utils import GSCUtils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils.gsc_utils import GSCUtils
 
 
 class Cr50APROHashTest(test_case.TestCase):

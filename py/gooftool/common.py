@@ -36,6 +36,7 @@ _DEFAULT_SYSTEM_INFO = (
     'wp',
 )
 
+
 def Shell(cmd, stdin=None, log=True, sys_interface=None):
   """Run cmd in a shell, return Obj containing stdout, stderr, and status.
 
@@ -142,8 +143,8 @@ class Util:
     /dev/sda1 => /dev/sda.
     /dev/mmcblk0p2 => /dev/mmcblk0.
     """
-    return ''.join(re.findall(
-        r'(.*[^0-9][0-9]+)p[0-9]+|(.*[^0-9])[0-9]+', path)[0])
+    return ''.join(
+        re.findall(r'(.*[^0-9][0-9]+)p[0-9]+|(.*[^0-9])[0-9]+', path)[0])
 
   def GetDevicePartition(self, device, partition):
     """Returns a partition path from device path string.
@@ -393,7 +394,10 @@ class Util:
   def EnableReleasePartition(self, root_dev):
     """Enables a release image partition on disk."""
     release_no = int(root_dev[-1]) - 1
-    factory_map = {2: 4, 4: 2}
+    factory_map = {
+        2: 4,
+        4: 2
+    }
     if release_no not in factory_map:
       raise ValueError(
           f'EnableReleasePartition: Cannot identify kernel {root_dev}')
