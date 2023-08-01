@@ -49,8 +49,9 @@ to the test list::
 """
 
 import enum
+import logging
 import os
-import tempfile
+import re
 
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
@@ -80,9 +81,6 @@ class UpdatePSROEMData(test_case.TestCase):
       Arg('update_from_config', bool,
           f'To update from config at {DEFAULT_OEM_DATA_CONFIG_FILE}',
           default=True),
-      Arg('clear_before_update', bool,
-          'To clear PSR OEM data saved in ME FW before updating',
-          default=False),
       Arg('oem_data_config_path', str, 'The file to update PSR OEM Data with',
           default=DEFAULT_OEM_DATA_CONFIG_FILE),
   ]
@@ -90,7 +88,23 @@ class UpdatePSROEMData(test_case.TestCase):
   def setUp(self):
     self._intel_psr_tool = intel_psrtool.IntelPSRTool()
     self._oem_data_config_path = self.args.oem_data_config_path
-    if self.args.update_from_config:
+    self.CheckUpdateSource(self.args.update_from_config)
+
+  def runTest(self):
+    try:
+      self.VerifyOEMData(self.args.update_from_config)
+      logging.info(
+          'PSR OEM data has been set correctly. Pass the test directly.')
+      return
+    except intel_psrtool.IntelPSRToolError:
+      logging.info('Try updating PSR OEM data.')
+
+    self.UpdateOEMData(self.args.update_from_config)
+    self._intel_psr_tool.CommitOEMData()
+    self.VerifyOEMData(self.args.update_from_config)
+
+  def CheckUpdateSource(self, update_from_config):
+    if update_from_config:
       self.assertTrue(
           os.path.exists(self._oem_data_config_path),
           f'Config file not found at {self._oem_data_config_path}')
@@ -98,21 +112,24 @@ class UpdatePSROEMData(test_case.TestCase):
       for name in PSROEMData:
         self.assertIn(name, self.args.oem_data_value)
 
-    if self.args.clear_before_update:
-      for name in PSROEMData:
-        self._intel_psr_tool.WriteNVAR(name, '')
-      self._intel_psr_tool.CommitOEMData()
-
-  def runTest(self):
-    if self.args.update_from_config:
+  def UpdateOEMData(self, update_from_config):
+    if update_from_config:
       self._intel_psr_tool.UpdateOEMDataFromConfig(self._oem_data_config_path)
-      self._intel_psr_tool.CommitOEMData()
-      self._intel_psr_tool.VerifyOEMData(self._oem_data_config_path)
     else:
       for name in PSROEMData:
         self._intel_psr_tool.WriteNVAR(name, self.args.oem_data_value[name])
-      self._intel_psr_tool.CommitOEMData()
-      with tempfile.TemporaryDirectory() as tmpdir:
-        oem_data_config_path = os.path.join(tmpdir, 'oem_data.cfg')
-        self._intel_psr_tool.ReadAndCreateOEMDataConfig(oem_data_config_path)
-        self._intel_psr_tool.VerifyOEMData(oem_data_config_path)
+
+  def VerifyOEMData(self, update_from_config):
+    if update_from_config:
+      self._intel_psr_tool.VerifyOEMData(self._oem_data_config_path)
+    else:
+      stdout = self._intel_psr_tool.DisplayPSRLog()
+      for name in PSROEMData:
+        data_pattern = fr'{name}:\s*([\w\s]+)\n'
+        match_data = re.search(data_pattern, stdout)
+        if not match_data:
+          raise intel_psrtool.IntelPSRToolRegexError(name, data_pattern, stdout)
+        if match_data.group(1) != self.args.oem_data_value[name]:
+          raise intel_psrtool.IntelPSRToolError(
+              f'{name} not matched. Current={match_data.group(1)};'
+              f'Expected={self.args.oem_data_value[name]}')
