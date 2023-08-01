@@ -13,6 +13,7 @@ import tempfile
 import unittest
 
 from cros.factory.dkps import dkps
+from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
@@ -38,6 +39,7 @@ encrypted_vpd_list = [
 
 
 # TODO(treapking): Run each test case in a separate function.
+@label_utils.Informational
 class DRMKeysProvisioningServerTest(unittest.TestCase):
 
   def setUp(self):
