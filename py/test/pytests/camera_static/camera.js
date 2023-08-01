@@ -223,7 +223,12 @@ class CameraTest {
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     const draw = (fill ? ctx.fillRect : ctx.rect).bind(ctx);
-    draw(overlayCanvas.width - x, y, -w, h);
+
+    if (this.flipImage) {
+      draw(overlayCanvas.width - x, y, -w, h);
+    } else {
+      draw(x, y, w, h);
+    }
     ctx.stroke();
   }
 }

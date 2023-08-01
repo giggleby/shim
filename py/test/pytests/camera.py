@@ -545,7 +545,10 @@ class CameraTest(test_case.TestCase):
     scanned_text = None
 
     # TODO(pihsun): Use the shape detection API in Chrome in e2e mode when it
-    # is ready.
+    # is ready. Note that the detection region is different for front and rear
+    # cameras in camera_assemble_qr mode. Since the front camera image will be
+    # flipped, the detection region for front camera is at the right half, and
+    # that of the rear camera is at the left half.
     scan_results = barcode.ScanQRCode(cv_image)
     if scan_results:
       scanned_text = scan_results[0]
@@ -575,6 +578,9 @@ class CameraTest(test_case.TestCase):
     # code so that it won't be at the center or boundary regions.
     qr_region = cv_image[y_pos:y_pos + qr_height, x_pos:x_pos + qr_width, :]
     qr_code_scan_success = self.ScanQRCode(qr_region)
+
+    if self.args.show_image:
+      self.DrawQRDetectionRegion(cv_image)
 
     string_to_show = i18n.StringFormat(
         _(
@@ -687,8 +693,6 @@ class CameraTest(test_case.TestCase):
             return
 
         if self.args.show_image:
-          if mode == TestModes.camera_assemble_qr:
-            self.DrawQRDetectionRegion(cv_image)
           self.ShowImage(cv_image)
 
         self.Sleep(frame_interval - (time.time() - start_time))
