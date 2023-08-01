@@ -205,7 +205,7 @@ class PayloadManager(abc.ABC):
           change_id, unused_cl_number = self._CreateCL(
               dryrun, git_url, self._auth_cookie, branch, git_files, author,
               author, commit_msg, reviewers, cc, topic=setting.topic,
-              hashtags=setting.hashtags)
+              auto_submit=setting.auto_submit, hashtags=setting.hashtags)
           self._PostUpdate(board, models, change_id, payloads)
           result[board] = UpdatedResult(payloads.hash_value, change_id)
         except git_util.GitUtilNoModificationException:
@@ -273,6 +273,7 @@ class PayloadManager(abc.ABC):
           author: {author}
           reviewers: {reviewers}
           cc: {cc}
+          auto_submit: {auto_submit}
           commit msg: \n{textwrap.indent(commit_msg, '          ')}
           update file paths: \n{textwrap.indent(file_paths, '          ')}
       """)

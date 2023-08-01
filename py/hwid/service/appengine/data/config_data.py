@@ -46,6 +46,7 @@ class CLSetting(NamedTuple):
   prefix: str
   branch: Optional[str] = None
   topic: Optional[str] = None
+  auto_submit: bool = False
   hashtags: Optional[Sequence[str]] = None
 
 
@@ -92,13 +93,13 @@ def CreateVerificationPayloadSettings(board: str) -> CLSetting:
   Returns:
     A CLSetting instance with corresponding settings.
   """
-  return CLSetting(review_host=hwid_repo.INTERNAL_REPO_REVIEW_URL,
-                   repo_host=hwid_repo.INTERNAL_REPO_URL,
-                   project=f'chromeos/overlays/overlay-{board.lower()}-private',
-                   prefix=f'chromeos-base/racc-config-{board.lower()}/files/',
-                   branch=None,
-                   topic='racc-verification-payload-automated-sync',
-                   hashtags=[f'racc-verification-payload-{board.lower()}'])
+  return CLSetting(
+      review_host=hwid_repo.INTERNAL_REPO_REVIEW_URL,
+      repo_host=hwid_repo.INTERNAL_REPO_URL,
+      project=f'chromeos/overlays/overlay-{board.lower()}-private',
+      prefix=f'chromeos-base/racc-config-{board.lower()}/files/', branch=None,
+      topic='racc-verification-payload-automated-sync', auto_submit=True,
+      hashtags=[f'racc-verification-payload-{board.lower()}'])
 
 def CreateHWIDSelectionPayloadSettings(board: str) -> CLSetting:
   """Create a repo setting of HWID selection payload for specific board.
@@ -114,7 +115,9 @@ def CreateHWIDSelectionPayloadSettings(board: str) -> CLSetting:
                    project=f'chromeos/overlays/overlay-{board.lower()}-private',
                    prefix='chromeos-base/feature-management-bsp/files/',
                    branch=None, topic='hwid-selection-payload-automated-sync',
-                   hashtags=[f'hwid-selection-payload-{board.lower()}'])
+                   auto_submit=True, hashtags=[
+                       f'hwid-selection-payload-{board.lower()}'
+                   ])
 
 
 class Config:
