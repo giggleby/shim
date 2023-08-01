@@ -30,17 +30,25 @@ class EmbeddedController(device_types.DeviceComponent):
     result = self._device.CallOutput(command)
     return result.strip() if result is not None else ''
 
+  def _GetVersionInfoWithRegex(self, regex):
+    """Calls `ectool version` and searches it using the given regex.
+
+    Returns:
+      The matched string.
+    """
+    ec_version = self._GetOutput(['ectool', 'version'])
+    match = regex.search(ec_version)
+    if not match:
+      raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
+    return match.group(1)
+
   def GetFirmwareCopy(self):
     """Gets the active EC firmware copy.
 
     Returns:
       A string of the active EC firmware copy.
     """
-    ec_version = self._GetOutput(['ectool', 'version'])
-    match = self.FIRMWARE_COPY_RE.search(ec_version)
-    if not match:
-      raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
-    return ECFWCopy(match.group(1))
+    return ECFWCopy(self._GetVersionInfoWithRegex(self.FIRMWARE_COPY_RE))
 
   def GetActiveVersion(self):
     """Gets the active EC firmware version.
@@ -61,11 +69,7 @@ class EmbeddedController(device_types.DeviceComponent):
     Returns:
       A string of the EC RO firmware version.
     """
-    ec_version = self._GetOutput(['ectool', 'version'])
-    match = self.RO_VERSION_RE.search(ec_version)
-    if match:
-      return match.group(1)
-    raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
+    return self._GetVersionInfoWithRegex(self.RO_VERSION_RE)
 
   def GetRWVersion(self):
     """Gets the EC RW firmware version.
@@ -73,11 +77,7 @@ class EmbeddedController(device_types.DeviceComponent):
     Returns:
       A string of the EC RW firmware version.
     """
-    ec_version = self._GetOutput(['ectool', 'version'])
-    match = self.RW_VERSION_RE.search(ec_version)
-    if match:
-      return match.group(1)
-    raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
+    return self._GetVersionInfoWithRegex(self.RW_VERSION_RE)
 
   def GetECConsoleLog(self):
     """Gets the EC console log.
