@@ -65,6 +65,21 @@ FACTORY_TESTS_DIR_REL_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/tests'
 FACTORY_TEST_SUMMARY_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/factory_test_summary'
 FACTORY_TEST_STATUS_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/factory_test_status'
 
+FACTORY_SYSTEM_INFO = (
+    'cbi',
+    'crosid',
+    'device',
+    'factory',
+    'fw',
+    'gsc',
+    'hw',
+    'image',
+    'modem_status',
+    'system',
+    'vpd',
+    'wp',
+)
+
 def _GetTimeZone(root: str) -> str:
   if sys_utils.InCrOSDevice():
     return process_utils.CheckOutput(['date', '+%:z']).strip()
@@ -184,7 +199,7 @@ def GetSystemSummary(
     filter_vpd: bool = False
 ) -> Dict[str, Optional[Union[Dict, bool, int, str]]]:
   """See common.Util.GetSystemInfo()"""
-  return Util().GetSystemInfo(filter_vpd)
+  return Util().GetSystemInfo(filter_vpd, FACTORY_SYSTEM_INFO)
 
 
 def PrintSystemSummary(filter_vpd: bool = False,
