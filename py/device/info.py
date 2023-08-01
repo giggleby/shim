@@ -426,7 +426,9 @@ class SystemInfo(device_types.DeviceComponent):
   def ec(self):
     return {
         'active': self.ecfw_act,
-        'version': self.ec_version,
+        'ro_version': self._device.ec.GetROVersion(),
+        'rw_version': self._device.ec.GetRWVersion(),
+        'type': self._device.ec.GetBuildInfo(),
     }
 
   @InfoProperty
