@@ -25,6 +25,7 @@ class EmbeddedController(device_types.DeviceComponent):
   FIRMWARE_COPY_RE = re.compile(r'^Firmware copy:\s*(\S+)\s*$', re.MULTILINE)
   RO_VERSION_RE = re.compile(r'^RO version:\s*(\S+)\s*$', re.MULTILINE)
   RW_VERSION_RE = re.compile(r'^RW version:\s*(\S+)\s*$', re.MULTILINE)
+  BUILD_INFO_RE = re.compile(r'^Build info:\s*([^\n]+)\s*$', re.MULTILINE)
 
   def _GetOutput(self, command):
     result = self._device.CallOutput(command)
@@ -41,6 +42,14 @@ class EmbeddedController(device_types.DeviceComponent):
     if not match:
       raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
     return match.group(1)
+
+  def GetBuildInfo(self):
+    """Gets the EC firmware build info.
+
+    Returns:
+      A string of the EC firmware build info.
+    """
+    return self._GetVersionInfoWithRegex(self.BUILD_INFO_RE)
 
   def GetFirmwareCopy(self):
     """Gets the active EC firmware copy.
