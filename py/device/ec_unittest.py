@@ -28,6 +28,12 @@ class EmbeddedControllerTest(unittest.TestCase):
     self.board = mock.Mock(device_types.DeviceBoard)
     self.ec = ec.EmbeddedController(self.board)
 
+  def testGetFirmwareCopy(self):
+    self.board.CallOutput.return_value = self._EC_VERSION_OUTPUT
+
+    self.assertEqual(self.ec.GetFirmwareCopy(), ec.ECFWCopy.RW)
+    self.board.CallOutput.assert_called_with(['ectool', 'version'])
+
   def testGetECVersion(self):
     self.board.CallOutput.return_value = self._EC_VERSION_OUTPUT
 

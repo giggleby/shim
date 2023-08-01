@@ -22,7 +22,7 @@ class EmbeddedController(device_types.DeviceComponent):
 
   # Regular expression for parsing ectool output.
   I2C_READ_RE = re.compile(r'I2C port \d+ at \S+ offset \S+ = (0x[0-9a-f]+)')
-  FIRMWARE_COPY = re.compile(r'^Firmware copy:\s*(\S+)\s*$', re.MULTILINE)
+  FIRMWARE_COPY_RE = re.compile(r'^Firmware copy:\s*(\S+)\s*$', re.MULTILINE)
   RO_VERSION_RE = re.compile(r'^RO version:\s*(\S+)\s*$', re.MULTILINE)
   RW_VERSION_RE = re.compile(r'^RW version:\s*(\S+)\s*$', re.MULTILINE)
 
@@ -30,18 +30,25 @@ class EmbeddedController(device_types.DeviceComponent):
     result = self._device.CallOutput(command)
     return result.strip() if result is not None else ''
 
+  def GetFirmwareCopy(self):
+    """Gets the active EC firmware copy.
+
+    Returns:
+      A string of the active EC firmware copy.
+    """
+    ec_version = self._GetOutput(['ectool', 'version'])
+    match = self.FIRMWARE_COPY_RE.search(ec_version)
+    if not match:
+      raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
+    return ECFWCopy(match.group(1))
+
   def GetECVersion(self):
     """Gets the active EC firmware version.
 
     Returns:
       A string of the active EC firmware version.
     """
-    ec_version = self._GetOutput(['ectool', 'version'])
-    match = self.FIRMWARE_COPY.search(ec_version)
-    if not match:
-      raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
-
-    active_firmware_copy = ECFWCopy(match.group(1))
+    active_firmware_copy = self.GetFirmwareCopy()
     if active_firmware_copy == ECFWCopy.RO:
       return self.GetROVersion()
     if active_firmware_copy == ECFWCopy.RW:
