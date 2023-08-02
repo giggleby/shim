@@ -881,9 +881,13 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
             else:
               comp_name = v3_builder.DetermineComponentName(field.name, value)
 
-            comp = db_builder.AddFirmwareComponent(
-                field.name, value, comp_name,
-                supported=firmware_record.supported)
+            try:
+              comp = db_builder.AddFirmwareComponent(
+                  field.name, value, comp_name,
+                  supported=firmware_record.supported)
+            except ValueError as ex:
+              raise common_helper.ConvertExceptionToProtoRPCException(
+                  ex) from None
 
             # Get the comp_name by hash again since it may be renamed if there's
             # a collision
