@@ -372,6 +372,7 @@ class DatabaseBuilder:
     # Append null comp for new firmware comp, otherwise the index 0 will be
     # decoded by default and break the existing devices.
     if (not self._database.is_initial and
+        comp_cls not in common.ESSENTIAL_COMPS and
         comp_cls not in self._database.GetComponentClasses()):
       self.AddNullComponent(comp_cls)
       self.AppendEncodedFieldBit(field_name, 1)
