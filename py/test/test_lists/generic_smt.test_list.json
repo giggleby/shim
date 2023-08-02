@@ -88,9 +88,9 @@
       "inherit": "TestGroup",
       "label": "Finish",
       "subtests": [
+        "StationEnd",
         "FinalizeMLB",
         "CheckRMATestList",
-        "StationEnd",
         "CheckPoint",
         "HaltStep",
         "SwitchToRMATestList"

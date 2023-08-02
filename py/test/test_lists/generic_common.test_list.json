@@ -6,6 +6,8 @@
     "audio": {
       "card_name": "0"
     },
+    "boot_to_shimless": false,
+    "__comment_boot_to_shimless": "Initiate Shimless RMA after wiping.",
     "default_factory_server_url": "",
     "__comment_default_factory_server_url": "The default URL to factory server, if not defined in locals.",
     "enable_factory_server": true,
@@ -652,7 +654,8 @@
       "run_if": "constants.factory_process != 'FULL'",
       "args": {
         "upload_method": "eval! 'factory_server' if constants.enable_factory_server else 'none'",
-        "mode": "MLB"
+        "mode": "eval! 'SHIMLESS_MLB' if constants.boot_to_shimless else 'MLB'",
+        "factory_process": "eval! constants.factory_process"
       }
     },
     "Finish": {

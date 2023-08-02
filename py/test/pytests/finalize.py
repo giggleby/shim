@@ -257,10 +257,8 @@ class Finalize(test_case.TestCase):
     self.ui.SetState(MSG_PREFLIGHT)
     self.Preflight()
     self.ui.SetState(MSG_FINALIZING)
-    if self.args.mode == FinalizeMode.MLB:
+    if self.args.mode in (FinalizeMode.MLB, FinalizeMode.SHIMLESS_MLB):
       self.FinalizeMLB()
-    elif self.args.mode == FinalizeMode.SHIMLESS_MLB:
-      raise NotImplementedError()
     elif self.args.mode == FinalizeMode.ASSEMBLED:
       self.Finalize()
 
@@ -376,8 +374,17 @@ class Finalize(test_case.TestCase):
   def FinalizeMLB(self):
     command = 'gooftool -v 4 smt_finalize'
     command = self.AppendUploadReportArgs(command)
-    # We only wipe DUT in GRT.
-    self._DoFinalize(command, True)
+
+    if self.args.factory_process == FactoryProcessEnum.RMA and \
+      self.args.mode == FinalizeMode.SHIMLESS_MLB:
+      command += ' --boot_to_shimless'
+
+      # The device will be wiped before initiating Shimless RMA, so wipe-related
+      # auguments should be included here.
+      if not self.args.secure_wipe:
+        command += ' --fast'
+
+    self._DoFinalize(command, self.args.mode != FinalizeMode.SHIMLESS_MLB)
 
   def AppendAssembledArgs(self, command):
     if not self.args.write_protection:
