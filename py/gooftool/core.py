@@ -943,13 +943,15 @@ class Gooftool:
     wipe.EnableReleasePartition(release_rootfs)
 
 
-  def WipeInPlace(self, is_fast=None, shopfloor_url=None,
-                  station_ip=None, station_port=None, wipe_finish_token=None,
-                  test_umount=False):
+  def WipeInPlace(self, is_fast=None, shopfloor_url=None, station_ip=None,
+                  station_port=None, wipe_finish_token=None,
+                  unused_boot_to_shimless=False, test_umount=False):
     """Start transition to release state directly without reboot.
 
     Args:
       is_fast: Whether or not to apply fast wipe.
+      boot_to_shimless: Whether to initiate the Shimless RMA after performing
+          wiping.
     """
     # check current GBB flags to determine if we need to keep .developer_mode
     # after clobber-state.
