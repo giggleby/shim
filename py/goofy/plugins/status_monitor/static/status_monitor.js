@@ -33,7 +33,8 @@ statusMonitor.SYSTEM_INFO_LABELS = [
   {key: 'firmware_version', label: _('Main Firmware')},
   {key: 'kernel_version', label: _('Kernel')},
   {key: 'architecture', label: _('Architecture')},
-  {key: 'ec_version', label: _('EC')}, {key: 'pd_version', label: _('PD')},
+  {key: 'ec_active_version', label: _('EC')},
+  {key: 'pd_version', label: _('PD')},
   {key: 'root_device', label: _('Root Device')},
   {key: 'device_id', label: _('Device ID')}, {
     key: 'toolkit_version',

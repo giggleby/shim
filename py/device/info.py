@@ -297,9 +297,9 @@ class SystemInfo(device_types.DeviceComponent):
     return self._ParseStrToDict(self._REGEX_CROSSYSTEM, output)
 
   @InfoProperty
-  def ec_version(self):
-    """Version of embedded controller."""
-    return self._device.ec.GetECVersion().strip()
+  def ec_active_version(self):
+    """Version of active embedded controller."""
+    return self._device.ec.GetActiveVersion().strip()
 
   @InfoProperty
   def pd_version(self):
