@@ -18,7 +18,7 @@ _INFO_TO_MONITOR = (
     'firmware_version',
     'kernel_version',
     'architecture',
-    'ec_version',
+    'ec_active_version',
     'root_device',
     'device_id',
     'toolkit_version',

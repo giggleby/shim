@@ -42,7 +42,7 @@ class EmbeddedController(device_types.DeviceComponent):
       raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
     return ECFWCopy(match.group(1))
 
-  def GetECVersion(self):
+  def GetActiveVersion(self):
     """Gets the active EC firmware version.
 
     Returns:

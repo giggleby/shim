@@ -34,10 +34,10 @@ class EmbeddedControllerTest(unittest.TestCase):
     self.assertEqual(self.ec.GetFirmwareCopy(), ec.ECFWCopy.RW)
     self.board.CallOutput.assert_called_with(['ectool', 'version'])
 
-  def testGetECVersion(self):
+  def testGetActiveVersion(self):
     self.board.CallOutput.return_value = self._EC_VERSION_OUTPUT
 
-    self.assertEqual(self.ec.GetECVersion(), 'samus_v1.7.688-22cf733')
+    self.assertEqual(self.ec.GetActiveVersion(), 'samus_v1.7.688-22cf733')
     self.board.CallOutput.assert_called_with(['ectool', 'version'])
 
   def testGetROVersion(self):
