@@ -12,6 +12,7 @@ from cros.factory.hwid_extractor import cr50
 from cros.factory.hwid_extractor import rlz
 from cros.factory.hwid_extractor import servod
 
+
 # SuzyQ usb device ids.
 CR50_USB = '18d1:5014'
 TI50_USB = '18d1:504a'
@@ -99,17 +100,23 @@ def Scan():
     }
 
 
-def ExtractHWIDAndSerialNumber(cr50_serial_name, board):
+def ExtractDeviceInfo(cr50_serial_name, board):
   """Extract info from device.
 
   Args:
     cr50_serial_name: The serial name of the cr50 usb device.
     board: The name of board of the device.
   Returns:
-    hwid, serial_number. The value may be None.
+    gsc_dev_id, serial_number, hwid. The value may be None.
   """
+  # TODO(b/294967029): figure out where this format
+  # "0x{id_first_part} 0x{id_second_part}" comes from.
+  # We are not sure if this is a convention from HWSEC team or not.
+  gsc_dev_id_arr = cr50_serial_name.split('-')
+  gsc_dev_id = f'0x{gsc_dev_id_arr[0]} 0x{gsc_dev_id_arr[1]}'
   with servod.Servod(serial_name=cr50_serial_name, board=board):
-    return ap_firmware.ExtractHWIDAndSerialNumber()
+    hwid, serial_number = ap_firmware.ExtractHWIDAndSerialNumber()
+    return gsc_dev_id, serial_number, hwid
 
 
 def Unlock(cr50_serial_name, authcode):

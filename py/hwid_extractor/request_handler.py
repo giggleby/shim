@@ -82,14 +82,15 @@ class RequestHandler(http_server.SimpleHTTPRequestHandler):
     self._SendActionResult(device.Unlock(cr50_serial_name, authcode))
 
   def _Extract(self):
-    """Extract HWID and SN."""
+    """Extract GSC device id, SN and HWID."""
     cr50_serial_name = self._GetArgument('cr50SerialName')
     board = self._GetArgument('board')
-    hwid, serial_number = device.ExtractHWIDAndSerialNumber(
+    gsc_dev_id, serial_number, hwid = device.ExtractDeviceInfo(
         cr50_serial_name, board)
     self._SendJSON({
-        'hwid': hwid,
+        'gscDevId': gsc_dev_id,
         'sn': serial_number,
+        'hwid': hwid,
     })
 
   def _UpdateRLZ(self):

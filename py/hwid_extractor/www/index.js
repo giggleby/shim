@@ -14,8 +14,9 @@
 let ScanData;
 /**
  * @typedef {{
- *  hwid: string,
+ *  gscDevId: string,
  *  sn: string,
+ *  hwid: string,
  * }}
  */
 let ExtractData;
@@ -44,6 +45,8 @@ let Config;
  *  supportedBoards: (!Array<string>|undefined),
  *  scanData: (!ScanData|undefined),
  *  extractData: (!ExtractData|undefined),
+ *  extractDataCopiedToClipboard: (string|undefined),
+ *  hasExtractDataCopiedToClipboard: (boolean|undefined),
  *  errorData: (!Object|undefined),
  *  isLoading: (boolean|undefined),
  *  message: (string|undefined),
@@ -75,6 +78,19 @@ const state /** State */ = {};
 /**
  * @param {State} newState
  */
+const setStateAndRenderWithoutClearMessage = (newState) => {
+  Object.assign(state, newState);
+  try {
+    render(/** @type{!Node} */ (document.getElementById('root')));
+  } catch (error) {
+    console.error(error);
+    alert(error);
+  }
+};
+
+/**
+ * @param {State} newState
+ */
 const setStateAndRender = (newState) => {
   if (!('message' in newState)) {
     newState.message = undefined;
@@ -85,13 +101,7 @@ const setStateAndRender = (newState) => {
   if (!('errorData' in newState)) {
     newState.errorData = undefined;
   }
-  Object.assign(state, newState);
-  try {
-    render(/** @type{!Node} */ (document.getElementById('root')));
-  } catch (error) {
-    console.error(error);
-    alert(error);
-  }
+  setStateAndRenderWithoutClearMessage(newState);
 };
 
 /**
@@ -172,7 +182,7 @@ const renderButton = (ele, text, onclick) => {
   }
   btn.innerText = text;
   btn.onclick = onclick;
-  btn.disabled = state.isLoading;
+  btn.disabled = state.isLoading || onclick === undefined;
   btn.style = 'margin: 5px; padding: 5px';
 };
 
@@ -298,6 +308,7 @@ const handleScan = async (isTriggeredByUser) => {
   setStateAndRender({
     scanData,
     extractData: undefined,
+    hasExtractDataCopiedToClipboard: false,
     message,
     input_authcode: undefined,
   });
@@ -393,12 +404,37 @@ const handleExtract = async () => {
 };
 
 /**
+ * handleExtractDataCopied
+ */
+const handleExtractDataCopied = () => {
+  const {gscDevId, sn, hwid} = state.extractData;
+  const copiedText = `"${gscDevId}"\t"${sn}"\t"${hwid}"`;
+  navigator.clipboard.writeText(copiedText);
+  setStateAndRenderWithoutClearMessage({
+    extractDataCopiedToClipboard: copiedText,
+    hasExtractDataCopiedToClipboard: true,
+  });
+  setTimeout(() => {
+    setStateAndRenderWithoutClearMessage({
+      hasExtractDataCopiedToClipboard: false,
+    });
+  }, 1500);
+};
+
+/**
  * @param {!Node} ele
  */
 const renderExtract = (ele) => {
   renderText(ele, 'Extract HWID and Serial No.', 'h4');
   renderButton(ele, 'Extract', handleExtract);
   renderTable(ele, state.extractData);
+  if (state.extractData) {
+    if (!state.hasExtractDataCopiedToClipboard) {
+      renderButton(ele, 'Copy to clipboard', handleExtractDataCopied);
+    } else {
+      renderButton(ele, 'Copied ✓');
+    }
+  }
 };
 
 /**
