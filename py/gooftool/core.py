@@ -945,7 +945,7 @@ class Gooftool:
 
   def WipeInPlace(self, is_fast=None, shopfloor_url=None, station_ip=None,
                   station_port=None, wipe_finish_token=None,
-                  unused_boot_to_shimless=False, test_umount=False):
+                  boot_to_shimless=False, test_umount=False):
     """Start transition to release state directly without reboot.
 
     Args:
@@ -971,15 +971,17 @@ class Gooftool:
     keep_developer_mode_flag = bool(gbb_flags & GBB_FLAG_FORCE_DEV_SWITCH_ON)
 
     wipe.WipeInRamFs(is_fast, shopfloor_url, station_ip, station_port,
-                     wipe_finish_token, keep_developer_mode_flag, test_umount)
+                     wipe_finish_token, keep_developer_mode_flag,
+                     boot_to_shimless, test_umount)
 
-  def WipeInit(self, wipe_args, shopfloor_url, state_dev,
-               release_rootfs, root_disk, old_root, station_ip, station_port,
-               wipe_finish_token, keep_developer_mode_flag, test_umount):
+  def WipeInit(self, wipe_args, shopfloor_url, state_dev, release_rootfs,
+               root_disk, old_root, station_ip, station_port, wipe_finish_token,
+               keep_developer_mode_flag, boot_to_shimless, test_umount):
     """Start wiping test image."""
     wipe.WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
                   root_disk, old_root, station_ip, station_port,
-                  wipe_finish_token, keep_developer_mode_flag, test_umount)
+                  wipe_finish_token, keep_developer_mode_flag, boot_to_shimless,
+                  test_umount)
 
   def WriteVPDForRLZPing(self, embargo_offset=7):
     """Write VPD values related to RLZ ping into VPD."""
