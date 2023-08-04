@@ -580,20 +580,15 @@ def WipeInPlace(options):
          _station_port_cmd_arg,
          _wipe_finish_token_cmd_arg,
          _keep_developer_mode_flag_after_clobber_state_cmd_arg,
+         _boot_to_shimless_cmd_arg,
          _test_umount_cmd_arg)
 def WipeInit(options):
   GetGooftool(options).WipeInit(
-      options.wipe_args,
-      options.shopfloor_url,
-      options.state_dev,
-      options.release_rootfs,
-      options.root_disk,
-      options.old_root,
-      options.station_ip,
-      options.station_port,
-      options.wipe_finish_token,
+      options.wipe_args, options.shopfloor_url, options.state_dev,
+      options.release_rootfs, options.root_disk, options.old_root,
+      options.station_ip, options.station_port, options.wipe_finish_token,
       options.keep_developer_mode_flag_after_clobber_state,
-      options.test_umount)
+      options.boot_to_shimless, options.test_umount)
 
 
 @Command('verify',

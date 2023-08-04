@@ -35,6 +35,13 @@ STATEFUL_PARTITION_PATH = '/mnt/stateful_partition/'
 
 WIPE_MARK_FILE = 'wipe_mark_file'
 
+_CROS_PAYLOADS_PATH = 'dev_image/opt/cros_payloads'
+
+_USER_RMAD = 'rmad'
+_SHIMLESS_DATA_PATH = '/mnt/stateful_partition/unencrypted/rma-data'
+_SHIMLESS_STATE_FILE_PATH = '%s/state' % _SHIMLESS_DATA_PATH
+_SHIMLESS_STATE_FILE_CONTENT = '{"firmware_updated": true}'
+
 CRX_CACHE_PAYLOAD_NAME = 'dev_image/opt/cros_payloads/release_image.crx_cache'
 CRX_CACHE_TAR_PATH = '/tmp/crx_cache.tar'
 
@@ -129,12 +136,14 @@ def ResetLog(logfile=None):
 
 def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
                 station_port=None, wipe_finish_token=None,
-                keep_developer_mode_flag=False, test_umount=False):
+                keep_developer_mode_flag=False, boot_to_shimless=False,
+                test_umount=False):
   """prepare to wipe by pivot root to tmpfs and unmount stateful partition.
 
   Args:
     is_fast: whether or not to apply fast wipe.
     shopfloor_url: for inform_shopfloor.sh
+    boot_to_shimless: Whether or not to boot to Shimless RMA process.
   """
 
   def _CheckBug78323428():
@@ -246,6 +255,8 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
         args += ['--station_port', station_port]
       if wipe_finish_token:
         args += ['--wipe_finish_token', wipe_finish_token]
+      if boot_to_shimless:
+        args += ['--boot_to_shimless']
       if test_umount:
         args += ['--test_umount']
       args += ['--state_dev', state_dev]
@@ -474,7 +485,7 @@ def _InformStation(ip, port, token, wipe_init_log=None,
 
 
 def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
-                  keep_developer_mode_flag):
+                  keep_developer_mode_flag, boot_to_shimless):
   clobber_state_env = os.environ.copy()
   clobber_state_env.update(ROOT_DEV=release_rootfs,
                            ROOT_DISK=root_disk)
@@ -499,6 +510,25 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
   if os.path.exists(CRX_CACHE_TAR_PATH):
     process_utils.Spawn(['tar', '-xpvf', CRX_CACHE_TAR_PATH, '-C',
                          STATEFUL_PARTITION_PATH], check_call=True, log=True)
+
+  if boot_to_shimless:
+    logging.info('Preparing Shimless RMA environment...')
+
+    # Add Shimless RMA file.
+    process_utils.Spawn(['mkdir', '-p', _SHIMLESS_DATA_PATH], check_call=True,
+                        log=True)
+
+    # TODO(jeffulin): It would be better to make the Shimless RMA directly in
+    # rework flow.
+    with open(_SHIMLESS_STATE_FILE_PATH, 'w') as f:
+      f.write(_SHIMLESS_STATE_FILE_CONTENT)
+      f.flush()
+
+    # Some of the factory branch has no rmad user/group, so failing to call this
+    # command is expected.
+    process_utils.Spawn(
+        ['chown', '%s:%s' % (_USER_RMAD, _USER_RMAD), _SHIMLESS_STATE_FILE_PATH],
+        log=True)
 
   try:
     if not keep_developer_mode_flag:
@@ -543,9 +573,9 @@ def _Cutoff():
   process_utils.Spawn([cutoff_script], check_call=True)
 
 
-def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
-             root_disk, old_root, station_ip, station_port, finish_token,
-             keep_developer_mode_flag, test_umount):
+def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs, root_disk,
+             old_root, station_ip, station_port, finish_token,
+             keep_developer_mode_flag, boot_to_shimless, test_umount):
   Daemonize()
   logfile = '/tmp/wipe_init.log'
   ResetLog(logfile)
@@ -557,6 +587,7 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
   logging.debug('release_rootfs: %s', release_rootfs)
   logging.debug('root_disk: %s', root_disk)
   logging.debug('old_root: %s', old_root)
+  logging.debug('boot_to_shimless: %s', boot_to_shimless)
   logging.debug('test_umount: %s', test_umount)
 
   try:
@@ -598,7 +629,7 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
 
     try:
       _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
-                    keep_developer_mode_flag)
+                    keep_developer_mode_flag, boot_to_shimless)
     except Exception:
       process_utils.Spawn(
           [os.path.join(CUTOFF_SCRIPT_DIR, 'display_wipe_message.sh'),

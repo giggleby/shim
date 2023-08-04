@@ -598,9 +598,9 @@ class Gooftool:
     wipe.EnableReleasePartition(release_rootfs)
 
 
-  def WipeInPlace(self, is_fast=None, shopfloor_url=None,
-                  station_ip=None, station_port=None, wipe_finish_token=None,
-                  unused_boot_to_shimless=False, test_umount=False):
+  def WipeInPlace(self, is_fast=None, shopfloor_url=None, station_ip=None,
+                  station_port=None, wipe_finish_token=None,
+                  boot_to_shimless=False, test_umount=False):
     """Start transition to release state directly without reboot.
 
     Args:
@@ -624,20 +624,24 @@ class Gooftool:
         phase.GetPhase() >= phase.PVT and gbb_flags != 0):
       raise Error('GBB flags should be cleared in PVT (it is 0x%x)' % gbb_flags)
 
+    # If the device is going to initiate Shimless RMA after wiping, it should
+    # return back to normal mode.
     GBB_FLAG_FORCE_DEV_SWITCH_ON = 0x00000008
-    keep_developer_mode_flag = bool(gbb_flags & GBB_FLAG_FORCE_DEV_SWITCH_ON)
+    keep_developer_mode_flag = bool(gbb_flags & GBB_FLAG_FORCE_DEV_SWITCH_ON) \
+                               and not boot_to_shimless
 
-    wipe.WipeInTmpFs(is_fast, shopfloor_url,
-                     station_ip, station_port, wipe_finish_token,
-                     keep_developer_mode_flag, test_umount)
+    wipe.WipeInTmpFs(is_fast, shopfloor_url, station_ip, station_port,
+                     wipe_finish_token, keep_developer_mode_flag,
+                     boot_to_shimless, test_umount)
 
-  def WipeInit(self, wipe_args, shopfloor_url, state_dev,
-               release_rootfs, root_disk, old_root, station_ip, station_port,
-               wipe_finish_token, keep_developer_mode_flag, test_umount):
+  def WipeInit(self, wipe_args, shopfloor_url, state_dev, release_rootfs,
+               root_disk, old_root, station_ip, station_port, wipe_finish_token,
+               keep_developer_mode_flag, boot_to_shimless, test_umount):
     """Start wiping test image."""
-    wipe.WipeInit(wipe_args, shopfloor_url, state_dev,
-                  release_rootfs, root_disk, old_root, station_ip, station_port,
-                  wipe_finish_token, keep_developer_mode_flag, test_umount)
+    wipe.WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
+                  root_disk, old_root, station_ip, station_port,
+                  wipe_finish_token, keep_developer_mode_flag, boot_to_shimless,
+                  test_umount)
 
   def WriteVPDForRLZPing(self, embargo_offset=7):
     """Write VPD values related to RLZ ping into VPD."""
