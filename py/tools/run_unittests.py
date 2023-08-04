@@ -56,7 +56,7 @@ TESTS_TO_EXCLUDE = [
 # TEST_PASSED_MARK is the .tests-passed file at factory root path
 TEST_PASSED_MARK = os.path.join(FACTORY_ROOT, '.tests-passed')
 # Timeout for running any individual test program.
-TEST_TIMEOUT_SECS = 60
+TEST_DEFAULT_TIMEOUT_SECS = 60
 TEST_FILE_SUFFIX = '_unittest.py'
 TEST_FILE_USE_MOCK_SUFFIX = '_unittest_mocked.py'
 
@@ -74,14 +74,16 @@ class _TestProc:
     log_name: path of log file for unittest.
     port_server: port server used by net_utils
     python_path: factory module path to be imported in process
+    timeout: timeout per test in seconds
   """
 
   def __init__(self, test_name: str, log_name: str, port_server: str,
-               python_path: str):
+               python_path: str, timeout: int):
     self.test_name = test_name
     self.log_file_name = log_name
     self._port_server = port_server
     self._python_path = python_path
+    self._timeout = timeout
     self._cros_factory_data_dir = cast(str, None)
     self.start_time = cast(float, None)
     self.proc = cast(process_utils.ExtendedPopen, None)
@@ -124,10 +126,10 @@ class _TestProc:
   def _WatchTest(self):
     """Watches a test, killing it if it times out."""
     try:
-      self.proc.wait(TEST_TIMEOUT_SECS)
+      self.proc.wait(self._timeout)
     except subprocess.TimeoutExpired:
       logging.error('Test %s still alive after %d secs: killing it',
-                    self.test_name, TEST_TIMEOUT_SECS)
+                    self.test_name, self._timeout)
       self.proc.send_signal(signal.SIGINT)
       time.sleep(1)
       self._ForceKillProcess()
@@ -196,6 +198,7 @@ class RunTests:
     max_jobs: maxinum number of parallel tests to run.
     log_dir: base directory to store test logs.
     plain_log: disable color and progress in log.
+    timeout: timeout per test in seconds.
     isolated_tests: list of test to run in isolate mode.
     fallback: True to re-run failed test sequentially.
   """
@@ -206,6 +209,7 @@ class RunTests:
       max_jobs: int,
       log_dir: str,
       plain_log: bool,
+      timeout: int,
       isolated_tests: Optional[Sequence[str]] = None,
       fallback: bool = True,
   ):
@@ -213,6 +217,7 @@ class RunTests:
     self._max_jobs = max_jobs
     self._log_dir = log_dir
     self._plain_log = plain_log
+    self._timeout = timeout
     self._isolated_tests = isolated_tests if isolated_tests else []
     self._fallback = fallback
     self._start_time = time.time()
@@ -323,7 +328,7 @@ class RunTests:
         try:
           p = stack.enter_context(
               _TestProc(test_name, self._GetLogFilename(test_name),
-                        port_server_socket_file, python_path))
+                        port_server_socket_file, python_path, self._timeout))
         except Exception:
           self._FailMessage(f'Error running test {test_name!r}')
           raise
@@ -489,6 +494,8 @@ def main():
                       help='Neither output nor update test pass mark file.')
   parser.add_argument('--plain-log', action='store_true',
                       help='disable color and progress in log.')
+  parser.add_argument('--timeout', default=TEST_DEFAULT_TIMEOUT_SECS, type=int,
+                      help='The timeout for each test.')
   parser.add_argument('test', nargs='*', help='Unittest filename.')
   args = parser.parse_args()
 
@@ -505,7 +512,8 @@ def main():
   label_utils.SetSkipInformational(not args.informational)
 
   runner = RunTests(args.test, args.jobs, args.log_dir, args.plain_log,
-                    isolated_tests=args.isolated, fallback=not args.nofallback)
+                    args.timeout, isolated_tests=args.isolated,
+                    fallback=not args.nofallback)
   return_value = runner.Run()
   if return_value == 0 and args.pass_mark:
     with open(TEST_PASSED_MARK, 'a', encoding='utf8'):

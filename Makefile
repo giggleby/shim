@@ -570,7 +570,7 @@ test-list-check:
 	    $(TOOLKITPATH)/py/test/test_lists/*.test_list.json))))
 
 ebuild-unit-test:
-	$(TEST_RUNNER) --no-informational --no-pass-mark --plain-log
+	$(TEST_RUNNER) --no-informational --no-pass-mark --plain-log --timeout 120
 
 # Only run this test if factory-board is overlayed and the board name does not
 # contain '-' as a substring since we want to skip *-arc and *-kernelnext
