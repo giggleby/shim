@@ -461,7 +461,7 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
           Run('audio_diagnostics', filename='audio_diagnostics',
               check_call=False, include_stderr=True),
           # Cannot zip an unseekable file, need to manually copy it instead.
-          Run(['cat', 'sys/firmware/log'], filename='bios_log',
+          Run(['cat', 'sys/firmware/log'], filename='ap_console',
               check_call=False),
           Run(['factory', 'tests', '--status'], filename='factory_test_status',
               check_call=False),
