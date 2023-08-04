@@ -77,14 +77,6 @@ class PayloadManager(abc.ABC):
     service_account_name = self._gerrit_credentials[0]
     return f'chromeoshwid <{service_account_name}>'
 
-  @property
-  def _reviewers(self) -> Collection[str]:
-    return self._data_manager.GetCLReviewers()
-
-  @property
-  def _cc(self) -> Collection[str]:
-    return self._data_manager.GetCLCCs()
-
   def _RefreshCredential(self):
     self._gerrit_credentials = git_util.GetGerritCredentials()
     self._auth_cookie = git_util.GetGerritAuthCookie(self._gerrit_credentials)
@@ -173,6 +165,7 @@ class PayloadManager(abc.ABC):
       A dict mapping board names to its updated results.
     """
     self._logger.info('Start syncing')
+    config = self._data_manager.config
 
     hwid_live_commit = live_hwid_repo.hwid_db_commit_id
     hwid_prev_commit = self._data_manager.GetLatestHWIDMainCommit()
@@ -185,8 +178,6 @@ class PayloadManager(abc.ABC):
     result = {}
     self._RefreshCredential()
     author = self._author
-    reviewers = self._reviewers
-    cc = self._cc
     for board, models in self._GetSupportedModels(limit_models,
                                                   live_hwid_repo).items():
       payloads = self._GeneratePayloads(board, models)
@@ -204,8 +195,9 @@ class PayloadManager(abc.ABC):
         try:
           change_id, unused_cl_number = self._CreateCL(
               dryrun, git_url, self._auth_cookie, branch, git_files, author,
-              author, commit_msg, reviewers, cc, topic=setting.topic,
-              auto_submit=setting.auto_submit, hashtags=setting.hashtags)
+              author, commit_msg, config.reviewers, config.ccs,
+              topic=setting.topic, auto_submit=setting.auto_submit,
+              hashtags=setting.hashtags)
           self._PostUpdate(board, models, change_id, payloads)
           result[board] = UpdatedResult(payloads.hash_value, change_id)
         except git_util.GitUtilNoModificationException:

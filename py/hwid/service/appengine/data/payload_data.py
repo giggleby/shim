@@ -4,7 +4,7 @@
 """Payload generation related data models and their manager."""
 
 import enum
-from typing import Collection, Optional
+from typing import Optional
 
 from google.cloud import ndb
 
@@ -22,22 +22,23 @@ class PayloadType(str, enum.Enum):
     return self.value
 
 
-class NotificationType(str, enum.Enum):
-  """The notification types."""
+class Config(ndb.Model):
+  """A config for payload generation which can be modified on Datastore.
 
-  REVIEWER = 'reviewer'
-  CC = 'cc'
+  Attributes:
+    payload_type: The payload type of config, which should be one of
+        PayloadType.
+    reviewers: E-mail addresses to be added to reviewer of CL.
+    ccs: E-mail addresses to be added to cc of CL.
+  """
 
-  def __str__(self):
-    return self.value
-
-
-class CLNotification(ndb.Model):
-  """Emails of CL notification recipients."""
+  @classmethod
+  def _get_kind(cls):
+    return 'PayloadConfig'
 
   payload_type = ndb.StringProperty()
-  notification_type = ndb.StringProperty()
-  email = ndb.StringProperty()
+  reviewers = ndb.StringProperty(repeated=True)
+  ccs = ndb.StringProperty(repeated=True)
 
 
 class LatestHWIDMainCommit(ndb.Model):
@@ -63,22 +64,16 @@ class PayloadDataManager:
     self._payload_type = payload_type
 
   @property
-  def payload_type(self):
+  def payload_type(self) -> PayloadType:
     return self._payload_type
 
-  def _GetCLNotifications(
-      self, notification_type: NotificationType) -> Collection[str]:
+  @property
+  def config(self) -> Config:
     with self._ndb_connector.CreateClientContextWithGlobalCache():
-      q = CLNotification.query(
-          CLNotification.notification_type == notification_type,
-          CLNotification.payload_type == self._payload_type)
-      return [notification.email for notification in q]
-
-  def GetCLReviewers(self) -> Collection[str]:
-    return self._GetCLNotifications(NotificationType.REVIEWER)
-
-  def GetCLCCs(self) -> Collection[str]:
-    return self._GetCLNotifications(NotificationType.CC)
+      entity = Config.query(Config.payload_type == self._payload_type).get()
+      if entity is None:
+        return Config(payload_type=self._payload_type)
+      return entity
 
   def GetLatestHWIDMainCommit(self) -> Optional[str]:
     with self._ndb_connector.CreateClientContextWithGlobalCache():

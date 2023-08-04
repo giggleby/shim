@@ -21,58 +21,42 @@ class PayloadDataManagerTest(unittest.TestCase):
     super().tearDown()
     self._ClearAll()
 
-  def _AddCLNotification(self, manager: payload_data.PayloadDataManager,
-                         notification_type: payload_data.NotificationType,
-                         email: str):
+  def _SetConfig(self, manager: payload_data.PayloadDataManager, **kwargs):
+    entity = manager.config
     with self._ndb_connector.CreateClientContext():
-      entity = payload_data.CLNotification(payload_type=manager.payload_type,
-                                           notification_type=notification_type,
-                                           email=email)
+      entity.populate(**kwargs)
       entity.put()
 
   def _ClearAll(self):
     with self._ndb_connector.CreateClientContext():
-      ndb.delete_multi(payload_data.CLNotification.query().iter(keys_only=True))
+      ndb.delete_multi(payload_data.Config.query().iter(keys_only=True))
       ndb.delete_multi(
           payload_data.LatestHWIDMainCommit.query().iter(keys_only=True))
       ndb.delete_multi(
           payload_data.LatestPayloadHash.query().iter(keys_only=True))
 
-  def testGetCLReviewers(self):
+  def testConfigDefault(self):
+    manager = payload_data.PayloadDataManager(
+        self._ndb_connector, payload_data.PayloadType.VERIFICATION)
+
+    config = manager.config
+    self.assertCountEqual(config.reviewers, [])
+    self.assertCountEqual(config.ccs, [])
+
+  def testConfig(self):
     manager = payload_data.PayloadDataManager(
         self._ndb_connector, payload_data.PayloadType.VERIFICATION)
     manager2 = payload_data.PayloadDataManager(self._ndb_connector,
                                                payload_data.PayloadType.UNKNOWN)
 
-    self._AddCLNotification(manager, payload_data.NotificationType.REVIEWER,
-                            'reviewer@example.com')
-    self._AddCLNotification(manager, payload_data.NotificationType.CC,
-                            'cc@example.com')
-    self._AddCLNotification(manager2, payload_data.NotificationType.REVIEWER,
-                            'foo@example.com')
-    self._AddCLNotification(manager2, payload_data.NotificationType.CC,
-                            'bar@example.com')
+    self._SetConfig(manager, reviewers=['reviewer@example.com'],
+                    ccs=['cc@example.com'])
+    self._SetConfig(manager2, reviewers=['foo@example.com'],
+                    ccs=['bar@example.com'])
 
-    actual = manager.GetCLReviewers()
-    self.assertCountEqual(actual, ['reviewer@example.com'])
-
-  def testGetCLCCs(self):
-    manager = payload_data.PayloadDataManager(
-        self._ndb_connector, payload_data.PayloadType.VERIFICATION)
-    manager2 = payload_data.PayloadDataManager(self._ndb_connector,
-                                               payload_data.PayloadType.UNKNOWN)
-
-    self._AddCLNotification(manager, payload_data.NotificationType.REVIEWER,
-                            'reviewer@example.com')
-    self._AddCLNotification(manager, payload_data.NotificationType.CC,
-                            'cc@example.com')
-    self._AddCLNotification(manager2, payload_data.NotificationType.REVIEWER,
-                            'foo@example.com')
-    self._AddCLNotification(manager2, payload_data.NotificationType.CC,
-                            'bar@example.com')
-
-    actual = manager.GetCLCCs()
-    self.assertCountEqual(actual, ['cc@example.com'])
+    config = manager.config
+    self.assertCountEqual(config.reviewers, ['reviewer@example.com'])
+    self.assertCountEqual(config.ccs, ['cc@example.com'])
 
   def testGetLatestHWIDMainCommit(self):
     manager = payload_data.PayloadDataManager(
