@@ -28,6 +28,8 @@ class Config(ndb.Model):
   Attributes:
     payload_type: The payload type of config, which should be one of
         PayloadType.
+    disabled: Disable payload generation process.
+    auto_approval: Enable auto approval of CL.
     reviewers: E-mail addresses to be added to reviewer of CL.
     ccs: E-mail addresses to be added to cc of CL.
   """
@@ -37,6 +39,8 @@ class Config(ndb.Model):
     return 'PayloadConfig'
 
   payload_type = ndb.StringProperty()
+  disabled = ndb.BooleanProperty(default=False)
+  auto_approval = ndb.BooleanProperty(default=False)
   reviewers = ndb.StringProperty(repeated=True)
   ccs = ndb.StringProperty(repeated=True)
 

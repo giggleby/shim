@@ -166,6 +166,9 @@ class PayloadManager(abc.ABC):
     """
     self._logger.info('Start syncing')
     config = self._data_manager.config
+    if config.disabled and not force_update:
+      self._logger.info('The payload generator is disabled, skipped')
+      return {}
 
     hwid_live_commit = live_hwid_repo.hwid_db_commit_id
     hwid_prev_commit = self._data_manager.GetLatestHWIDMainCommit()
@@ -196,7 +199,8 @@ class PayloadManager(abc.ABC):
           change_id, unused_cl_number = self._CreateCL(
               dryrun, git_url, self._auth_cookie, branch, git_files, author,
               author, commit_msg, config.reviewers, config.ccs,
-              topic=setting.topic, auto_submit=setting.auto_submit,
+              topic=setting.topic, bot_commit=config.auto_approval,
+              commit_queue=config.auto_approval, auto_submit=True,
               hashtags=setting.hashtags)
           self._PostUpdate(board, models, change_id, payloads)
           result[board] = UpdatedResult(payloads.hash_value, change_id)
@@ -265,6 +269,8 @@ class PayloadManager(abc.ABC):
           author: {author}
           reviewers: {reviewers}
           cc: {cc}
+          bot_commit: {bot_commit}
+          commit_queue: {commit_queue}
           auto_submit: {auto_submit}
           commit msg: \n{textwrap.indent(commit_msg, '          ')}
           update file paths: \n{textwrap.indent(file_paths, '          ')}
