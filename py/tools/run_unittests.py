@@ -3,7 +3,6 @@
 # Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Runs unittests in parallel."""
 
 import argparse
@@ -25,6 +24,7 @@ import sys
 import tempfile
 import threading
 import time
+from typing import cast, Collection, Generator, MutableMapping, Optional, Sequence, Set, Tuple
 
 from cros.factory.tools.unittest_tools import mock_loader
 from cros.factory.unittest_utils import label_utils
@@ -76,24 +76,25 @@ class _TestProc:
     python_path: factory module path to be imported in process
   """
 
-  def __init__(self, test_name, log_name, port_server, python_path):
+  def __init__(self, test_name: str, log_name: str, port_server: str,
+               python_path: str):
     self.test_name = test_name
     self.log_file_name = log_name
     self._port_server = port_server
     self._python_path = python_path
-    self.cros_factory_data_dir = None
-    self.start_time = None
-    self.proc = None
+    self._cros_factory_data_dir = cast(str, None)
+    self.start_time = cast(float, None)
+    self.proc = cast(process_utils.ExtendedPopen, None)
 
   def __enter__(self):
-    self.cros_factory_data_dir = tempfile.mkdtemp(
+    self._cros_factory_data_dir = tempfile.mkdtemp(
         prefix='cros_factory_data_dir.')
-    child_tmp_root = os.path.join(self.cros_factory_data_dir, 'tmp')
+    child_tmp_root = os.path.join(self._cros_factory_data_dir, 'tmp')
     os.mkdir(child_tmp_root)
 
     child_env = os.environ.copy()
     child_env['PYTHONPATH'] = self._python_path
-    child_env['CROS_FACTORY_DATA_DIR'] = self.cros_factory_data_dir
+    child_env['CROS_FACTORY_DATA_DIR'] = self._cros_factory_data_dir
     # Since some tests using `make par` is sensitive to file changes inside py
     # directory, don't generate .pyc file.
     child_env['PYTHONDONTWRITEBYTECODE'] = '1'
@@ -116,8 +117,8 @@ class _TestProc:
     return self
 
   def __exit__(self, exc_type, exc_value, traceback):
-    if os.path.isdir(self.cros_factory_data_dir):
-      shutil.rmtree(self.cros_factory_data_dir)
+    if os.path.isdir(self._cros_factory_data_dir):
+      shutil.rmtree(self._cros_factory_data_dir)
     self._ForceKillProcess()
 
   def _WatchTest(self):
@@ -138,20 +139,22 @@ class _TestProc:
 
 
 class PortDistributeHandler(socketserver.StreamRequestHandler):
+
   def handle(self):
     length = struct.unpack('B', self.rfile.read(1))[0]
+    assert isinstance(self.server, PortDistributeServer)
     port = self.server.RequestPort(length)
     self.wfile.write(struct.pack('<H', port))
 
 
 class PortDistributeServer(socketserver.ThreadingUnixStreamServer):
 
-  def __init__(self, socket_file):
+  def __init__(self, socket_file: str):
     super().__init__(socket_file, PortDistributeHandler)
     self.lock = threading.RLock()
     self.unused_ports = set(
         range(net_utils.UNUSED_PORT_LOW, net_utils.UNUSED_PORT_HIGH))
-    self.thread = None
+    self.thread = cast(threading.Thread, None)
 
   def __enter__(self):
     self.thread = threading.Thread(target=self.serve_forever)
@@ -163,7 +166,7 @@ class PortDistributeServer(socketserver.ThreadingUnixStreamServer):
       net_utils.ShutdownTCPServer(self)
       self.thread.join()
 
-  def RequestPort(self, length):
+  def RequestPort(self, length: int) -> int:
     with self.lock:
       while True:
         port = random.randint(net_utils.UNUSED_PORT_LOW,
@@ -176,7 +179,7 @@ class PortDistributeServer(socketserver.ThreadingUnixStreamServer):
 
 
 @contextlib.contextmanager
-def CreatePortDistributeServer():
+def CreatePortDistributeServer() -> Generator[str, None, None]:
   # Set the temp dir to /tmp to prevent the socket path longer than 108
   # characters (the unix socket file name length limit in linux).
   with tempfile.TemporaryDirectory(dir='/tmp') as temp_dir:
@@ -192,13 +195,21 @@ class RunTests:
     tests: list of unittest paths.
     max_jobs: maxinum number of parallel tests to run.
     log_dir: base directory to store test logs.
+    plain_log: disable color and progress in log.
     isolated_tests: list of test to run in isolate mode.
     fallback: True to re-run failed test sequentially.
   """
 
-  def __init__(self, tests, max_jobs, log_dir, plain_log, isolated_tests=None,
-               fallback=True):
-    self._tests = tests if tests else []
+  def __init__(
+      self,
+      tests: Collection[str],
+      max_jobs: int,
+      log_dir: str,
+      plain_log: bool,
+      isolated_tests: Optional[Sequence[str]] = None,
+      fallback: bool = True,
+  ):
+    self._tests = tests
     self._max_jobs = max_jobs
     self._log_dir = log_dir
     self._plain_log = plain_log
@@ -207,13 +218,15 @@ class RunTests:
     self._start_time = time.time()
 
     # A dict to store running subprocesses. pid: (_TestProc, test_name).
-    self._running_proc = {}
+    self._running_proc: MutableMapping[int, Tuple[_TestProc, str]] = {}
     self._abort_event = threading.Event()
 
-    self._passed_tests = set()  # set of passed test_name
-    self._failed_tests = {}  # dict of failed test name -> log file
-
-    self._run_counts = {}  # dict of test name -> number of runs so far
+    # set of passed test_name
+    self._passed_tests: Set[str] = set()
+    # dict of failed test name -> log file
+    self._failed_tests: MutableMapping[str, str] = {}
+    # dict of test name -> number of runs so far
+    self._run_counts: MutableMapping[str, int] = {}
 
     def AbortHandler(sig, frame):
       del sig, frame  # Unused.
@@ -225,7 +238,7 @@ class RunTests:
 
     signal.signal(signal.SIGINT, AbortHandler)
 
-  def Run(self):
+  def Run(self) -> int:
     """Runs all unittests.
 
     Returns:
@@ -270,7 +283,7 @@ class RunTests:
       return 1
     return 0
 
-  def _GetLogFilename(self, test_path):
+  def _GetLogFilename(self, test_path: str) -> str:
     """Composes log filename.
 
     Log filename is based on unittest path.  We replace '/' with '_' and
@@ -291,7 +304,7 @@ class RunTests:
     return os.path.join(self._log_dir,
                         f"{test_path.replace('/', '_')}.{int(run_count)}.log")
 
-  def _RunInParallel(self, tests, max_jobs):
+  def _RunInParallel(self, tests: Collection[str], max_jobs: int):
     """Runs tests in parallel.
 
     It creates subprocesses and runs in parallel for at most max_jobs.
@@ -319,7 +332,7 @@ class RunTests:
       # Wait for all running test.
       self._WaitRunningProcessesFewerThan(1)
 
-  def _CheckTestFailedReason(self, p):
+  def _CheckTestFailedReason(self, p: _TestProc) -> Optional[str]:
     """Returns fail reason or None if test passed.
 
     Not only checks the return code of the test process, but also examines is
@@ -343,7 +356,7 @@ class RunTests:
 
     return None
 
-  def _RecordTestResult(self, p):
+  def _RecordTestResult(self, p: _TestProc):
     """Records test result.
 
     Places the completed test to either success or failure list based on
@@ -374,7 +387,7 @@ class RunTests:
     time.sleep(1)
     raise KeyboardInterrupt
 
-  def _WaitRunningProcessesFewerThan(self, threshold):
+  def _WaitRunningProcessesFewerThan(self, threshold: int):
     """Waits until #running processes is fewer than specifed.
 
     It is a blocking call. If #running processes >= thresold, it waits for a
@@ -399,15 +412,15 @@ class RunTests:
         self._ShowRunningTest()
       self._abort_event.wait(0.05)
 
-  def _PassMessage(self, message):
+  def _PassMessage(self, message: str):
     self._ClearLine()
     print(message if self._plain_log else f'\033[22;32m{message}\033[22;0m')
 
-  def _FailMessage(self, message):
+  def _FailMessage(self, message: str):
     self._ClearLine()
     print(message if self._plain_log else f'\033[22;31m{message}\033[22;0m')
 
-  def _InfoMessage(self, message):
+  def _InfoMessage(self, message: str):
     self._ClearLine()
     print(message)
 
@@ -427,7 +440,7 @@ class RunTests:
     sys.stderr.flush()
 
 
-def FindTests(directory):
+def FindTests(directory: str) -> Set[str]:
   """Returns a set of test filenames starting from the given directory.
 
   filenames ending with TEST_FILE_SUFFIX or TEST_FILE_USE_MOCK_SUFFIX are
@@ -439,7 +452,7 @@ def FindTests(directory):
                     recursive=True))
 
 
-def GetUnitTestFilenames():
+def GetUnitTestFilenames() -> Sequence[str]:
   """Searches and returns list of test filenames starting from factory root."""
   test_files = set()
   for d in DIRECTORIES_TO_SEARCH:
