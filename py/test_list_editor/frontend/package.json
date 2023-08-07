@@ -47,8 +47,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "CI=true react-scripts test --transformIgnorePatterns --env=jsdom \"node_modules/(?!axios)/\"",
-    "coverage": "CI=true react-scripts test --transformIgnorePatterns \"node_modules/(?!axios)/\" --coverage",
+    "test": "CI=true react-scripts test --env=jsdom",
+    "coverage": "CI=true react-scripts test  --env=jsdom --coverage",
     "presubmit": "npm run test && npm run lint && npm run format_check && touch .frontend-presubmit-passed",
     "lint": "eslint src/",
     "format": "npx prettier --write src/",
