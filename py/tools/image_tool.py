@@ -4083,7 +4083,7 @@ class EditToolkitConfigCommand(SubCommand):
           self.args.image, self.args.board, [PAYLOAD_TYPE_TOOLKIT_CONFIG],
           temp_dir, create_metadata=True)
       json_path = CrosPayloadUtils.GetJSONPath(temp_dir, self.args.board)
-      with tempfile.NamedTemporaryFile('w') as config_file:
+      with tempfile.NamedTemporaryFile('r+') as config_file:
         try:
           CrosPayloadUtils.InstallComponents(
               json_path, config_file.name, PAYLOAD_TYPE_TOOLKIT_CONFIG,
