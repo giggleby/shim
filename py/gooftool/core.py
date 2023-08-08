@@ -28,6 +28,7 @@ from cros.factory.gooftool import wipe
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.probe.functions import flash_chip
+from cros.factory.test.env import paths
 from cros.factory.test.l10n import regions
 from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
@@ -1824,10 +1825,20 @@ class Gooftool:
       probe_result = flash_chip.FlashChipFunction.ProbeDevices('host')
       flash_name = probe_result.get('name') or probe_result.get('partname')
 
-      sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
+      # Reads `.../factory/py/test/pytests/model_sku.json`
+      # for 'spi_flash_transform' information.
+      model_sku_config_path = os.path.join(paths.FACTORY_DIR, 'py', 'test',
+                                           'pytests')
+      sku_config = model_sku_utils.GetDesignConfig(
+          self._util.sys_interface, default_config_dirs=model_sku_config_path,
+          config_name='model_sku')
       if 'spi_flash_transform' in sku_config and flash_name in sku_config[
           'spi_flash_transform']:
-        flash_name = sku_config['spi_flash_transform'][flash_name]
+        new_flash_name = sku_config['spi_flash_transform'][flash_name]
+        logging.info('Transform flash name from "%s" to "%s".', flash_name,
+                     new_flash_name)
+        flash_name = new_flash_name
+
       logging.info('Flash name: %s', flash_name)
       return flash_name
 
