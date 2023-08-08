@@ -40,27 +40,13 @@ type CodeCopyButtonProps =
 const useClipboardCopy = () => {
   const [isCopied, setIsCopied] = React.useState(false);
   const timeout = React.useRef<ReturnType<typeof setTimeout>>();
-  const mounted = React.useRef(false);
-
-  React.useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
 
   const copy = async (text: string) => {
-    try {
-      setIsCopied(true);
-      timeout.current = setTimeout(() => {
-        if (mounted) {
-          setIsCopied(false);
-        }
-      }, 1200);
-      await clipboardCopy(text);
-    } catch (error) {
-      // ignore error
-    }
+    setIsCopied(true);
+    timeout.current = setTimeout(() => {
+      setIsCopied(false);
+    }, 1200);
+    await clipboardCopy(text);
   };
 
   return {copy, isCopied};
