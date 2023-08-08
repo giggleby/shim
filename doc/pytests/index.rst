@@ -15,3 +15,9 @@ factory code.
 
    *
 
+Notes
+-----
+
+The components here are AVL components. See this :doc:`link<../hwid/index>` for
+the mapping of HWID component and AVL components.
+

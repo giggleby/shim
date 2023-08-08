@@ -17,6 +17,7 @@ Contents
    pytests/index.rst
    test_lists/index.rst
    probe/index.rst
+   hwid/index.rst
 
 APIs
 ====

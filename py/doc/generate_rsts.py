@@ -27,6 +27,8 @@ import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import urllib.parse
 
+from cros.factory.hwid.v3 import converter
+from cros.factory.probe import common
 from cros.factory.probe import function as probe_function
 from cros.factory.test.env import paths
 from cros.factory.test import test_case
@@ -459,6 +461,29 @@ def GenerateProbeDoc(output_dir):
   # Generate the index file.
   FinishTemplate(os.path.join(output_dir, 'index.rst'),
                  functions_section=functions_section_rst.io.getvalue())
+
+
+@DocGenerator('hwid')
+def GenerateHWIDDoc(output_dir):
+  probe_statement = common.LoadUserProbeStatementFile(
+      converter.DEFAULT_PROBE_STATEMENT_PATH)
+
+  table = {}
+  for category in test_case.TestCategory.__members__.values():
+    if category.hwid_name:
+      table.setdefault(category.hwid_name, []).append(category)
+
+  with open(os.path.join(output_dir, 'index.rst'), 'w', encoding='utf8') as out:
+    rst = RSTWriter(out)
+    rst.WriteTitle('HWID components', '=')
+    rst.WriteListTableHeader(header_rows=1)
+    rst.WriteListTableRow(('HWID Component Name', 'AVL Component Names'))
+
+    for comp_cls in sorted(probe_statement):
+      sub_rst = RSTWriter(StringIO())
+      for sub_item in table.get(comp_cls, []):
+        sub_rst.WriteListItem(LinkToAVL(sub_item))
+      rst.WriteListTableRow((comp_cls, sub_rst.io.getvalue()))
 
 
 def main():
