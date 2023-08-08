@@ -45,6 +45,8 @@
     "@testing-library/react": "~9.4.0",
     "@types/classnames": "~2.2.6",
     "@types/dateformat": "~1.0.1",
+    "@types/enzyme": "^3.10.13",
+    "@types/enzyme-adapter-react-16": "^1.0.6",
     "@types/get-node-dimensions": "~1.2.0",
     "@types/jest": "~24.0.25",
     "@types/js-yaml": "~3.11.2",
@@ -59,7 +61,10 @@
     "@types/webpack-env": "~1.13.6",
     "babel-jest": "~24.9.0",
     "babel-loader": "8.0.2",
+    "enzyme": "^3.11.0",
+    "enzyme-adapter-react-16": "^1.15.7",
     "jest": "~24.9.0",
+    "jest-html-reporters": "^3.1.4",
     "koa-convert": "~1.2.0",
     "koa-webpack-hot-middleware": "~1.0.3",
     "react-test-renderer": "~16.12.0",
@@ -77,7 +82,8 @@
     "build": "mkdir -p build && cp src/static/* build && webpack-cli",
     "dev": "webpack-serve ./webpack.config.js",
     "lint": "tslint -t verbose -p ./",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "author": "Mao Huang <littlecvr@google.com>"
 }

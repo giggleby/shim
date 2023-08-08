@@ -23,8 +23,29 @@ module.exports = {
   // Test spec file resolution pattern
   // Matches parent folder `__tests__` and filename
   // should contain `test` or `spec`.
-  testRegex: "(/__tests__/.*|(\\.|/)(test|spec))\\.tsx?$",
+  testRegex: "(/.*(test|spec))\\.tsx?$",
 
   // Module file extensions for importing
-  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"]
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+
+  // An array of directory names to be searched recursively up from the
+  // requiring module's location.
+  moduleDirectories: ["node_modules", "src"],
+
+  // A map from regular expressions to module names or to arrays of module
+  // names that allow to stub out resources.
+  moduleNameMapper: {
+    '@app/(.*)': '<rootDir>/src/$1',
+    '@common/(.*)': '<rootDir>/src/common/$1',
+  },
+
+  // Use a Jest test results processor for generating a summary in HTML.
+  reporters: [
+    "default",
+    [
+      "jest-html-reporters", {
+        publicPath: "report"
+      }
+    ]
+  ]
 };

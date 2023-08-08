@@ -63,3 +63,11 @@ test-frontend:
 	echo "Running dome frontend test"
 	../../setup/cros_docker.sh build
 	docker run --rm cros/dome-builder npm run test
+
+test-frontend-coverage:
+	echo "Running dome frontend test coverage"
+	docker rm -f dome_builder
+	../../setup/cros_docker.sh build
+	docker run --name dome_builder cros/dome-builder npm run test:coverage
+	docker cp "dome_builder:${DOME_DIR}/frontend/report" "$(CURDIR)/frontend/"
+	docker rm dome_builder
