@@ -4,7 +4,7 @@
 
 import NoSsr from '@mui/base/NoSsr';
 import Box from '@mui/material/Box';
-import indigo from '@mui/material/colors/indigo';
+import {indigo} from '@mui/material/colors';
 import {Theme} from '@mui/material/styles';
 import {
   createStyles,
