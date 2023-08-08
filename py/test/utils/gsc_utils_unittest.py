@@ -7,6 +7,7 @@ import os
 import unittest
 from unittest import mock
 
+from cros.factory.test.env import paths
 from cros.factory.test.rules import phase
 from cros.factory.test.utils import gsc_utils
 from cros.factory.test.utils.gsc_utils import GSCScriptPath
@@ -403,6 +404,54 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertRaisesRegex(gsc_utils.GSCUtilsError,
                            'Fail to parse the wpsr from ap_wpsr tool',
                            self.gsc.Ti50SetSWWPRegister, False)
+
+  @mock.patch(
+      'cros.factory.probe.functions.flash_chip.FlashChipFunction.ProbeDevices')
+  @mock.patch('cros.factory.test.utils.model_sku_utils.GetDesignConfig')
+  @mock.patch('logging.info')
+  def testGetFlashName_NoTransform(self, mock_info, mock_get_config,
+                                   mock_probe_device):
+    mock_probe_device.return_value = {
+        'name': 'mock_name'
+    }
+    mock_get_config.return_value = {}
+
+    flash_name = self.gsc.GetFlashName()
+    self.assertEqual(flash_name, 'mock_name')
+    mock_probe_device.assert_called_once_with('host')
+    mock_get_config.assert_called_once_with(
+        self.gsc._dut,  # pylint: disable=protected-access
+        default_config_dirs=f'{paths.FACTORY_DIR}/py/test/pytests',
+        config_name='model_sku')
+    mock_info.assert_called_once_with('Flash name: %s', 'mock_name')
+
+  @mock.patch(
+      'cros.factory.probe.functions.flash_chip.FlashChipFunction.ProbeDevices')
+  @mock.patch('cros.factory.test.utils.model_sku_utils.GetDesignConfig')
+  @mock.patch('logging.info')
+  def testGetFlashName_Transform(self, mock_info, mock_get_config,
+                                 mock_probe_device):
+    mock_probe_device.return_value = {
+        'partname': 'mock_partname'
+    }
+    mock_get_config.return_value = {
+        'spi_flash_transform': {
+            'mock_partname': 'transformed_mock_partname'
+        }
+    }
+
+    flash_name = self.gsc.GetFlashName()
+    self.assertEqual(flash_name, 'transformed_mock_partname')
+    mock_probe_device.assert_called_once_with('host')
+    mock_get_config.assert_called_once_with(
+        self.gsc._dut,  # pylint: disable=protected-access
+        default_config_dirs=f'{paths.FACTORY_DIR}/py/test/pytests',
+        config_name='model_sku')
+    mock_info.assert_has_calls([
+        mock.call('Transform flash name from "%s" to "%s".', 'mock_partname',
+                  'transformed_mock_partname'),
+        mock.call('Flash name: %s', 'transformed_mock_partname')
+    ])
 
   @mock.patch('logging.info')
   def testExecuteGSCSetScript(self, mock_info):
