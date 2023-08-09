@@ -26,10 +26,10 @@ from cros.factory.external.chromeos_cli import vpd
 
 class GSCScriptPath(enum.Enum):
   GSC_CONSTANTS = '/usr/share/cros/gsc-constants.sh'
-  BOARD_ID = '/usr/share/cros/cr50-set-board-id.sh'
-  SN_BITS = '/usr/share/cros/cr50-set-sn-bits.sh'
+  BOARD_ID = '/usr/share/cros/hwsec-utils/cr50_set_board_id'
+  SN_BITS = '/usr/share/cros//hwsec-utils/cr50_set_sn_bits'
   FACTORY_CONFIG = '/usr/share/cros/hwsec-utils/cr50_set_factory_config'
-  AP_RO_HASH = 'ap_ro_hash.py'
+  AP_RO_HASH = '/usr/local/bin/ap_ro_hash.py'
 
 
 class GSCUtilsError(type_utils.Error):
@@ -341,7 +341,7 @@ class GSCUtils:
 
     mode = arg_phase
     if two_stages:
-      mode = 'whitelabel_' + mode
+      mode = 'two_stages_' + mode
       if is_flags_only:
         mode += '_flags'
 

@@ -323,7 +323,7 @@ class GSCUtilsTest(unittest.TestCase):
     self.gsc.GSCSetBoardId(two_stages=True, is_flags_only=True)
 
     mock_script.assert_called_with(GSCScriptPath.BOARD_ID,
-                                   'whitelabel_pvt_flags')
+                                   'two_stages_pvt_flags')
 
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(PHASE)
@@ -331,7 +331,7 @@ class GSCUtilsTest(unittest.TestCase):
     mock_phase.return_value = phase.PVT
 
     self.gsc.GSCSetBoardId(two_stages=True, is_flags_only=False)
-    mock_script.assert_called_with(GSCScriptPath.BOARD_ID, 'whitelabel_pvt')
+    mock_script.assert_called_with(GSCScriptPath.BOARD_ID, 'two_stages_pvt')
 
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(PHASE)
@@ -411,10 +411,10 @@ class GSCUtilsTest(unittest.TestCase):
     self.gsc.ExecuteGSCSetScript(GSCScriptPath.BOARD_ID, 'args')
 
     self.shell.assert_called_with(
-        ['/usr/share/cros/cr50-set-board-id.sh', 'args'])
-    mock_info.assert_called_with('Successfully set %s on GSC with `%s`.',
-                                 'BOARD_ID',
-                                 '/usr/share/cros/cr50-set-board-id.sh args')
+        ['/usr/share/cros/hwsec-utils/cr50_set_board_id', 'args'])
+    mock_info.assert_called_with(
+        'Successfully set %s on GSC with `%s`.', 'BOARD_ID',
+        '/usr/share/cros/hwsec-utils/cr50_set_board_id args')
 
   @mock.patch('logging.error')
   def testExecuteGSCSetScriptAlreadySet(self, mock_error):
@@ -449,12 +449,13 @@ class GSCUtilsTest(unittest.TestCase):
 
     self.assertEqual(
         GSCScriptPath(GSCScriptPath.BOARD_ID).value,
-        '/usr/share/cros/cr50-set-board-id.sh')
+        '/usr/share/cros/hwsec-utils/cr50_set_board_id')
     self.assertEqual(
         GSCScriptPath(GSCScriptPath.SN_BITS).value,
-        '/usr/share/cros/cr50-set-sn-bits.sh')
+        '/usr/share/cros//hwsec-utils/cr50_set_sn_bits')
     self.assertEqual(
-        GSCScriptPath(GSCScriptPath.AP_RO_HASH).value, 'ap_ro_hash.py')
+        GSCScriptPath(GSCScriptPath.AP_RO_HASH).value,
+        '/usr/local/bin/ap_ro_hash.py')
     self.assertEqual(
         GSCScriptPath(GSCScriptPath.FACTORY_CONFIG).value,
         '/usr/share/cros/hwsec-utils/cr50_set_factory_config')
