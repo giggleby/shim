@@ -254,6 +254,7 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._cros_config.GetCustomLabelTag.return_value = (True,
                                                                   'unittest')
     self._gooftool._cros_config.GetModelName.return_value = 'unittest'
+    self._gooftool._cros_config.GetFirmwareImageName.return_value = 'unittest'
 
     self._smart_amp_info = self._gooftool.GetSmartAmpInfo
     self._gooftool.GetSmartAmpInfo = mock.Mock(return_value=[None, None, None])
