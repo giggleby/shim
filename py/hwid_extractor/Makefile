@@ -35,7 +35,6 @@ JS_SOURCES := \
 
 HWID_EXTRACTOR_SOURCES := \
 	www/index.html \
-	ap_config.json \
 	$(JS_SOURCES) \
 	$(wildcard *.py)
 
@@ -49,8 +48,6 @@ INSTALL_TARGET := $(addprefix install_,$(SOURCES))
 
 .PHONY: all check_js $(INSTALL_TARGET) install
 
-all: ap_config.json
-
 check_js:
 	closure-compiler \
 	  --warning_level=VERBOSE \
@@ -59,13 +56,7 @@ check_js:
 	  --checks-only \
 	  $(JS_SOURCES)
 
-ap_config.json:
-	# TODO(b/283024460): Use futility to handle ap config.
-	$(CHROMITE_PATH)/bin/cros ap dump-config -o ap_config.json --board \
-		"draco drallion generic grunt hades hatch keeby mancomb octopus puff \
-		volteer brya brask"
-
-$(INSTALL_TARGET): ap_config.json
+$(INSTALL_TARGET):
 	mkdir -p $(DEST_LIB_PATH)/py/$(dir $(@:install_%=%))
 	cp -P $(FACTORY_SRC_PATH)/$(@:install_%=%) \
 		$(DEST_LIB_PATH)/py/$(@:install_%=%)

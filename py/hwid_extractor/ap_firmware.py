@@ -2,79 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import functools
 import logging
-import os
 import re
 import subprocess
 
 from cros.factory.utils import file_utils
-from cros.factory.utils import json_utils
-from cros.factory.utils import schema
 
 
 FUTILITY_BIN = '/usr/bin/futility'
 VPD_BIN = '/usr/sbin/vpd'
 CMD_TIMEOUT_SECOND = 20
 
-# The servo type names from servod.
-SERVO_TYPE_CCD = 'ccd_gsc'
-
-# The config of the ap commands of each board.
-AP_CONFIG_JSON = os.path.join(os.path.dirname(__file__), 'ap_config.json')
-AP_CONFIG_DUT_CONTROL = {
-    'type': 'array',
-    'items': {
-        'type': 'array',
-        'items': {
-            'type': 'string'
-        }
-    }
-}
-AP_CONFIG_SCHEMA = schema.JSONSchemaDict(
-    'ap_config',
-    {
-        'type': 'object',
-        # Board.
-        'additionalProperties': {
-            'type': 'object',
-            # Servo type.
-            'additionalProperties': {
-                'type': 'object',
-                'properties': {
-                    'dut_control_off': AP_CONFIG_DUT_CONTROL,
-                    'dut_control_on': AP_CONFIG_DUT_CONTROL,
-                    'programmer': {
-                        'type': 'string'
-                    }
-                }
-            }
-        }
-    })
-
 HWID_RE = re.compile(r'hardware_id: ([A-Z0-9- ]+)')
 SERIAL_NUMBER_RE = re.compile(r'"serial_number"="([A-Za-z0-9]+)"')
 
 
-@functools.lru_cache(maxsize=None)
-def _GetBoardConfigurations():
-  """Get ap firmware configuration of each board.
-
-  The configurations of supported boards are under chromite
-  `chromite.lib.firmware.ap_firmware_config`. Those configs are dumped to
-  `ap_config.json` through `cros ap dump-config`.
-  """
-  boards = json_utils.LoadFile(AP_CONFIG_JSON)
-  AP_CONFIG_SCHEMA.Validate(boards)
-  return {k: v
-          for k, v in boards.items()
-          if SERVO_TYPE_CCD in v}
-
-
-@functools.lru_cache(maxsize=None)
 def GetSupportedBoards():
   """The supported boards for the web UI."""
-  return sorted(_GetBoardConfigurations())
+  # This list was initially populated by copying from:
+  # https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:src/platform/factory/py/hwid_extractor/Makefile;drc=e06002c53672b84f8a330efb732dad6c9b61186a;l=65-66
+  return [
+      'brask',
+      'brya',
+      'draco',
+      'drallion',
+      'generic',
+      'grunt',
+      'hades',
+      'hatch',
+      'keeby',
+      'mancomb',
+      'octopus',
+      'puff',
+      'volteer',
+  ]
 
 
 def _GetHWID(firmware_binary_file):
