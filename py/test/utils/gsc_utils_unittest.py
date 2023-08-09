@@ -297,13 +297,15 @@ class GSCUtilsTest(unittest.TestCase):
 
     mock_set_flags.assert_called_with(True, 2)
 
+  @mock.patch('cros.factory.utils.file_utils.CheckPath')
   @mock.patch(f'{GSCTOOL}.SetFeatureManagementFlags')
   @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
   @mock.patch(f'{GSCUTIL}.IsGSCFeatureManagementFlagsLocked')
-  def testGSCSetFeatureManagementFlagsFallback(
-      self, mock_locked, mock_device_data, mock_get_flags, mock_set_flags):
-    self.mock_check_path.stop()  # Assume the file doesn't exist in file system.
+  def testGSCSetFeatureManagementFlagsFallback(self, mock_locked,
+                                               mock_device_data, mock_get_flags,
+                                               mock_set_flags, mock_path):
+    mock_path.side_effect = FileNotFoundError
     mock_locked.return_value = False
     mock_device_data.side_effect = [True, 1]
     mock_get_flags.return_value = FeatureManagementFlags(False, 0)
@@ -311,7 +313,6 @@ class GSCUtilsTest(unittest.TestCase):
     self.gsc.GSCSetFeatureManagementFlags()
 
     mock_set_flags.assert_called_with(True, 1)
-    self.mock_check_path.start()  # To prevent runtime error before python 3.8
 
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(PHASE)
