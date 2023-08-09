@@ -229,6 +229,7 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._cros_config.GetCustomLabelTag.return_value = (True,
                                                                   'unittest')
     self._gooftool._cros_config.GetModelName.return_value = 'unittest'
+    self._gooftool._cros_config.GetFirmwareImageName.return_value = 'unittest'
 
     self._gooftool._gsctool = mock.Mock(self._gooftool._gsctool)
     self._gooftool._gsctool.GetFeatureManagementFlags.return_value = (

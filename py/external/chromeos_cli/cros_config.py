@@ -63,6 +63,10 @@ class CrosConfig:
     result = self.GetValue('/', 'name')
     return result.stdout.strip() if result.stdout else ''
 
+  def GetFirmwareImageName(self):
+    result = self.GetValue('/firmware', 'image-name')
+    return result.stdout.strip() if result.stdout else ''
+
   def GetFingerPrintBoard(self):
     result = self.GetValue('/fingerprint', 'board')
     return result.stdout.strip() if result.stdout else ''

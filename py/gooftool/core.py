@@ -548,18 +548,27 @@ class Gooftool:
       _VerifyMiniOS(is_dev_rootkey, key_recovery, dir_devkeys)
 
       if not is_dev_rootkey:
-        model_name = self._cros_config.GetModelName()
+        # Try GetFirmwareImageName first before falling back to use
+        # GetModelName. These two values will differ when
+        # model_name_design_id_override is used, the firmware image name will
+        # be original design name while the model name will be overridden.
+        # GetFirmwareImageName might be empty if we haven't pinned firmware
+        # into OS, although this should not happen as in PVT phase we
+        # should already pin the final firmware in OS.
+        firmware_name = self._cros_config.GetFirmwareImageName()
+        if not firmware_name:
+          raise Error('cros_config /firmware image-name is not found.')
         is_custom_label, custom_label_tag = (
             self._cros_config.GetCustomLabelTag())
         if is_custom_label and custom_label_tag:
-          model_name = model_name + "-" + custom_label_tag
+          firmware_name = firmware_name + "-" + custom_label_tag
         with sys_utils.MountPartition(release_rootfs) as root:
           release_updater_path = os.path.join(root, _FIRMWARE_RELATIVE_PATH)
           _TmpExec('unpack firmware updater from release rootfs partition',
                    f'{release_updater_path} --unpack {tmpdir}')
         release_rootkey_hash = _TmpExec('get rootkey from signer',
                                         'cat VERSION.signer', regex=r'(?<='
-                                        f'{model_name}:).*').strip()
+                                        f'{firmware_name}:).*').strip()
         if release_rootkey_hash != rootkey_hash:
           raise Error(
               f'Firmware rootkey is not matched ({release_rootkey_hash} != '
