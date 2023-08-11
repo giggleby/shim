@@ -277,6 +277,7 @@ def AssertStrLen(length):
     logger.Error('Assertion error')
 
 
+@label_utils.Informational
 class ValueYAMLTagTest(unittest.TestCase):
 
   def testYAMLParsing(self):
