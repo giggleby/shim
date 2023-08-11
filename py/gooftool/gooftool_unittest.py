@@ -891,6 +891,46 @@ class GooftoolTest(unittest.TestCase):
     matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
     self.assertDictEqual(matched_config, configs[0])
 
+  def testMatchConfigWithIdentity_extraVPD(self):
+    identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
+    identity['frid'] = 'Google_Skolas'
+    identity['sku-id'] = 'sku1'
+    identity['customization-id'] = 'empty'
+    identity['custom-label-tag'] = 'custom-label-tag'
+
+    configs = [
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'frid': 'Google_Skolas',
+                'sku-id': 1
+            }
+        },
+    ]
+
+    matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
+    self.assertIsNone(matched_config)
+
+  def testMatchConfigWithIdentity_noVPD(self):
+    identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
+    identity['frid'] = 'Google_Skolas'
+    identity['sku-id'] = 'sku1'
+    identity['customization-id'] = 'empty'
+    identity['custom-label-tag'] = 'empty'
+
+    configs = [
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'frid': 'Google_Skolas',
+                'sku-id': 1
+            }
+        },
+    ]
+
+    matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
+    self.assertDictEqual(matched_config, configs[0])
+
   def testMatchConfigWithIdentity_Arm_Frid(self):
     identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
     identity['device-tree-compatible-match'] = \
