@@ -357,6 +357,7 @@
       },
       "keys": [
         "bus_type",
+        "pci_class",
         "pci_vendor_id",
         "pci_device_id",
         "pci_revision",
@@ -378,6 +379,7 @@
       },
       "keys": [
         "bus_type",
+        "pci_class",
         "pci_vendor_id",
         "pci_device_id",
         "pci_revision",
