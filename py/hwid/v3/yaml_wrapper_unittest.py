@@ -277,7 +277,6 @@ def AssertStrLen(length):
     logger.Error('Assertion error')
 
 
-@label_utils.Informational
 class ValueYAMLTagTest(unittest.TestCase):
 
   def testYAMLParsing(self):
@@ -287,8 +286,14 @@ class ValueYAMLTagTest(unittest.TestCase):
     self.assertIn(
         yaml.safe_dump(rule.Value('abc', is_re=True)),
         (
-            "!re 'abc'\n",  # SafeDump style
-            "!re abc\n...\n",  # CSafeDumper style
+            # SafeDumper style
+            "!re 'abc'\n",
+            # CSafeDumper style before
+            # https://github.com/yaml/libyaml/commit/56400d976
+            "!re abc\n...\n",
+            # CSafeDumper style since
+            # https://github.com/yaml/libyaml/commit/56400d976
+            "!re abc\n",
         ))
 
 
