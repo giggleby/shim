@@ -825,7 +825,7 @@ class Gooftool:
   def _MatchConfigWithIdentity(self, configs, identity):
     for config in configs:
       config_identity = config['identity']
-      mismatch_count = 0
+      mismatch = False
       for key in config_identity.keys():
         if key == 'device-tree-compatible-match':
           # For device-tree-compatible-match, the original way of crosid
@@ -839,7 +839,7 @@ class Gooftool:
           # [google,tentacruel][google,corsolamed][...].
           # We just match it with a simpler way here.
           if config_identity[key] not in identity[key]:
-            mismatch_count += 1
+            mismatch = True
             break
         elif key == 'sku-id':
           # For x86 devices the format would be sku + at least 1 digit.
@@ -852,12 +852,21 @@ class Gooftool:
           sku_string = identity[key]
           sku_value = int(sku_string.lstrip('sku'))
           if config_identity[key] != sku_value:
-            mismatch_count += 1
+            mismatch = True
             break
         elif config_identity[key] != identity[key]:
-          mismatch_count += 1
+          mismatch = True
           break
-      if not mismatch_count:
+
+      if mismatch:
+        continue
+
+      for key in ('customization-id', 'custom-label-tag'):
+        if key not in config_identity and identity[key] != 'empty':
+          mismatch = True
+          break
+
+      if not mismatch:
         return config
     return None
 
