@@ -44,6 +44,7 @@ from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.test import state
 from cros.factory.test.utils.cbi_utils import CbiEepromWpStatus
 from cros.factory.test.utils import hps_utils
+from cros.factory.test.utils import smart_amp_utils
 from cros.factory.utils import argparse_utils
 from cros.factory.utils.argparse_utils import CmdArg
 from cros.factory.utils.argparse_utils import ParseCmdline
@@ -1250,11 +1251,12 @@ def GetFirmwareHash(options):
     raise Error(f'File does not exist: {options.file}')
 
 
-@Command('get_smart_amp_info', *GetGooftool.__args__)
+@Command('get_smart_amp_info')
 def GetSmartAmpInfo(options):
   """Get the information about the smart amplifier."""
+  del options  # Unused
   speaker_amp, sound_card_init_path, channels = \
-    GetGooftool(options).GetSmartAmpInfo()
+    smart_amp_utils.GetSmartAmpInfo()
   if speaker_amp:
     print('Amplifier name:', speaker_amp)
   if sound_card_init_path:
