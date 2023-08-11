@@ -22,6 +22,7 @@ from cros.factory.gooftool import core
 from cros.factory.gooftool.core import CrosConfigIdentity
 from cros.factory.gooftool.core import IdentitySourceEnum
 from cros.factory.gooftool import crosfw
+from cros.factory.gooftool import vpd_utils
 from cros.factory.test.rules import phase
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.unittest_utils import label_utils
@@ -200,8 +201,10 @@ class GooftoolTest(unittest.TestCase):
                                                                   'unittest')
     self._gooftool._cros_config.GetModelName.return_value = 'unittest'
 
-    self._smart_amp_info = self._gooftool.GetSmartAmpInfo
-    self._gooftool.GetSmartAmpInfo = mock.Mock(return_value=[None, None, None])
+    self.get_amp_info = mock.patch(
+        'cros.factory.test.utils.smart_amp_utils.GetSmartAmpInfo')
+    self.get_amp_info.start().return_value = [None, None, None]
+    self.addCleanup(self.get_amp_info.stop)
 
   def testVerifyECKeyWithPubkeyHash(self):
     f = MockFile()
@@ -533,7 +536,7 @@ class GooftoolTest(unittest.TestCase):
                         rw=self._SIMPLE_VALID_RW_VPD_DATA)
     mock_cros_config.return_value.GetAmplifier.return_value = 'MAX98360'
     mock_cros_config.return_value.GetSoundCardInit.return_value = None
-    self._gooftool.GetSmartAmpInfo = self._smart_amp_info
+    self.get_amp_info.stop()
 
     # Should not fail, since MAX98360 is not a smart amplifier.
     self._gooftool.VerifyVPD()
@@ -541,6 +544,7 @@ class GooftoolTest(unittest.TestCase):
         partition=vpd.VPD_READONLY_PARTITION_NAME)
     self._gooftool._vpd.GetAllData.assert_any_call(
         partition=vpd.VPD_READWRITE_PARTITION_NAME)
+    self.get_amp_info.start()  # To prevent runtime error before python 3.8
 
   @mock.patch.object(cros_config, 'CrosConfig')
   @mock.patch.object(file_utils, 'CheckPath')
@@ -554,16 +558,17 @@ class GooftoolTest(unittest.TestCase):
     mock_path_checker.return_value = True
     mock_file_reader.return_value = \
       '  temp_ctrl: ["Left ADC TEMP", "Right ADC TEMP"]'
-    self._gooftool.GetSmartAmpInfo = self._smart_amp_info
+    self.get_amp_info.stop()
 
     # Should fail, since dsm calib is missing.
     # Since the dictionary ordering is not deterministic, we use regex to parse
     # the error messages.
     dsm_string_regex = 'dsm_calib_(?:temp|r0)_[0-1]'
     self.assertRaisesRegex(
-        core.VPDError,
+        vpd_utils.VPDError,
         f'Missing required RO VPD values: (?:{dsm_string_regex},){{3}}'
         f'{dsm_string_regex}', self._gooftool.VerifyVPD)
+    self.get_amp_info.start()  # To prevent runtime error before python 3.8
 
   def testVerifyVPD_NoRegion(self):
     ro_vpd_value = self._SIMPLE_VALID_RO_VPD_DATA.copy()
@@ -571,7 +576,7 @@ class GooftoolTest(unittest.TestCase):
     self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
 
     # Should fail, since region is missing.
-    self.assertRaisesRegex(core.VPDError,
+    self.assertRaisesRegex(vpd_utils.VPDError,
                            'Missing required RO VPD values: region',
                            self._gooftool.VerifyVPD)
 
@@ -580,7 +585,7 @@ class GooftoolTest(unittest.TestCase):
     ro_vpd_value['region'] = 'nonexist'
     self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
 
-    self.assertRaisesRegex(core.VPDError, 'Unknown region: "nonexist".',
+    self.assertRaisesRegex(vpd_utils.VPDError, 'Unknown region: "nonexist".',
                            self._gooftool.VerifyVPD)
 
   def testVerifyVPD_InvalidMACKey(self):
@@ -588,7 +593,7 @@ class GooftoolTest(unittest.TestCase):
     ro_vpd_value['wifi_mac'] = '00:11:de:ad:be:ef'
     self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
 
-    self.assertRaisesRegex(core.VPDError,
+    self.assertRaisesRegex(vpd_utils.VPDError,
                            'Unexpected RO VPD: wifi_mac=00:11:de:ad:be:ef.',
                            self._gooftool.VerifyVPD)
 
@@ -599,7 +604,7 @@ class GooftoolTest(unittest.TestCase):
     rw_vpd_value['gbind_attribute'] = 'badvalue'
     self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA, rw=rw_vpd_value)
 
-    self.assertRaisesRegex(core.VPDError, 'gbind_attribute is invalid:',
+    self.assertRaisesRegex(vpd_utils.VPDError, 'gbind_attribute is invalid:',
                            self._gooftool.VerifyVPD)
 
   # TODO (b/212216855)
@@ -614,7 +619,7 @@ class GooftoolTest(unittest.TestCase):
         'zbTOX_9OQI_3EAAaCmNocm9tZWJvb2sQouDUgwQ=')
     self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA, rw=rw_vpd_value)
 
-    self.assertRaisesRegex(core.VPDError, 'gbind_attribute is invalid: ',
+    self.assertRaisesRegex(vpd_utils.VPDError, 'gbind_attribute is invalid: ',
                            self._gooftool.VerifyVPD)
 
   # TODO (b/212216855)
@@ -634,7 +639,7 @@ class GooftoolTest(unittest.TestCase):
     ro_vpd_value['initial_locale'] = 'en-US'
     self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
 
-    self.assertRaisesRegex(core.VPDError,
+    self.assertRaisesRegex(vpd_utils.VPDError,
                            'Unexpected RO VPD: initial_locale=en-US',
                            self._gooftool.VerifyVPD)
 
