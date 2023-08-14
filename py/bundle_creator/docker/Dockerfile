@@ -49,10 +49,9 @@ RUN pip install crcmod==1.7
 # The `jsonschema` module is required for installing factory toolkit.
 RUN pip install jsonschema==4.17.3
 
-COPY docker/install_factory_toolkit.run /tmp
 # Use `docker/factory.zip*` here to prevent the interruption when the file
 # doesn't exist.
-COPY docker/factory.zip* /tmp
+COPY docker/install_factory_toolkit.run docker/factory.zip* /tmp/
 COPY docker/setup/ /tmp/setup
 # We install toolkit, cgpt, and futility here. If `make bundle` is executed,
 # then use the local bundle. Otherwise, download the bundle from gs bucket.
