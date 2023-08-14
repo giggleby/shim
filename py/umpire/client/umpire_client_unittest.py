@@ -17,13 +17,13 @@ class MockSystemInfo:
   """Mocked SystemInfo class."""
 
   def __init__(self, serial_number, mlb_serial_number, firmware_version,
-               ec_version, pd_version, stage, eth_macs, wlan0_mac,
+               ec_active_version, pd_version, stage, eth_macs, wlan0_mac,
                factory_image_version, release_image_version,
                hwid_database_version, toolkit_version):
     self.serial_number = serial_number
     self.mlb_serial_number = mlb_serial_number
     self.firmware_version = firmware_version
-    self.ec_version = ec_version
+    self.ec_active_version = ec_active_version
     self.pd_version = pd_version
     self.stage = stage
     self.eth_macs = eth_macs
@@ -34,62 +34,46 @@ class MockSystemInfo:
     self.toolkit_version = toolkit_version
 
 mock_system_info_1 = MockSystemInfo(
-    serial_number='DEV001',
-    mlb_serial_number='MLB001',
-    firmware_version='fw_001',
-    ec_version='ec_001',
-    pd_version='pd_001',
-    stage='SMT',
-    eth_macs={'eth0': 'EE:EE:EE:EE:EE:00', 'eth1': 'EE:EE:EE:EE:EE:01'},
-    wlan0_mac='FF:FF:FF:FF:FF:00',
-    factory_image_version='factory_001',
-    release_image_version='release_001',
-    hwid_database_version='hwid_001',
+    serial_number='DEV001', mlb_serial_number='MLB001',
+    firmware_version='fw_001', ec_active_version='ec_001', pd_version='pd_001',
+    stage='SMT', eth_macs={
+        'eth0': 'EE:EE:EE:EE:EE:00',
+        'eth1': 'EE:EE:EE:EE:EE:01'
+    }, wlan0_mac='FF:FF:FF:FF:FF:00', factory_image_version='factory_001',
+    release_image_version='release_001', hwid_database_version='hwid_001',
     toolkit_version='ver_001')
 
 # Uses a different serial_number than mock_system_info_1.
 mock_system_info_2 = MockSystemInfo(
-    serial_number='DEV002',
-    mlb_serial_number='MLB001',
-    firmware_version='fw_001',
-    ec_version='ec_001',
-    pd_version='pd_001',
-    stage='SMT',
-    eth_macs={'eth0': 'EE:EE:EE:EE:EE:00', 'eth1': 'EE:EE:EE:EE:EE:01'},
-    wlan0_mac='FF:FF:FF:FF:FF:00',
-    factory_image_version='factory_001',
-    release_image_version='release_001',
-    hwid_database_version='hwid_001',
+    serial_number='DEV002', mlb_serial_number='MLB001',
+    firmware_version='fw_001', ec_active_version='ec_001', pd_version='pd_001',
+    stage='SMT', eth_macs={
+        'eth0': 'EE:EE:EE:EE:EE:00',
+        'eth1': 'EE:EE:EE:EE:EE:01'
+    }, wlan0_mac='FF:FF:FF:FF:FF:00', factory_image_version='factory_001',
+    release_image_version='release_001', hwid_database_version='hwid_001',
     toolkit_version='ver_001')
 
 # Uses a different eth0 MAC address than mock_system_info_2.
 mock_system_info_3 = MockSystemInfo(
-    serial_number='DEV002',
-    mlb_serial_number='MLB001',
-    firmware_version='fw_001',
-    ec_version='ec_001',
-    pd_version='pd_001',
-    stage='SMT',
-    eth_macs={'eth0': 'EE:EE:EE:EE:EE:02', 'eth1': 'EE:EE:EE:EE:EE:01'},
-    wlan0_mac='FF:FF:FF:FF:FF:00',
-    factory_image_version='factory_001',
-    release_image_version='release_001',
-    hwid_database_version='hwid_001',
+    serial_number='DEV002', mlb_serial_number='MLB001',
+    firmware_version='fw_001', ec_active_version='ec_001', pd_version='pd_001',
+    stage='SMT', eth_macs={
+        'eth0': 'EE:EE:EE:EE:EE:02',
+        'eth1': 'EE:EE:EE:EE:EE:01'
+    }, wlan0_mac='FF:FF:FF:FF:FF:00', factory_image_version='factory_001',
+    release_image_version='release_001', hwid_database_version='hwid_001',
     toolkit_version='ver_001')
 
 # Uses a different factory_image than mock_system_info_3.
 mock_system_info_4 = MockSystemInfo(
-    serial_number='DEV002',
-    mlb_serial_number='MLB001',
-    firmware_version='fw_001',
-    ec_version='ec_001',
-    pd_version='pd_001',
-    stage='SMT',
-    eth_macs={'eth0': 'EE:EE:EE:EE:EE:02', 'eth1': 'EE:EE:EE:EE:EE:01'},
-    wlan0_mac='FF:FF:FF:FF:FF:00',
-    factory_image_version='factory_002',
-    release_image_version='release_001',
-    hwid_database_version='hwid_001',
+    serial_number='DEV002', mlb_serial_number='MLB001',
+    firmware_version='fw_001', ec_active_version='ec_001', pd_version='pd_001',
+    stage='SMT', eth_macs={
+        'eth0': 'EE:EE:EE:EE:EE:02',
+        'eth1': 'EE:EE:EE:EE:EE:01'
+    }, wlan0_mac='FF:FF:FF:FF:FF:00', factory_image_version='factory_002',
+    release_image_version='release_001', hwid_database_version='hwid_001',
     toolkit_version='ver_001')
 
 
