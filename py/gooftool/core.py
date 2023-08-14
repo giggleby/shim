@@ -109,13 +109,25 @@ class IdentitySourceEnum(str, enum.Enum):
 class CrosConfigIdentity(dict):
   message_template = '%s:\nproduct name: %s\nsku id: %s\n' + \
       'frid: %s\ncustomization id: %s\ncustom label tag: %s\n'
+  # The change (https://crrev.com/c/3527015) was landed in 14675.0.0.
+  # TODO(cyueh) Drop this after all factory branches before 14675.0.0 are
+  # removed.
+  non_inclusive_custom_label_tag_cros_config_key = (
+      bytes.fromhex('77686974656c6162656c2d746167').decode('utf-8'))
+  non_inclusive_custom_label_tag_vpd_key = (
+      bytes.fromhex('77686974656c6162656c5f746167').decode('utf-8'))
 
   def __init__(self, config_source):
     dict.__init__(self)
     self.config_source = config_source.value
     identity_key_list = [
-        'smbios-name-match', 'sku-id', 'customization-id'
-        'frid', 'custom-label-tag', 'device-tree-compatible-match'
+        'smbios-name-match',
+        'sku-id',
+        'customization-id'
+        'frid',
+        'custom-label-tag',
+        'device-tree-compatible-match',
+        self.non_inclusive_custom_label_tag_cros_config_key,
     ]
     for key in identity_key_list:
       self[key] = ''
@@ -853,7 +865,9 @@ class Gooftool:
       if mismatch:
         continue
 
-      for key in ('customization-id', 'custom-label-tag'):
+      for key in (
+          'customization-id', 'custom-label-tag',
+          CrosConfigIdentity.non_inclusive_custom_label_tag_cros_config_key):
         if key not in config_identity and identity[key] != 'empty':
           mismatch = True
           break
@@ -1509,6 +1523,9 @@ class Gooftool:
             cros_config.DEVICE_TREE_SKU_ID_PATH, True) or 'empty'
     cur_identity['customization-id'] = get_vpd_val('customization_id')
     cur_identity['custom-label-tag'] = get_vpd_val('custom_label_tag')
+    cur_identity[CrosConfigIdentity
+                 .non_inclusive_custom_label_tag_cros_config_key] = get_vpd_val(
+                     CrosConfigIdentity.non_inclusive_custom_label_tag_vpd_key)
 
     return db_identity, cur_identity
 
