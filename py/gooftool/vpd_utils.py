@@ -6,7 +6,11 @@ import logging
 import re
 
 from cros.factory.gooftool import vpd_data
+from cros.factory.test.l10n import regions
+from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
+from cros.factory.test.rules import registration_codes
+from cros.factory.test.rules.registration_codes import RegistrationCode
 from cros.factory.test.utils import smart_amp_utils
 from cros.factory.utils import config_utils
 from cros.factory.utils.type_utils import Error
@@ -22,7 +26,7 @@ class VPDError(Error):
 class VPDUtils:
 
   def __init__(self, project):
-    self.project = project
+    self._project = project
     self._vpd = vpd.VPDTool()
     self._cros_config = cros_config.CrosConfig()
 
@@ -80,7 +84,7 @@ class VPDUtils:
     except Exception as e:
       raise VPDError(f'Failed to remove VPD entries: {e!r}') from None
 
-  def CheckVPDFields(self, section, data, required, optional, optional_re):
+  def _CheckVPDFields(self, section, data, required, optional, optional_re):
     """Checks if all fields in data fall into given format.
 
     Args:
@@ -153,7 +157,7 @@ class VPDUtils:
 
     return entries
 
-  def GetAudioVPDROData(self):
+  def _GetAudioVPDROData(self):
     """Return the required audio VPD RO data.
 
     If a DUT comes with a smart amplifier, it must be calibrated in the
@@ -179,7 +183,7 @@ class VPDUtils:
 
     return dsm_vpd_ro_data
 
-  def GetDeviceNameForRegistrationCode(self, project):
+  def _GetDeviceNameForRegistrationCode(self, project):
 
     def _LoadConfigJsonFile(_config):
       try:
@@ -212,3 +216,37 @@ class VPDUtils:
     if reg_code_config[project][custom_label_tag]:
       return custom_label_tag
     return project
+
+  def VerifyVPD(self):
+    """Verify that VPD values are set properly."""
+
+    required_vpd_ro_data = vpd_data.REQUIRED_RO_DATA.copy()
+    audio_vpd_ro_data = self._GetAudioVPDROData()
+    required_vpd_ro_data.update(audio_vpd_ro_data)
+
+    # Check required data
+    ro_vpd = self._vpd.GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME)
+    rw_vpd = self._vpd.GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME)
+    self._CheckVPDFields('RO', ro_vpd, required_vpd_ro_data,
+                         vpd_data.KNOWN_RO_DATA, vpd_data.KNOWN_RO_DATA_RE)
+
+    self._CheckVPDFields('RW', rw_vpd, vpd_data.REQUIRED_RW_DATA,
+                         vpd_data.KNOWN_RW_DATA, vpd_data.KNOWN_RW_DATA_RE)
+
+    # Check known value contents.
+    region = ro_vpd['region']
+    if region not in regions.REGIONS:
+      raise VPDError(f'Unknown region: "{region}".')
+
+    device_name = self._GetDeviceNameForRegistrationCode(self._project)
+
+    for type_prefix in ['UNIQUE', 'GROUP']:
+      vpd_field_name = type_prefix[0].lower() + 'bind_attribute'
+      type_name = getattr(RegistrationCode.Type, type_prefix + '_CODE')
+      try:
+        # RegCode should be ready since PVT
+        registration_codes.CheckRegistrationCode(
+            rw_vpd[vpd_field_name], type=type_name, device=device_name,
+            allow_dummy=(phase.GetPhase() < phase.PVT_DOGFOOD))
+      except registration_codes.RegistrationCodeException as e:
+        raise VPDError(f'{vpd_field_name} is invalid: {e!r}') from None

@@ -23,17 +23,13 @@ from cros.factory.gooftool.core import CrosConfigIdentity
 from cros.factory.gooftool.core import IdentitySourceEnum
 from cros.factory.gooftool.management_engine import ManagementEngineError
 from cros.factory.gooftool.management_engine import SKU
-from cros.factory.gooftool import vpd_utils
-from cros.factory.test.rules import phase
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.unittest_utils import label_utils
-from cros.factory.utils import file_utils
 from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
 
-from cros.factory.external.chromeos_cli import cros_config
 from cros.factory.external.chromeos_cli import flashrom
 from cros.factory.external.chromeos_cli import futility
 from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
@@ -205,19 +201,6 @@ class UtilTest(unittest.TestCase):
 class GooftoolTest(unittest.TestCase):
   """Unit test for Gooftool."""
 
-  _SIMPLE_VALID_RO_VPD_DATA = {
-      'serial_number': 'A1234',
-      'region': 'us',
-  }
-
-  _SIMPLE_VALID_RW_VPD_DATA = {
-      'gbind_attribute': ('=CjAKIAABAgMEBQYHCAkKCwwNDg8QERITFBUWF'
-                          'xgZGhscHR4fEAAaCmNocm9tZWJvb2sQhOfLlA8='),
-      'ubind_attribute': ('=CjAKIAABAgMEBQYHCAkKCwwNDg8QERITFBUWF'
-                          'xgZGhscHR4fEAEaCmNocm9tZWJvb2sQgdSQ-AI='),
-      'rlz_embargo_end_date': '2018-03-09',
-      'should_send_rlz_ping': '1',
-  }
 
   _SIMPLE_MODEL_SKU_CONFIG_REBRAND = {
       'custom_type': 'rebrand',
@@ -246,10 +229,6 @@ class GooftoolTest(unittest.TestCase):
                                                                   'unittest')
     self._gooftool._cros_config.GetModelName.return_value = 'unittest'
 
-    self.get_amp_info = mock.patch(
-        'cros.factory.test.utils.smart_amp_utils.GetSmartAmpInfo')
-    self.get_amp_info.start().return_value = [None, None, None]
-    self.addCleanup(self.get_amp_info.stop)
     self._gooftool._gsctool = mock.Mock(self._gooftool._gsctool)
     self._gooftool._gsctool.GetFeatureManagementFlags.return_value = (
         FeatureManagementFlags(False, 0))
@@ -646,131 +625,6 @@ class GooftoolTest(unittest.TestCase):
       return None
 
     self._gooftool._vpd.GetAllData.side_effect = GetAllDataSideEffect
-
-  # TODO (b/212216855)
-  @label_utils.Informational
-  def testVerifyVPD_AllValid(self):
-    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA,
-                        rw=self._SIMPLE_VALID_RW_VPD_DATA)
-
-    self._gooftool.VerifyVPD()
-    self._gooftool._vpd.GetAllData.assert_any_call(
-        partition=vpd.VPD_READONLY_PARTITION_NAME)
-    self._gooftool._vpd.GetAllData.assert_any_call(
-        partition=vpd.VPD_READWRITE_PARTITION_NAME)
-
-  @mock.patch.object(cros_config, 'CrosConfig')
-  def testVerifyVPD_NonSmartAmp(self, mock_cros_config):
-    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA,
-                        rw=self._SIMPLE_VALID_RW_VPD_DATA)
-    mock_cros_config.return_value.GetAmplifier.return_value = 'MAX98360'
-    mock_cros_config.return_value.GetSoundCardInit.return_value = None
-    self.get_amp_info.stop()
-
-    # Should not fail, since MAX98360 is not a smart amplifier.
-    self._gooftool.VerifyVPD()
-    self._gooftool._vpd.GetAllData.assert_any_call(
-        partition=vpd.VPD_READONLY_PARTITION_NAME)
-    self._gooftool._vpd.GetAllData.assert_any_call(
-        partition=vpd.VPD_READWRITE_PARTITION_NAME)
-    self.get_amp_info.start()  # To prevent runtime error before python 3.8
-
-  @mock.patch.object(cros_config, 'CrosConfig')
-  @mock.patch.object(file_utils, 'CheckPath')
-  @mock.patch.object(file_utils, 'ReadFile')
-  def testVerifyVPD_SmartAmpNoDSM(self, mock_file_reader, mock_path_checker,
-                                  mock_cros_config):
-    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA,
-                        rw=self._SIMPLE_VALID_RW_VPD_DATA)
-    mock_cros_config.return_value.GetAmplifier.return_value = 'MAX98373'
-    mock_cros_config.return_value.GetSoundCardInit.return_value = 'factory.yaml'
-    mock_path_checker.return_value = True
-    mock_file_reader.return_value = \
-      '  temp_ctrl: ["Left ADC TEMP", "Right ADC TEMP"]'
-    self.get_amp_info.stop()
-
-    # Should fail, since dsm calib is missing.
-    # Since the dictionary ordering is not deterministic, we use regex to parse
-    # the error messages.
-    dsm_string_regex = 'dsm_calib_(?:temp|r0)_[0-1]'
-    self.assertRaisesRegex(
-        vpd_utils.VPDError,
-        f'Missing required RO VPD values: (?:{dsm_string_regex},){{3}}'
-        f'{dsm_string_regex}', self._gooftool.VerifyVPD)
-    self.get_amp_info.start()  # To prevent runtime error before python 3.8
-
-  def testVerifyVPD_NoRegion(self):
-    ro_vpd_value = self._SIMPLE_VALID_RO_VPD_DATA.copy()
-    del ro_vpd_value['region']
-    self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
-
-    # Should fail, since region is missing.
-    self.assertRaisesRegex(vpd_utils.VPDError,
-                           'Missing required RO VPD values: region',
-                           self._gooftool.VerifyVPD)
-
-  def testVerifyVPD_InvalidRegion(self):
-    ro_vpd_value = self._SIMPLE_VALID_RO_VPD_DATA.copy()
-    ro_vpd_value['region'] = 'nonexist'
-    self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
-
-    self.assertRaisesRegex(vpd_utils.VPDError, 'Unknown region: "nonexist".',
-                           self._gooftool.VerifyVPD)
-
-  def testVerifyVPD_InvalidMACKey(self):
-    ro_vpd_value = self._SIMPLE_VALID_RO_VPD_DATA.copy()
-    ro_vpd_value['wifi_mac'] = '00:11:de:ad:be:ef'
-    self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
-
-    self.assertRaisesRegex(vpd_utils.VPDError,
-                           'Unexpected RO VPD: wifi_mac=00:11:de:ad:be:ef.',
-                           self._gooftool.VerifyVPD)
-
-  # TODO (b/212216855)
-  @label_utils.Informational
-  def testVerifyVPD_InvalidRegistrationCode(self):
-    rw_vpd_value = self._SIMPLE_VALID_RW_VPD_DATA.copy()
-    rw_vpd_value['gbind_attribute'] = 'badvalue'
-    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA, rw=rw_vpd_value)
-
-    self.assertRaisesRegex(vpd_utils.VPDError, 'gbind_attribute is invalid:',
-                           self._gooftool.VerifyVPD)
-
-  # TODO (b/212216855)
-  @label_utils.Informational
-  @mock.patch('cros.factory.test.rules.phase.GetPhase')
-  def testVerifyVPD_InvalidTestingRegistrationCodePVT_DOGFOOD(
-      self, get_phase_mock):
-    get_phase_mock.return_value = phase.PVT_DOGFOOD
-    rw_vpd_value = self._SIMPLE_VALID_RW_VPD_DATA.copy()
-    rw_vpd_value['gbind_attribute'] = (
-        '=CjAKIP______TESTING_______-rhGkyZUn_'
-        'zbTOX_9OQI_3EAAaCmNocm9tZWJvb2sQouDUgwQ=')
-    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA, rw=rw_vpd_value)
-
-    self.assertRaisesRegex(vpd_utils.VPDError, 'gbind_attribute is invalid: ',
-                           self._gooftool.VerifyVPD)
-
-  # TODO (b/212216855)
-  @label_utils.Informational
-  @mock.patch('cros.factory.test.rules.phase.GetPhase')
-  def testVerifyVPD_InvalidTestingRegistrationCodeDVT(self, get_phase_mock):
-    get_phase_mock.return_value = phase.DVT
-    rw_vpd_value = self._SIMPLE_VALID_RW_VPD_DATA.copy()
-    rw_vpd_value['gbind_attribute'] = (
-        '=CjAKIP______TESTING_______-rhGkyZUn_'
-        'zbTOX_9OQI_3EAAaCmNocm9tZWJvb2sQouDUgwQ=')
-    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA, rw=rw_vpd_value)
-    self._gooftool.VerifyVPD()
-
-  def testVerifyVPD_UnexpectedValues(self):
-    ro_vpd_value = self._SIMPLE_VALID_RO_VPD_DATA.copy()
-    ro_vpd_value['initial_locale'] = 'en-US'
-    self._SetupVPDMocks(ro=ro_vpd_value, rw=self._SIMPLE_VALID_RW_VPD_DATA)
-
-    self.assertRaisesRegex(vpd_utils.VPDError,
-                           'Unexpected RO VPD: initial_locale=en-US',
-                           self._gooftool.VerifyVPD)
 
   def testVerifyReleaseChannel_CanaryChannel(self):
     self._gooftool._util.GetReleaseImageChannel.return_value = 'canary-channel'

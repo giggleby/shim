@@ -22,15 +22,12 @@ from cros.factory.gooftool import bmpblk
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool import gbb
 from cros.factory.gooftool import management_engine
-from cros.factory.gooftool import vpd_data
 from cros.factory.gooftool import vpd_utils
 from cros.factory.gooftool import wipe
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.test.l10n import regions
 from cros.factory.test.rules import phase
-from cros.factory.test.rules import registration_codes
-from cros.factory.test.rules.registration_codes import RegistrationCode
 from cros.factory.test.utils import bluetooth_utils
 from cros.factory.test.utils import cbi_utils
 from cros.factory.test.utils import gsc_utils
@@ -661,43 +658,10 @@ class Gooftool:
     main_fw = self._ifdtool.LoadIntelMainFirmware()
     management_engine.VerifyMELocked(main_fw, self._util.shell)
 
-  # TODO(jasonchuang) Move it into vpd_utils.py
   def VerifyVPD(self):
     """Verify that VPD values are set properly."""
 
-    required_vpd_ro_data = vpd_data.REQUIRED_RO_DATA.copy()
-    audio_vpd_ro_data = self.vpd_utils.GetAudioVPDROData()
-    required_vpd_ro_data.update(audio_vpd_ro_data)
-
-    # Check required data
-    ro_vpd = self._vpd.GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME)
-    rw_vpd = self._vpd.GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME)
-    self.vpd_utils.CheckVPDFields('RO', ro_vpd, required_vpd_ro_data,
-                                  vpd_data.KNOWN_RO_DATA,
-                                  vpd_data.KNOWN_RO_DATA_RE)
-
-    self.vpd_utils.CheckVPDFields('RW', rw_vpd, vpd_data.REQUIRED_RW_DATA,
-                                  vpd_data.KNOWN_RW_DATA,
-                                  vpd_data.KNOWN_RW_DATA_RE)
-
-    # Check known value contents.
-    region = ro_vpd['region']
-    if region not in regions.REGIONS:
-      raise vpd_utils.VPDError(f'Unknown region: "{region}".')
-
-    device_name = self.vpd_utils.GetDeviceNameForRegistrationCode(self._project)
-
-    for type_prefix in ['UNIQUE', 'GROUP']:
-      vpd_field_name = type_prefix[0].lower() + 'bind_attribute'
-      type_name = getattr(RegistrationCode.Type, type_prefix + '_CODE')
-      try:
-        # RegCode should be ready since PVT
-        registration_codes.CheckRegistrationCode(
-            rw_vpd[vpd_field_name], type=type_name, device=device_name,
-            allow_dummy=(phase.GetPhase() < phase.PVT_DOGFOOD))
-      except registration_codes.RegistrationCodeException as e:
-        raise vpd_utils.VPDError(
-            f'{vpd_field_name} is invalid: {e!r}') from None
+    self.vpd_utils.VerifyVPD()
 
   def VerifyReleaseChannel(self, enforced_channels=None):
     """Verify that release image channel is correct.
