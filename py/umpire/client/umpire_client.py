@@ -52,7 +52,7 @@ class UmpireClientInfo:
       'sn': 'serial_number',
       'mlb_sn': 'mlb_serial_number',
       'firmware': 'firmware_version',
-      'ec': 'ec_version',
+      'ec': 'ec_active_version',
       'pd': 'pd_version',
       'mac': 'macs',
       'stage': 'stage'
@@ -63,7 +63,8 @@ class UmpireClientInfo:
 
   VARIANT_FIELDS = [
       'serial_number', 'mlb_serial_number', 'firmware_version',
-      'ec_version', 'pd_version', 'macs', 'stage']
+      'ec_active_version', 'pd_version', 'macs', 'stage'
+  ]
 
   def __init__(self, _dut=None):
     # serial_number, mlb_serial_number, firmware, ec and wireless mac address
@@ -71,7 +72,7 @@ class UmpireClientInfo:
     self.serial_number = None
     self.mlb_serial_number = None
     self.firmware_version = None
-    self.ec_version = None
+    self.ec_active_version = None
     self.pd_version = None
     self.macs = {}
     self.stage = None
@@ -96,7 +97,13 @@ class UmpireClientInfo:
     new_info['serial_number'] = system_info.serial_number
     new_info['mlb_serial_number'] = system_info.mlb_serial_number
     new_info['firmware_version'] = system_info.firmware_version
-    new_info['ec_version'] = system_info.ec_version
+    # ec_version is renamed to ec_active_version in CL:4738896.
+    # Keeps the old usage to be backward-compatible.
+    try:
+      new_info['ec_active_version'] = system_info.ec_active_version
+    except AttributeError:
+      logging.debug('ec_active_version is not found. Fallback to ec_version.')
+      new_info['ec_active_version'] = system_info.ec_version
     new_info['pd_version'] = system_info.pd_version
     new_info['stage'] = system_info.stage
     # new_info['macs'] is a dict like
@@ -131,7 +138,7 @@ class UmpireClientInfo:
     system_info = self.dut.info
     components['rootfs_test'] = system_info.factory_image_version
     components['rootfs_release'] = system_info.release_image_version
-    components['firmware_ec'] = system_info.ec_version
+    components['firmware_ec'] = system_info.ec_active_version
     components['firmware_bios'] = system_info.firmware_version
     components['firmware_pd'] = system_info.pd_version
     components['hwid'] = system_info.hwid_database_version
