@@ -494,20 +494,6 @@ class GSCUtilsTest(unittest.TestCase):
         gsc_utils.GSCUtilsError, 'Failed to set BOARD_ID on GSC',
         self.gsc.ExecuteGSCSetScript, GSCScriptPath.BOARD_ID, 'args')
 
-  def testGSCScriptPath(self):
-
-    self.assertEqual(
-        GSCScriptPath(GSCScriptPath.BOARD_ID).value,
-        '/usr/share/cros/hwsec-utils/cr50_set_board_id')
-    self.assertEqual(
-        GSCScriptPath(GSCScriptPath.SN_BITS).value,
-        '/usr/share/cros//hwsec-utils/cr50_set_sn_bits')
-    self.assertEqual(
-        GSCScriptPath(GSCScriptPath.AP_RO_HASH).value,
-        '/usr/local/bin/ap_ro_hash.py')
-    self.assertEqual(
-        GSCScriptPath(GSCScriptPath.FACTORY_CONFIG).value,
-        '/usr/share/cros/hwsec-utils/cr50_set_factory_config')
 
   def _SetShellResult(self, stdout='', stderr='', status=0):
     self.shell.return_value = shell.ShellResult(

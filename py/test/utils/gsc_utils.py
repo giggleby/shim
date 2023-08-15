@@ -26,13 +26,15 @@ from cros.factory.external.chromeos_cli import shell
 from cros.factory.external.chromeos_cli import vpd
 
 
-class GSCScriptPath(enum.Enum):
+class GSCScriptPath(str, enum.Enum):
   GSC_CONSTANTS = '/usr/share/cros/gsc-constants.sh'
   BOARD_ID = '/usr/share/cros/hwsec-utils/cr50_set_board_id'
   SN_BITS = '/usr/share/cros//hwsec-utils/cr50_set_sn_bits'
   FACTORY_CONFIG = '/usr/share/cros/hwsec-utils/cr50_set_factory_config'
   AP_RO_HASH = '/usr/local/bin/ap_ro_hash.py'
 
+  def __str__(self):
+    return self.value
 
 class GSCUtilsError(type_utils.Error):
   """All errors when processing GSC related logic."""
@@ -458,8 +460,7 @@ class GSCUtils:
     return flash_name
 
   def ExecuteGSCSetScript(self, path: GSCScriptPath, args=''):
-    name = GSCScriptPath(path).name
-    path = GSCScriptPath(path).value
+    name = path.name
     file_utils.CheckPath(path)
     if isinstance(args, str):
       cmd = [path, args]
