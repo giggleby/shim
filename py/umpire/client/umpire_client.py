@@ -109,7 +109,7 @@ class UmpireClientInfo:
     # new_info['macs'] is a dict like
     # {'eth0': 'xx:xx:xx:xx:xx:xx', 'eth1': 'xx:xx:xx:xx:xx:xx',
     #  'wlan0': 'xx:xx:xx:xx:xx:xx'}
-    macs = dict(system_info.eth_macs)
+    macs = dict(system_info.eth_macs) if system_info.eth_macs else {}
     macs['wlan0'] = system_info.wlan0_mac
     new_info['macs'] = macs
 
