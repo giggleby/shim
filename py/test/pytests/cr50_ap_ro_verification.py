@@ -56,7 +56,6 @@ To use manual test of AP RO verification, add this to test list::
 import logging
 
 from cros.factory.device import device_utils
-from cros.factory.gooftool.core import Gooftool
 from cros.factory.test.i18n import _
 from cros.factory.test import state
 from cros.factory.test import test_case
@@ -83,7 +82,6 @@ class Cr50APROVerficationTest(test_case.TestCase):
   ]
 
   def setUp(self):
-    self.gooftool = Gooftool()
     self.gsctool = gsctool_module.GSCTool()
     self.ui.ToggleTemplateClass('font-large', True)
     self.dut = device_utils.CreateDUTInterface()
@@ -118,10 +116,10 @@ class Cr50APROVerficationTest(test_case.TestCase):
     if GSCUtils().IsTi50():
       self.WaiveTest('Skip Cr50 AP RO Verification test '
                      'since the firmware is Ti50.')
-    if self.gooftool.IsGSCBoardIDSet():
-      self.WaiveTask('Unable to verify RO hash '
+    if self.gsctool.IsGSCBoardIdTypeSet():
+      self.WaiveTest('Unable to verify RO hash '
                      'since the board ID is set, test skipped.')
-    if not self.gooftool.IsCr50ROHashSet():
+    if not self.gsctool.IsCr50ROHashSet():
       raise Exception('Please set RO hash first.')
 
   def VerifyAPRO(self):

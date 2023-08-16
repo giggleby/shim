@@ -46,11 +46,13 @@ To set/clear AP RO hash, add this to test list::
 
 """
 
-from cros.factory.gooftool.core import Gooftool
 from cros.factory.test import session
 from cros.factory.test import test_case
+from cros.factory.test.utils import gsc_utils
 from cros.factory.test.utils.gsc_utils import GSCUtils
 from cros.factory.utils.arg_utils import Arg
+
+from cros.factory.external.chromeos_cli import gsctool
 
 
 class Cr50APROHashTest(test_case.TestCase):
@@ -58,7 +60,8 @@ class Cr50APROHashTest(test_case.TestCase):
   ARGS = [Arg('action', str, "The action for AP RO hash ('set', 'clear').")]
 
   def setUp(self):
-    self.gooftool = Gooftool()
+    self.gsctool = gsctool.GSCTool()
+    self.gsc_utils = gsc_utils.GSCUtils()
 
   def runTest(self):
     # skip the test if the firmware is Ti50
@@ -66,14 +69,14 @@ class Cr50APROHashTest(test_case.TestCase):
       session.console.info('Skip Cr50 AP RO hash test '
                            'since the firmware is Ti50.')
       return
-    if self.gooftool.IsGSCBoardIDSet():
+    if self.gsctool.IsGSCBoardIdTypeSet():
       session.console.warn('Unable to modify RO hash, test skipped.')
       return
 
     action = self.args.action
     if action == 'set':
-      self.gooftool.Cr50SetROHash()
+      self.gsc_utils.Cr50SetROHash()
     elif action == 'clear':
-      self.gooftool.Cr50ClearRoHash()
+      self.gsc_utils.Cr50ClearROHash()
     else:
       raise Exception(f'Unknown action: {action}')
