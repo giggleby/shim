@@ -10,6 +10,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.device import device_types
+from cros.factory.device import info
 from cros.factory.umpire.client import umpire_client
 
 
@@ -32,6 +33,14 @@ class MockSystemInfo:
     self.release_image_version = release_image_version
     self.hwid_database_version = hwid_database_version
     self.toolkit_version = toolkit_version
+
+    # Verify no additional attributes.
+    for attribute in dir(self):
+      if attribute.startswith('__'):
+        continue
+      if not hasattr(info.SystemInfo, attribute):
+        raise RuntimeError(
+            f'{attribute} is not an attribute in info.SystemInfo')
 
 mock_system_info_1 = MockSystemInfo(
     serial_number='DEV001', mlb_serial_number='MLB001',
