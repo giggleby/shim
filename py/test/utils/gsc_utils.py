@@ -65,12 +65,10 @@ class GSCUtils:
 
   @type_utils.LazyProperty
   def image_base_name(self):
-    file_utils.CheckPath(self.gsc_constants_path)
     return self._GetConstant('gsc_image_base_name')
 
   @type_utils.LazyProperty
   def metrics_prefix(self):
-    file_utils.CheckPath(self.gsc_constants_path)
     return self._GetConstant('gsc_metrics_prefix')
 
   # TODO(phoebewang): Remove the workaround once there's way to distinguish the
