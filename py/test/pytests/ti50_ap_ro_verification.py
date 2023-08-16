@@ -41,7 +41,6 @@ To test AP RO verification, add this to test list::
 """
 
 from cros.factory.gooftool.common import Util
-from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import write_protect_target
 from cros.factory.test import session
 from cros.factory.test import state
@@ -63,9 +62,9 @@ class Ti50APROVerficationTest(test_case.TestCase):
   ]
 
   def setUp(self):
-    self.gooftool = Gooftool()
     self.gsctool = gsctool_module.GSCTool()
     self.goofy = state.GetInstance()
+    self.gsc_utils = GSCUtils()
     self._util = Util()
     self.ap_wp_target = write_protect_target.CreateWriteProtectTarget(
         write_protect_target.WriteProtectTargetType.AP)
@@ -77,7 +76,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
 
   def PreCheck(self):
     # Skip the test if the firmware is not Ti50.
-    if not GSCUtils().IsTi50():
+    if not self.gsc_utils.IsTi50():
       self.WaiveTest('Skip Ti50 AP RO Verification test '
                      'since the firmware is not Ti50.')
 
@@ -89,7 +88,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
 
     # Set board ID.
     session.console.info('Set board ID.')
-    self.gooftool.GSCSetBoardId(two_stages=self.args.two_stages)
+    self.gsc_utils.GSCSetBoardId(two_stages=self.args.two_stages)
 
     # Set Addressing mode and WPSR.
     # Skip provisioning SPI data only if not in initial factory mode
@@ -97,8 +96,7 @@ class Ti50APROVerficationTest(test_case.TestCase):
     if (self.gsctool.IsTi50InitialFactoryMode() or
         not self.gsctool.IsWpsrProvisioned()):
       session.console.info('Set Addressing mode and WPSR.')
-      self.gooftool.Ti50SetAddressingMode()
-      self.gooftool.Ti50SetSWWPRegister(
+      self.gsc_utils.Ti50ProvisionSPIData(
           no_write_protect=(not self.args.enable_swwp))
 
   def VerifyAPRO(self):

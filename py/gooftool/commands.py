@@ -1323,9 +1323,8 @@ def GetLogicalBlockSize(options):
     _no_write_protect_cmd_arg,  # this
     *GetGooftool.__args__)
 def Ti50SetSPIData(options):
-  """Gets the logical block size of the primary device on DUT."""
-  GetGooftool(options).Ti50SetAddressingMode()
-  GetGooftool(options).Ti50SetSWWPRegister(options.no_write_protect)
+  """Sets the ti50 addressing mode and wpsr."""
+  gsc_utils.GSCUtils().Ti50ProvisionSPIData(options.no_write_protect)
 
 
 def main():
