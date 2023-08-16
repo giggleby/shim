@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-08-01 08:37+UTC\n"
+"PO-Revision-Date: 2023-08-16 02:56+UTC\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -271,6 +271,7 @@ msgid "Gyroscope"
 msgstr "Con quay hồi chuyển"
 
 #: ../build/pytests_label_generated.json
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Gyroscope Angle"
 msgstr "Góc con quay hồi chuyển"
 

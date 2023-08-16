@@ -730,6 +730,15 @@
         "stop_threshold": 0.1
       }
     },
+    "GyroscopeAngle": {
+      "pytest_name": "gyroscope_angle",
+      "label": "Gyroscope Angle",
+      "run_if": "not constants.has_device_data or device.component.has_base_gyroscope",
+      "args": {
+        "rotation_threshold": 90,
+        "stop_threshold": 0.1
+      }
+    },
     "GyroscopeCalibration": {
       "pytest_name": "gyroscope_calibration",
       "label": "Gyroscope Calibration",

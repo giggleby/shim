@@ -80,7 +80,8 @@
         "AccelerometersLidAngle",
         "ScreenRotation",
         "GyroscopeCalibration",
-        "Gyroscope"
+        "Gyroscope",
+        "GyroscopeAngle"
       ]
     },
     "FFTStart": {
