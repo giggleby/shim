@@ -306,7 +306,7 @@ class GSCUtilsTest(unittest.TestCase):
   def testGSCSetFeatureManagementFlagsFallback(self, mock_locked,
                                                mock_device_data, mock_get_flags,
                                                mock_set_flags, mock_path):
-    mock_path.side_effect = FileNotFoundError
+    mock_path.side_effect = IOError
     mock_locked.return_value = False
     mock_device_data.side_effect = [True, 1]
     mock_get_flags.return_value = FeatureManagementFlags(False, 0)
@@ -494,6 +494,12 @@ class GSCUtilsTest(unittest.TestCase):
         gsc_utils.GSCUtilsError, 'Failed to set BOARD_ID on GSC',
         self.gsc.ExecuteGSCSetScript, GSCScriptPath.BOARD_ID, 'args')
 
+  def testExecuteGSCSetScriptFileNotFound(self):
+    self.mock_check_path.stop()
+    self.assertRaises(IOError, self.gsc.ExecuteGSCSetScript,
+                      GSCScriptPath.BOARD_ID, 'args')
+
+    self.mock_check_path.start()  # To prevent runtime error before python 3.8
 
   def _SetShellResult(self, stdout='', stderr='', status=0):
     self.shell.return_value = shell.ShellResult(

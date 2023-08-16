@@ -310,7 +310,7 @@ class GSCUtils:
     try:
       self.GSCSetFeatureManagementFlagsWithHwSecUtils(chassis_branded,
                                                       hw_compliance_version)
-    except FileNotFoundError:
+    except IOError:
       self._gsctool.SetFeatureManagementFlags(chassis_branded,
                                               hw_compliance_version)
 
