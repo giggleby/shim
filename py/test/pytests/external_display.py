@@ -135,6 +135,8 @@ For tablet or Chromebox, use HW buttons instead of keyboard numbers::
 """
 
 import collections
+import copy
+import enum
 import logging
 import os
 import queue
@@ -153,6 +155,7 @@ from cros.factory.test.i18n import _
 from cros.factory.test.pytests import audio
 from cros.factory.test import test_case
 from cros.factory.test.utils import button_utils
+from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
 from cros.factory.utils import sync_utils
@@ -268,6 +271,7 @@ def _GetLabel(label):
     return label['en-US']
   return label
 
+
 class SysfsDisplayInfo:
   """The display info under /sys/class/drm/cardX-YYY."""
 
@@ -355,6 +359,19 @@ class SysfsDisplayInfo:
         return info
     return None
 
+
+# TODO(louischiu): Set up schemas for different status and refactor this.
+class ConnectedExternalDisplayStatus(enum.IntEnum):
+  """Enum for the test status of external display.
+
+  The following order should NOT be changed as other components depend on the
+  order of the state.
+  """
+  NOT_STARTED = enum.auto()
+  SUCCESS = enum.auto()
+  FAILURE = enum.auto()
+
+
 class ExtDisplayTest(test_case.TestCase):
   """Main class for external display test."""
   ARGS = [
@@ -439,6 +456,7 @@ class ExtDisplayTest(test_case.TestCase):
                       'If do_output is True then do_connect must be True')
 
     self._target_display_info = None
+    self.edid = None
 
   def runTest(self):
     visited = []
@@ -449,23 +467,33 @@ class ExtDisplayTest(test_case.TestCase):
       visited.append(args)
 
       self.Reset()
-      if self.do_connect:
-        self.WaitConnect(args)
-      if self.do_output:
-        self.CheckVideo(args)
-        if args.audio_card:
-          self.SetupAudio(args)
-          audio_label = _('{display_label} Audio',
-                          display_label=args.display_label)
-          audio.TestAudioDigitPlayback(self.ui, self._dut, audio_label,
-                                       card=args.audio_card,
-                                       device=args.audio_device)
-      if self.do_disconnect:
-        self.WaitDisconnect(args)
+      test_status = ConnectedExternalDisplayStatus.NOT_STARTED
+      try:
+        if self.do_connect:
+          self.WaitConnect(args)
+        if self.do_output:
+          self.CheckVideo(args)
+          if args.audio_card:
+            self.SetupAudio(args)
+            audio_label = _('{display_label} Audio',
+                            display_label=args.display_label)
+            audio.TestAudioDigitPlayback(self.ui, self._dut, audio_label,
+                                         card=args.audio_card,
+                                         device=args.audio_device)
+        if self.do_disconnect:
+          self.WaitDisconnect(args)
+
+        test_status = ConnectedExternalDisplayStatus.SUCCESS
+      except Exception as e:
+        test_status = ConnectedExternalDisplayStatus.FAILURE
+        raise e from None
+      finally:
+        self._LogConnectedExternalDisplay(args, test_status)
 
   def Reset(self):
     """Resets status between different displays."""
     self._target_display_info = None
+    self.edid = None
 
   def ParseDisplayInfo(self, info):
     """Parses lists from args.display_info.
@@ -693,6 +721,7 @@ class ExtDisplayTest(test_case.TestCase):
                        display=args.display_label))
 
     self._WaitDisplayConnection(args, True)
+    self.edid = copy.deepcopy(self._target_display_info.edid)
 
   def WaitDisconnect(self, args):
     self.ui.BindStandardFailKeys()
@@ -838,3 +867,14 @@ class ExtDisplayTest(test_case.TestCase):
       self.Sleep(_CONNECTION_CHECK_PERIOD_SECS)
 
     logging.info('Get display info %r', display_info)
+
+  def _LogConnectedExternalDisplay(self, args: ExtDisplayTaskArg,
+                                   status: ConnectedExternalDisplayStatus):
+    """Logs the connected external display and result to testlog."""
+    # TODO(louischiu): Set up schemas for observation and refactor this.
+    observation = {
+        'status': status.value,
+        'edidData': self.edid,
+        'displayInfo': args._asdict(),
+    }
+    testlog.LogParam('ConnectedExternalDisplay', observation)
