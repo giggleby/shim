@@ -15,6 +15,7 @@ from cros.factory.gooftool.common import Util
 from cros.factory.log_extractor.file_utils import ExtractLogsAndWriteRecord
 from cros.factory.log_extractor.file_utils import LogExtractorFileReader
 import cros.factory.log_extractor.record as record_module
+from cros.factory.tools import factory_bug
 from cros.factory.tools.factory_log_parser import FactoryLogParser
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
@@ -63,7 +64,6 @@ FACTORY_LOG_DIR_REL_PATH = 'var/factory'
 FACTORY_TESTLOG_REL_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/log/testlog.json'
 FACTORY_TESTS_DIR_REL_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/tests'
 FACTORY_TEST_SUMMARY_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/factory_test_summary'
-FACTORY_TEST_STATUS_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/factory_test_status'
 
 FACTORY_SYSTEM_INFO = (
     'cbi',
@@ -155,7 +155,8 @@ def _GenerateTestSummary(summary_path: str, factory_log_path: str,
 def _GetTestStatus(root: str) -> Optional[str]:
   if sys_utils.InCrOSDevice():
     return process_utils.CheckOutput(['factory', 'tests', '--status']).strip()
-  test_status = os.path.join(root, FACTORY_TEST_STATUS_PATH)
+  # Read from the test status file collected by factory_bug.
+  test_status = os.path.join(root, factory_bug.FACTORY_TEST_STATUS_FNAME)
   if os.path.exists(test_status):
     return file_utils.ReadFile(test_status)
   return None
