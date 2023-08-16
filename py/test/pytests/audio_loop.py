@@ -493,7 +493,7 @@ class AudioLoopTest(test_case.TestCase):
           '  - **input_gain**: The volume gain for sox recorder command.\n'
           '        The value should be in "dB", you can see the value \n'
           '        suggested by CRAS with command \n'
-          '        `cras_test_client --dump_sever_info`, check the "Gain" \n'
+          '        `cras_test_client --dump_server_info`, check the "Gain" \n'
           '        column.'
           '  - **sample_format**: The sample format for audiofuntest. \n'
           '        See -t section in audiofuntest manual.\n'
