@@ -82,6 +82,7 @@ EXAMPLES = """Examples:
 #   temporary: Whether the device is being temporarily mounted.
 MountUSBInfo = namedtuple('MountUSBInfo', ['dev', 'mount_point', 'temporary'])
 
+FACTORY_TEST_STATUS_FNAME = 'factory_test_status'
 
 def GetRootDevice():
   """Get the device name on which current rootfs is mounted.
@@ -463,8 +464,8 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
           # Cannot zip an unseekable file, need to manually copy it instead.
           Run(['cat', 'sys/firmware/log'], filename='ap_console',
               check_call=False),
-          Run(['factory', 'tests', '--status'], filename='factory_test_status',
-              check_call=False),
+          Run(['factory', 'tests', '--status'],
+              filename=FACTORY_TEST_STATUS_FNAME, check_call=False),
       ]
 
       system_summary_fname = 'factory_system_summary'
