@@ -19,13 +19,18 @@ BOARD ?=
 # The package names (factory-board, chromeos-factory-board) must be same as
 # RDEPEND listed in virtual/chromeos-bsp-factory.
 _BOARD_EBUILD = \
-  $(if $(BOARD),$(shell equery-$(BOARD) which factory-board 2>/dev/null || \
-                        equery-$(BOARD) which chromeos-factory-board))
+  $(if $(FROM_EBUILD),\
+    $(error Don't use BOARD_EBUILD or BOARD_FILES_DIR in ebuild),\
+    $(if $(BOARD),$(shell equery-$(BOARD) which factory-board 2>/dev/null || \
+                          equery-$(BOARD) which chromeos-factory-board)))
+
 BOARD_EBUILD ?= $(call memoized,_BOARD_EBUILD)
 BOARD_FILES_DIR ?= $(if $(BOARD_EBUILD),$(dir $(BOARD_EBUILD))files)
 
 _BASEBOARD_EBUILD = \
-  $(if $(BOARD),$(shell equery-$(BOARD) which factory-baseboard))
+  $(if $(FROM_EBUILD),\
+    $(error Don't use BASEBOARD_EBUILD or BASEBOARD_FILES_DIR in ebuild),\
+    $(if $(BOARD),$(shell equery-$(BOARD) which factory-baseboard)))
 
 BASEBOARD_EBUILD ?= $(call memoized,_BASEBOARD_EBUILD)
 BASEBOARD_FILES_DIR ?= $(if $(BASEBOARD_EBUILD),$(dir $(BASEBOARD_EBUILD))files)

@@ -37,6 +37,7 @@ RESOURCE_SRC_DIR ?= resources
 BUNDLE_DIR ?= \
   $(if $(DESTDIR),$(DESTDIR)/$(TARGET_DIR)/bundle,$(BUILD_DIR)/bundle)
 TEMP_DIR ?= $(BUILD_DIR)/tmp
+TEMP_BOARD_FILES_DIR ?= $(TEMP_DIR)/board_files_dir
 
 # Global environment settings
 SHELL := bash
@@ -46,11 +47,11 @@ TARGET_DIR = /usr/local/factory
 
 # Build and board config settings
 STATIC ?= false
-BOARD_PACKAGE_NAME ?= $(notdir $(realpath $(dir $(BOARD_EBUILD))))
-BOARD_PACKAGE_FILE ?= \
-  $(if $(BOARD_EBUILD),$(SYSROOT)/packages/chromeos-base/$(basename $(notdir \
-    $(BOARD_EBUILD))).tbz2)
 BOARD_RESOURCES_DIR ?= $(SYSROOT)/usr/share/factory/resources
+# The resource must be extracted in ordered so we cannot use * in wildcard.
+OVERLAY_RESOURCES ?= $(wildcard \
+  $(BOARD_RESOURCES_DIR)/ebuild-source-baseboard-overlay.tar \
+  $(BOARD_RESOURCES_DIR)/ebuild-source-board-overlay.tar)
 BOARD_TARGET_DIR ?= $(SYSROOT)$(TARGET_DIR)
 SYSROOT ?= $(if $(BOARD),/build/$(BOARD),/)
 # The SETUP_BIN is for setup/ in factory bundle, for setting up and preparing
@@ -234,29 +235,18 @@ func-check-package = @\
 # comparison only in an interactive quickfix (modify, make, test) cycle, by
 # checking if the build is triggered by ebuild ($(FROM_EBUILD) is set in
 # factory-9999.ebuild).
-# If the FILESDIR of the package exists, the path will be added to
-# $(EXTRA_RESOURCE_ARGS), which will be added to toolkit later.
-define func-add-package
+define func-check-overlay-package
 # Declare some useful variables.
 # The $(1)_EBUILD variable should be defined in common.mk.
 @$(eval CURRENT_EBUILD := $($(1)_EBUILD))
-@$(eval CURRENT_PACKAGE_NAME := $(notdir $(realpath \
-	$(dir $(CURRENT_EBUILD)))))
-@$(eval CURRENT_PACKAGE_FILES_DIR := $($(1)_FILES_DIR))
+@$(eval CURRENT_PACKAGE_NAME := $(notdir $(realpath $(dir $(CURRENT_EBUILD)))))
 @$(eval CURRENT_PACKAGE_FILE = \
   $(if $(CURRENT_EBUILD),$(SYSROOT)/packages/chromeos-base/$(basename \
     $(notdir $(CURRENT_EBUILD))).tbz2))
 # Check if overlay resources are out of date
 $(if $(CURRENT_EBUILD),\
-   $(if $(FROM_EBUILD),\
-     $(info Ignore $(CURRENT_EBUILD) check.), \
-     $(call func-check-package,$(CURRENT_PACKAGE_NAME), \
-       [ "$(realpath $(CURRENT_EBUILD))" -ot "$(CURRENT_PACKAGE_FILE)" ])))
-# If the FILESDIR exists, append to the argument list.
-@$(info Adding content of FILESDIR from $(CURRENT_PACKAGE_NAME))
-$(if $(wildcard $(CURRENT_PACKAGE_FILES_DIR)), \
-  $(eval EXTRA_RESOURCE_ARGS += --exclude '$(RESOURCE_SRC_DIR)' \
-    -C $(CURRENT_PACKAGE_FILES_DIR) .))
+  $(call func-check-package,$(CURRENT_PACKAGE_NAME), \
+    [ "$(realpath $(CURRENT_EBUILD))" -ot "$(CURRENT_PACKAGE_FILE)" ]))
 endef
 
 # Add all available SSH identities to misc/sshkeys. These includes testing_rsa
@@ -272,24 +262,32 @@ define func-add-ssh-identities
 	tar -rf $(RESOURCE_PATH) -C $(TEMP_DIR) misc/sshkeys
 endef
 
-# Prepare files from source folder into resource folder.
-resource: closure po
+check-overlay-dependency: .phony
 	@rm -f $(TEMP_DIR)/reinstall
 	@$(info Checking region database...)
 	@$(call func-check-package,chromeos-regions, \
 	  [ -e "$(CROS_REGIONS_DATABASE)" ] )
-	@$(call func-add-package,BASEBOARD)
-	@$(call func-add-package,BOARD)
+	@$(if $(FROM_EBUILD),,$(call func-check-overlay-package,BASEBOARD))
+	@$(if $(FROM_EBUILD),,$(call func-check-overlay-package,BOARD))
 	@if [ -e "$(TEMP_DIR)/reinstall" ] ; then \
 	  $(MK_DIR)/die.sh \
 	    "Need to run 'emerge-$(BOARD) `cat $(TEMP_DIR)/reinstall`'." ; \
 	fi
-	@$(info EXTRA_RESOURCE_ARGS: $(EXTRA_RESOURCE_ARGS))
+
+# Prepare files from source folder into resource folder.
+resource: closure po
+	@$(info Create $(TEMP_BOARD_FILES_DIR).)
+	rm -rf $(TEMP_BOARD_FILES_DIR)
+	mkdir -p $(TEMP_BOARD_FILES_DIR)
+	$(foreach file,\
+	  $(OVERLAY_RESOURCES), \
+	  $(info Target '$@' found board resource file $(file)) \
+	  tar -xf $(file) -C $(TEMP_BOARD_FILES_DIR)${\n})
 	@$(info Create resource $(if $(BOARD),for [$(BOARD)],without board).)
 	mkdir -p $(RESOURCE_DIR)
 	tar -cf $(RESOURCE_PATH) -X $(MK_DIR)/resource_exclude.lst \
 	  bin misc py py_pkg sh init \
-	  $(EXTRA_RESOURCE_ARGS)
+	  --exclude '$(RESOURCE_SRC_DIR)' -C $(TEMP_BOARD_FILES_DIR) .
 	tar -rf $(RESOURCE_PATH) -C $(BUILD_DIR) locale
 	$(call func-add-ssh-identities)
 	$(call func-gen-and-add-pb2-files-to-resource)
@@ -306,7 +304,7 @@ resource: closure po
 	  tar -Af $(RESOURCE_PATH) $(file)${\n})
 	$(MK_DIR)/create_resources.py -v --output_dir $(RESOURCE_DIR) \
 	  --sysroot $(SYSROOT)  --resources $(RESOURCE_SRC_DIR) \
-	  --board_resources $(BOARD_FILES_DIR)/$(RESOURCE_SRC_DIR)
+	  --board_resources $(TEMP_BOARD_FILES_DIR)/$(RESOURCE_SRC_DIR)
 
 # Apply files from BOARD_RESOURCES_DIR to particular folder.
 # Usage: $(call func-apply-board-resources,RESOURCE_TYPE,OUTPUT_FOLDER)
@@ -542,18 +540,15 @@ test-critical:
 
 # Builds an overlay of the given board.  Use "private" to overlay
 # factory-private (e.g., to build private API docs).
-overlay:
+overlay: check-overlay-dependency
 	$(if $(BOARD),,$(error "You must specify a board to build overlay."))
-	$(if $(BOARD_FILES_DIR),, \
-	  $(error "You have to first run: setup_board --board $(BOARD)"))
 	rm -rf $@-$(BOARD)
 	mkdir -p $@-$(BOARD)
 	rsync -aK --exclude build --exclude overlay-\* ./ $@-$(BOARD)/
-	$(if $(wildcard $(BASEBOARD_FILES_DIR)), \
-	  rsync -aK "$(BASEBOARD_FILES_DIR)/" $@-$(BOARD)/)
-	rsync -aK $(if $(filter $(BOARD),private), \
-	  --exclude Makefile ../factory-private/ $@-$(BOARD)/, \
-	  "$(BOARD_FILES_DIR)/" $@-$(BOARD)/)
+	$(foreach file,\
+	  $(OVERLAY_RESOURCES), \
+	  $(info Target '$@' found board resource file $(file)) \
+	  tar -xf $(file) -C $@-$(BOARD)${\n})
 
 overlay-%: .phony
 	$(MAKE) overlay BOARD=$(subst overlay-,,$@)
@@ -570,8 +565,15 @@ lint-overlay-%: overlay-%
 par-overlay-%: overlay-%
 	$(MAKE) -C $< par
 
-po:
-	$(MAKE) -C po build BOARD=$(BOARD) BUILD_DIR=$(abspath $(BUILD_DIR))
+po: check-overlay-dependency
+	rm -rf $(TEMP_BOARD_FILES_DIR)
+	mkdir -p $(TEMP_BOARD_FILES_DIR)/po $(TEMP_BOARD_FILES_DIR)/py
+	$(foreach file,\
+	  $(OVERLAY_RESOURCES), \
+	  $(info Target '$@' found board resource file $(file)) \
+	  tar -xf $(file) -C $(TEMP_BOARD_FILES_DIR)${\n})
+	$(MAKE) -C po build BOARD=$(BOARD) BUILD_DIR=$(abspath $(BUILD_DIR)) \
+	  BOARD_FILES_DIR=$(TEMP_BOARD_FILES_DIR)
 
 test-list-check:
 	$(if $(TOOLKITPATH),, \
@@ -588,14 +590,12 @@ ebuild-unit-test:
 # contain '-' as a substring since we want to skip *-arc and *-kernelnext
 # overlays.
 ebuild-test: ebuild-unit-test
-ifeq ($(findstring third_party/chromiumos-overlay,$(BOARD_EBUILD)),)
 ifeq ($(findstring -,$(BOARD)),)
 ifneq ($(filter-out $(EBUILD_TEST_BLOCKED_LIST), $(BOARD)),)
 	rm -rf $(EBUILD_TEMP_DIR)
 	$(BUILD_DIR)/$(TOOLKIT_FILENAME) --noexec --noprogress --nox11 \
 	  --target $(EBUILD_TEMP_DIR)
 	$(MAKE) test-list-check TOOLKITPATH=$(EBUILD_TEMP_DIR)$(TARGET_DIR)
-endif
 endif
 endif
 
