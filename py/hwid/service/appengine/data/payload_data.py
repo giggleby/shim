@@ -22,14 +22,31 @@ class PayloadType(str, enum.Enum):
     return self.value
 
 
+class ApprovalMethod(str, enum.Enum):
+  """The payload CLs approval methods.
+
+  Attributes:
+    MANUAL: Reviewed by assigned reviewers.
+    SELF: Reviewed by the service itself with the service account.
+    BOT: Reviewed by a configured bot reviewer.
+  """
+
+  MANUAL = 'manual'
+  SELF = 'self'
+  BOT = 'bot'
+
+  def __str__(self):
+    return self.value
+
+
 class Config(ndb.Model):
   """A config for payload generation which can be modified on Datastore.
 
   Attributes:
-    payload_type: The payload type of config, which should be one of
-        PayloadType.
+    payload_type: The payload type of config.  See also PayloadType.
     disabled: Disable payload generation process.
-    auto_approval: Enable auto approval of CL.
+    approval_method: Approval method of CL.  See also ApprovalMethod.
+        Default: "manual".
     reviewers: E-mail addresses to be added to reviewer of CL.
     ccs: E-mail addresses to be added to cc of CL.
   """
@@ -38,9 +55,10 @@ class Config(ndb.Model):
   def _get_kind(cls):
     return 'PayloadConfig'
 
-  payload_type = ndb.StringProperty()
+  payload_type = ndb.StringProperty(choices=set(PayloadType))
   disabled = ndb.BooleanProperty(default=False)
-  auto_approval = ndb.BooleanProperty(default=False)
+  approval_method = ndb.StringProperty(default=ApprovalMethod.MANUAL,
+                                       choices=set(ApprovalMethod))
   reviewers = ndb.StringProperty(repeated=True)
   ccs = ndb.StringProperty(repeated=True)
 

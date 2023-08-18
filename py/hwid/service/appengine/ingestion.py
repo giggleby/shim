@@ -129,7 +129,7 @@ class IngestionRPCProvider(_HWIDIngestionProtoRPCShardBase):
         config.vp_data_manager, self.hwid_action_manager, config_data,
         self.decoder_data_manager)
     self.hsp_manager = payload_management.HWIDSelectionPayloadManager(
-        config.hsp_data_manager, self.hwid_action_manager)
+        config.hsp_data_manager, self.hwid_action_manager, config_data)
 
   def _UpdatePayloads(self, payload_manager: payload_management.PayloadManager,
                       dryrun: bool, limit_models: bool, force_update: bool,

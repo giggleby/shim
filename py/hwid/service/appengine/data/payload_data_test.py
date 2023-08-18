@@ -41,7 +41,7 @@ class PayloadDataManagerTest(unittest.TestCase):
 
     config = manager.config
     self.assertFalse(config.disabled)
-    self.assertFalse(config.auto_approval)
+    self.assertEqual(config.approval_method, payload_data.ApprovalMethod.MANUAL)
     self.assertCountEqual(config.reviewers, [])
     self.assertCountEqual(config.ccs, [])
 
@@ -51,14 +51,14 @@ class PayloadDataManagerTest(unittest.TestCase):
     manager2 = payload_data.PayloadDataManager(self._ndb_connector,
                                                payload_data.PayloadType.UNKNOWN)
 
-    self._SetConfig(manager, disabled=True, auto_approval=True,
+    self._SetConfig(manager, disabled=True, approval_method='bot',
                     reviewers=['reviewer@example.com'], ccs=['cc@example.com'])
     self._SetConfig(manager2, reviewers=['foo@example.com'],
                     ccs=['bar@example.com'])
 
     config = manager.config
     self.assertTrue(config.disabled)
-    self.assertTrue(config.auto_approval)
+    self.assertEqual(config.approval_method, payload_data.ApprovalMethod.BOT)
     self.assertCountEqual(config.reviewers, ['reviewer@example.com'])
     self.assertCountEqual(config.ccs, ['cc@example.com'])
 

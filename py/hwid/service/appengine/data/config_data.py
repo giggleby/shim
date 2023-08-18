@@ -160,6 +160,7 @@ class Config:
     self.hwid_api_endpoint = conf['hwid_api_endpoint']
     self.cq_count_over_limit_cl_reviewers = conf.get(
         'cq_count_over_limit_cl_reviewers', [])
+    self.payload_bot_reviewer = conf.get('payload_bot_reviewer', '')
 
 
 CONFIG = type_utils.LazyObject(Config)

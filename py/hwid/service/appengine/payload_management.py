@@ -64,11 +64,13 @@ class PayloadManager(abc.ABC):
 
   def __init__(
       self, data_manager: payload_data.PayloadDataManager,
-      hwid_action_manager: hwid_action_manager_module.HWIDActionManager):
+      hwid_action_manager: hwid_action_manager_module.HWIDActionManager,
+      config_data: config_data_module.Config):
 
     self._logger = logging.getLogger(self.__class__.__name__)
     self._data_manager = data_manager
     self._hwid_action_manager = hwid_action_manager
+    self._config_data = config_data
     self._gerrit_credentials = None
     self._auth_cookie = None
 
@@ -181,6 +183,22 @@ class PayloadManager(abc.ABC):
     result = {}
     self._RefreshCredential()
     author = self._author
+    if config.approval_method == payload_data.ApprovalMethod.BOT:
+      if not self._config_data.payload_bot_reviewer:
+        self._logger.warning('"payload_bot_reviewer" config is empty')
+      reviewers = [self._config_data.payload_bot_reviewer]
+      ccs = config.reviewers + config.ccs
+      self_approval = False
+    elif config.approval_method == payload_data.ApprovalMethod.SELF:
+      reviewers = []
+      ccs = config.reviewers + config.ccs
+      self_approval = True
+    elif config.approval_method == payload_data.ApprovalMethod.MANUAL:
+      reviewers = config.reviewers
+      ccs = config.ccs
+      self_approval = False
+    else:
+      raise ValueError('Invalid approval_method: ', config.approval_method)
     for board, models in self._GetSupportedModels(limit_models,
                                                   live_hwid_repo).items():
       payloads = self._GeneratePayloads(board, models)
@@ -198,10 +216,9 @@ class PayloadManager(abc.ABC):
         try:
           change_id, unused_cl_number = self._CreateCL(
               dryrun, git_url, self._auth_cookie, branch, git_files, author,
-              author, commit_msg, config.reviewers, config.ccs,
-              topic=setting.topic, bot_commit=config.auto_approval,
-              commit_queue=config.auto_approval, auto_submit=True,
-              hashtags=setting.hashtags)
+              author, commit_msg, reviewers, ccs, topic=setting.topic,
+              bot_commit=self_approval, commit_queue=self_approval,
+              auto_submit=True, hashtags=setting.hashtags)
           self._PostUpdate(board, models, change_id, payloads)
           result[board] = UpdatedResult(payloads.hash_value, change_id)
         except git_util.GitUtilNoModificationException:
@@ -398,8 +415,7 @@ class VerificationPayloadManager(PayloadManager):
       config_data: config_data_module.Config,
       decoder_data_manager: decoder_data_module.DecoderDataManager):
 
-    super().__init__(data_manager, hwid_action_manager)
-    self._config_data = config_data
+    super().__init__(data_manager, hwid_action_manager, config_data)
     self._decoder_data_manager = decoder_data_manager
 
   def _GetSupportedModels(
