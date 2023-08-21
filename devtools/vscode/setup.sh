@@ -34,9 +34,6 @@ main(){
   cp -f "${SCRIPT_DIR}/example_jsconfig.json" "${jsconfig_path}"
   sed -i "s#\${factoryFolder}#${FACTORY_DIR}#g" "${jsconfig_path}"
 
-  echo "Add .vscode to your global .gitignore."
-  echo "See https://gist.github.com/subfuzion/db7f57fff2fb6998a16c for more" \
-    "information."
   mk_success
 }
 
