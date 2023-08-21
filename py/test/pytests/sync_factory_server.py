@@ -228,7 +228,7 @@ class SyncFactoryServer(test_case.TestCase):
     self.dut = device_utils.CreateDUTInterface()
     self.station = device_utils.CreateStationInterface()
 
-  def _GetHWID(self) -> str:
+  def _GetHWID(self):
     hwid = device_data.GetDeviceData(device_data.KEY_HWID,
                                      self.dut.CallOutput('crossystem hwid'))
     if not hwid:
