@@ -17,10 +17,10 @@ VPDUTILS = 'cros.factory.gooftool.vpd_utils.VPDUtils'
 CROS_CONFIG = 'cros.factory.external.chromeos_cli.cros_config.CrosConfig'
 
 
-class VPDUTILSTest(unittest.TestCase):
+class VPDUtilsTest(unittest.TestCase):
 
   def setUp(self):
-    self.vpd_util = vpd_utils.VPDUtils('project')
+    self.vpd_utils = vpd_utils.VPDUtils('project')
 
   def test_GetInvalidVPDFieldsUnknownKeys(self):
     data = {
@@ -37,8 +37,8 @@ class VPDUTILSTest(unittest.TestCase):
         're[0-9]': r'.*'
     }
     # pylint: disable=protected-access
-    invalid_key, _ = self.vpd_util._GetInvalidVPDFields(data, known_key,
-                                                        known_key_re)
+    invalid_key, _ = self.vpd_utils._GetInvalidVPDFields(
+        data, known_key, known_key_re)
     self.assertEqual(invalid_key, ['unknown1', 'unknown2'])
 
   def test_GetInvalidVPDFieldsUnknownValues(self):
@@ -51,7 +51,7 @@ class VPDUTILSTest(unittest.TestCase):
         'key[0-9]': r'[0-9]'
     }
     # pylint: disable=protected-access
-    _, invalid_values = self.vpd_util._GetInvalidVPDFields(
+    _, invalid_values = self.vpd_utils._GetInvalidVPDFields(
         data, {}, known_key_re)
     self.assertEqual(invalid_values, [('key2', '[0-9]'), ('key3', '[0-9]')])
 
@@ -66,7 +66,7 @@ class VPDUTILSTest(unittest.TestCase):
     }
     mock_invalid_vpd.return_value = ['unknown'], []
 
-    self.vpd_util.ClearUnknownVPDEntries()
+    self.vpd_utils.ClearUnknownVPDEntries()
 
     mock_invalid_vpd.assert_called_with({'ubind_attribute': 1},
                                         dict(vpd_data.REQUIRED_RW_DATA,
@@ -86,7 +86,7 @@ class VPDUTILSTest(unittest.TestCase):
     }
     mock_invalid_vpd.return_value = [], []
 
-    self.vpd_util.ClearUnknownVPDEntries()
+    self.vpd_utils.ClearUnknownVPDEntries()
 
     mock_info.assert_called_with('No unknown RW VPDs are found. Skip clearing.')
 
@@ -95,7 +95,7 @@ class VPDUTILSTest(unittest.TestCase):
   def testClearRWVPDEntries(self, mock_update_vpd, mock_info):
     keys = ['key1', 'key2']
     # pylint: disable=protected-access
-    self.vpd_util._ClearRWVPDEntries(keys)
+    self.vpd_utils._ClearRWVPDEntries(keys)
 
     mock_update_vpd.assert_called_with({
         'key1': None,
@@ -106,8 +106,8 @@ class VPDUTILSTest(unittest.TestCase):
   @mock.patch(f'{VPDUTILS}._GetInvalidVPDFields')
   def testCheckVPDFields(self, mock_invalid_vpd):
     mock_invalid_vpd.return_value = [], []
-    self.vpd_util.CheckVPDFields('section', {'req': ''}, {'req': ''},
-                                 {'opt': ''}, {'opt_re': ''})
+    self.vpd_utils.CheckVPDFields('section', {'req': ''}, {'req': ''},
+                                  {'opt': ''}, {'opt_re': ''})
 
     mock_invalid_vpd.assert_called_with({'req': ''}, {
         'req': '',
@@ -117,11 +117,11 @@ class VPDUTILSTest(unittest.TestCase):
   @mock.patch(f'{VPDUTILS}._GetInvalidVPDFields')
   def testCheckVPDFieldsError(self, mock_invalid_vpd):
     mock_invalid_vpd.return_value = ['key'], []
-    self.assertRaises(vpd_utils.VPDError, self.vpd_util.CheckVPDFields, '',
+    self.assertRaises(vpd_utils.VPDError, self.vpd_utils.CheckVPDFields, '',
                       {'key': 1}, {}, {}, {})
 
     mock_invalid_vpd.return_value = [], [('key', '[0-9]')]
-    self.assertRaises(vpd_utils.VPDError, self.vpd_util.CheckVPDFields, '',
+    self.assertRaises(vpd_utils.VPDError, self.vpd_utils.CheckVPDFields, '',
                       {'key': 1}, {}, {}, {})
 
   @mock.patch(f'{VPDUTILS}._ClearRWVPDEntries')
@@ -135,7 +135,7 @@ class VPDUTILSTest(unittest.TestCase):
     }
     mock_get_vpd.return_value = data
 
-    self.vpd_util.ClearFactoryVPDEntries()
+    self.vpd_utils.ClearFactoryVPDEntries()
 
     mock_clear_vpd.assert_called_with(data.keys())
 
@@ -146,7 +146,7 @@ class VPDUTILSTest(unittest.TestCase):
         'unknow.key': 1
     }
 
-    self.assertRaises(vpd_utils.VPDError, self.vpd_util.ClearFactoryVPDEntries)
+    self.assertRaises(vpd_utils.VPDError, self.vpd_utils.ClearFactoryVPDEntries)
     mock_clear_vpd.assert_not_called()
 
   @mock.patch('logging.info')
@@ -158,7 +158,7 @@ class VPDUTILSTest(unittest.TestCase):
         'key': 1
     }
 
-    self.vpd_util.ClearFactoryVPDEntries()
+    self.vpd_utils.ClearFactoryVPDEntries()
 
     mock_clear_vpd.assert_not_called()
     mock_info.assert_called_with(
@@ -170,7 +170,7 @@ class VPDUTILSTest(unittest.TestCase):
     mock_get_amp_info.return_value = 'speaker_amp', 'sound_card_init_file', [
         'channel1', 'channel2'
     ]
-    res = self.vpd_util.GetAudioVPDROData()
+    res = self.vpd_utils.GetAudioVPDROData()
 
     self.assertEqual(
         res, {
@@ -191,7 +191,7 @@ class VPDUTILSTest(unittest.TestCase):
   def testGetAudioVPDRODataNotFound(self, mock_get_amp_info, mock_info):
     mock_get_amp_info.return_value = 'speaker_amp', '', ['channel']
 
-    self.assertEqual(self.vpd_util.GetAudioVPDROData(), {})
+    self.assertEqual(self.vpd_utils.GetAudioVPDROData(), {})
     mock_info.assert_called_with(
         'No smart amplifier found! Skip checking DSM VPD value.')
 
@@ -269,7 +269,7 @@ class VPDUTILSTest(unittest.TestCase):
         'custom_label_reg_code')
 
   def _GetDeviceName(self):
-    return self.vpd_util.GetDeviceNameForRegistrationCode('project')
+    return self.vpd_utils.GetDeviceNameForRegistrationCode('project')
 
 
 if __name__ == '__main__':

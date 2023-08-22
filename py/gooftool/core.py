@@ -198,7 +198,7 @@ class Gooftool:
     self._db = None
     self._cros_config = cros_config.CrosConfig()
     self._gsctool = gsctool.GSCTool()
-    self._gsc_util = gsc_utils.GSCUtils()
+    self._gsc_utils = gsc_utils.GSCUtils()
     self._ifdtool = ifdtool
     self._futility = futility.Futility()
 
@@ -969,7 +969,7 @@ class Gooftool:
       raise Error('write protectioin switch of EC is disabled.')
 
   def VerifySnBits(self):
-    self._gsc_util.VerifySnBits()
+    self._gsc_utils.VerifySnBits()
 
   def VerifyCBIEEPROMWPStatus(self, cbi_eeprom_wp_status):
     """Verifies CBI EEPROM write protection status."""
@@ -1190,7 +1190,7 @@ class Gooftool:
     # The MLB is still not finalized, and some dependencies of
     # SN bits or AP RO Hash might be uncertain at this time.
     # So we only set Board ID flags for security issue.
-    self._gsc_util.GSCSetBoardId(two_stages=True, is_flags_only=True)
+    self._gsc_utils.GSCSetBoardId(two_stages=True, is_flags_only=True)
 
   def GSCWriteFlashInfo(
       self, enable_zero_touch=False, factory_process=FactoryProcessEnum.FULL,
@@ -1208,31 +1208,31 @@ class Gooftool:
 
     set_sn_bits = enable_zero_touch and not rma_mode
     if set_sn_bits:
-      self._gsc_util.GSCSetSnBits()
+      self._gsc_utils.GSCSetSnBits()
 
-    if self._gsc_util.IsTi50():
-      self._gsc_util.Ti50ProvisionSPIData(no_write_protect)
+    if self._gsc_utils.IsTi50():
+      self._gsc_utils.Ti50ProvisionSPIData(no_write_protect)
     else:
-      self._gsc_util.Cr50SetROHashForShipping()
+      self._gsc_utils.Cr50SetROHashForShipping()
 
     skip_feature_tiering_steps |= (
-        rma_mode and self._gsc_util.IsGSCFeatureManagementFlagsLocked())
+        rma_mode and self._gsc_utils.IsGSCFeatureManagementFlagsLocked())
 
     # Setting the feature management flags to GSC is a write-once operation,
     # so we should set these flags right before GSCSetBoardId.
     if not skip_feature_tiering_steps:
-      self._gsc_util.GSCSetFeatureManagementFlags()
+      self._gsc_utils.GSCSetFeatureManagementFlags()
 
     if not rma_mode:
-      self._gsc_util.GSCSetBoardId(
+      self._gsc_utils.GSCSetBoardId(
           two_stages=factory_process == FactoryProcessEnum.TWOSTAGES)
       return
 
     # In RMA center, we don't know the process that the device was produced.
     try:
-      self._gsc_util.GSCSetBoardId(two_stages=True)
+      self._gsc_utils.GSCSetBoardId(two_stages=True)
     except Exception:
-      self._gsc_util.GSCSetBoardId(two_stages=False)
+      self._gsc_utils.GSCSetBoardId(two_stages=False)
 
   def GSCDisableFactoryMode(self):
     """Disable GSC Factory mode.
@@ -1245,7 +1245,7 @@ class Gooftool:
     if not self._gsctool.IsGSCBoardIdTypeSet():
       raise Error('GSC board ID not set.')
     self.VerifyGSCBoardID()
-    self._gsc_util.GSCDisableFactoryMode()
+    self._gsc_utils.GSCDisableFactoryMode()
 
   def FpmcuInitializeEntropy(self):
     """Initialze entropy of FPMCU.
