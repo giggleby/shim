@@ -816,6 +816,7 @@ class FinalizeBundle:
       # Collect only the desired firmware
       if self.is_boxster_project:
         keep_list = set()
+        need_set_vars = False
         for manifest_key, sub_manifest in manifest.items():
           if manifest_key in firmware_manifest_keys:
             keep_list.add(sub_manifest.get('host', {}).get('image'))
@@ -824,6 +825,13 @@ class FinalizeBundle:
             Spawn(['rm', '-rf',
                    os.path.join(temp_dir, 'models', manifest_key)], log=True,
                   check_call=True)
+            need_set_vars = True
+        if need_set_vars:
+          # TODO(b/296967721): Update signer_config.csv to remove the deleted
+          # models. Until that is fixed, we have to fallback to 'setvars'.
+          setvars_sh_only = os.path.join(temp_dir, 'setvars_sh_only')
+          with open(setvars_sh_only, 'w', encoding='utf8') as f:
+            f.write('b/296967721: This is a modified firmware archive.\n')
         for f in os.listdir(os.path.join(temp_dir, 'images')):
           if os.path.join('images', f) not in keep_list:
             os.remove(os.path.join(temp_dir, 'images', f))
