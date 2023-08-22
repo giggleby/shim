@@ -816,22 +816,39 @@ class FinalizeBundle:
       # Collect only the desired firmware
       if self.is_boxster_project:
         keep_list = set()
-        need_set_vars = False
         for manifest_key, sub_manifest in manifest.items():
           if manifest_key in firmware_manifest_keys:
             keep_list.add(sub_manifest.get('host', {}).get('image'))
             keep_list.add(sub_manifest.get('ec', {}).get('image'))
           else:
+            # Remove the (deprecated) setvars.sh config. This is no longer
+            # needed on the new firmware updaters that only look at
+            # signer_config.csv, but we need to keep this until all the old
+            # factory branches have been deactivated.
             Spawn(['rm', '-rf',
                    os.path.join(temp_dir, 'models', manifest_key)], log=True,
                   check_call=True)
-            need_set_vars = True
-        if need_set_vars:
-          # TODO(b/296967721): Update signer_config.csv to remove the deleted
-          # models. Until that is fixed, we have to fallback to 'setvars'.
-          setvars_sh_only = os.path.join(temp_dir, 'setvars_sh_only')
-          with open(setvars_sh_only, 'w', encoding='utf8') as f:
-            f.write('b/296967721: This is a modified firmware archive.\n')
+
+        # Update signer_config to remove the discarded models.
+        signer_config_path = os.path.join(temp_dir, 'signer_config.csv')
+        if os.path.exists(signer_config_path):
+          with open(signer_config_path, 'r', encoding='utf8') as csv_in:
+            reader = csv.DictReader(csv_in)
+            fieldnames = reader.fieldnames
+            rows = [
+                row for row in reader
+                if row['model_name'] in firmware_manifest_keys
+            ]
+          if len(rows) < 1:
+            raise FinalizeBundleException(
+                'No models left for signer_config.csv of the firmware updater.')
+          with open(signer_config_path, 'w', encoding='utf8') as csv_out:
+            # 'futility update' does not handle \r\n (csv default).
+            writer = csv.DictWriter(csv_out, fieldnames, lineterminator='\n')
+            writer.writeheader()
+            for row in rows:
+              writer.writerow(row)
+
         for f in os.listdir(os.path.join(temp_dir, 'images')):
           if os.path.join('images', f) not in keep_list:
             os.remove(os.path.join(temp_dir, 'images', f))
