@@ -372,6 +372,35 @@ class ConnectedExternalDisplayStatus(enum.IntEnum):
   FAILURE = enum.auto()
 
 
+class ExternalDisplayFailureReason(enum.IntEnum):
+  """Enum for failure test reasons.
+
+  The class is used to specify different failure reasons when the test failed.
+
+  The following order should NOT be changed as other components depend on the
+  order of the state.
+  """
+  NONE = enum.auto()
+  WRONG_KEY_PRESSED = enum.auto()  # Raised from WrongKeyPressed
+  TEST_ABORTED_BY_OPERATOR = enum.auto()  # Raised from TestAbortedByOperator
+  UNKNOWN_ERROR = enum.auto()
+
+
+class _ExternalDisplayBaseException(Exception):
+  """Base exception for external display failure."""
+  error_code = ExternalDisplayFailureReason.UNKNOWN_ERROR
+
+
+class WrongKeyPressed(_ExternalDisplayBaseException):
+  """Exception to raise when incorrect key is pressed."""
+  error_code = ExternalDisplayFailureReason.WRONG_KEY_PRESSED
+
+
+class TestAbortedByOperator(_ExternalDisplayBaseException):
+  """Exception to raise when operator aborted the test."""
+  error_code = ExternalDisplayFailureReason.TEST_ABORTED_BY_OPERATOR
+
+
 class ExtDisplayTest(test_case.TestCase):
   """Main class for external display test."""
   ARGS = [
@@ -468,6 +497,7 @@ class ExtDisplayTest(test_case.TestCase):
 
       self.Reset()
       test_status = ConnectedExternalDisplayStatus.NOT_STARTED
+      failed_reason = ExternalDisplayFailureReason.NONE
       try:
         if self.do_connect:
           self.WaitConnect(args)
@@ -484,11 +514,16 @@ class ExtDisplayTest(test_case.TestCase):
           self.WaitDisconnect(args)
 
         test_status = ConnectedExternalDisplayStatus.SUCCESS
+      except _ExternalDisplayBaseException as e:
+        test_status = ConnectedExternalDisplayStatus.FAILURE
+        failed_reason = e.error_code
+        self.FailTask(str(e))
       except Exception as e:
         test_status = ConnectedExternalDisplayStatus.FAILURE
+        failed_reason = ExternalDisplayFailureReason.UNKNOWN_ERROR
         raise e from None
       finally:
-        self._LogConnectedExternalDisplay(args, test_status)
+        self._LogConnectedExternalDisplay(args, test_status, failed_reason)
 
   def Reset(self):
     """Resets status between different displays."""
@@ -580,7 +615,8 @@ class ExtDisplayTest(test_case.TestCase):
           pass_button[0].IsPressed() or not self._IsDisplayConnected(args))
     else:
       key_pressed = queue.Queue()
-      keys = [str(i) for i in range(10)]
+      fail_key = ['ESCAPE']
+      keys = fail_key + [str(i) for i in range(10)]
       for key in keys:
         self.ui.BindKey(
             key, (lambda k: lambda unused_event: key_pressed.put(k))(key))
@@ -604,8 +640,10 @@ class ExtDisplayTest(test_case.TestCase):
         self.ui.UnbindKey(key)
 
       key = key_pressed.get()
+      if key in fail_key:
+        raise TestAbortedByOperator('The test is aborted by the operator')
       if key != pass_input:
-        self.FailTask(
+        raise WrongKeyPressed(
             f'Wrong key pressed. pressed: {key}, correct: {pass_input}')
 
   def CheckVideoFixture(self, args):
@@ -643,7 +681,6 @@ class ExtDisplayTest(test_case.TestCase):
     except type_utils.MaxRetryError:
       self.FailTask(f'Failed to see screen on external display after '
                     f'{int(retry_times)} retries.')
-
 
   def VerifyDisplayConfig(self):
     """Check display configuration.
@@ -869,12 +906,14 @@ class ExtDisplayTest(test_case.TestCase):
     logging.info('Get display info %r', display_info)
 
   def _LogConnectedExternalDisplay(self, args: ExtDisplayTaskArg,
-                                   status: ConnectedExternalDisplayStatus):
+                                   status: ConnectedExternalDisplayStatus,
+                                   failed_reason: ExternalDisplayFailureReason):
     """Logs the connected external display and result to testlog."""
     # TODO(louischiu): Set up schemas for observation and refactor this.
     observation = {
         'status': status.value,
         'edidData': self.edid,
         'displayInfo': args._asdict(),
+        'failureReason': failed_reason.value,
     }
     testlog.LogParam('ConnectedExternalDisplay', observation)
