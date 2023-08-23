@@ -52,7 +52,8 @@ class SessionTest(unittest.TestCase):
     self.assertEqual(session.HOST_DEVICE_ID, session.GetDeviceID())
     mock_exists.assert_called_once_with(session.DEVICE_ID_PATH)
 
-  @mock.patch('session.file_utils.ReadFile', return_value='device_id\n')
+  @mock.patch('cros.factory.test.session.file_utils.ReadFile',
+              return_value='device_id\n')
   @mock.patch('os.path.exists', return_value=True)
   def testGetDeviceIDOnDUT(self, mock_exists, mock_read_file):
     session.GetDeviceID.InvalidateCache()
