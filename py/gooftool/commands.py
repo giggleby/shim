@@ -478,8 +478,8 @@ def VerifyDLCImages(options):
     *GetGooftool.__args__)
 def VerifyECKey(options):
   """Verify EC key."""
-  return GetGooftool(options).VerifyECKey(
-      options.ec_pubkey_path, options.ec_pubkey_hash)
+  return GetGooftool(options).futility.VerifyECKey(options.ec_pubkey_path,
+                                                   options.ec_pubkey_hash)
 
 
 @Command('verify_fp_key', *GetGooftool.__args__)
@@ -560,10 +560,12 @@ def VerifyVPD(options):
 
   Check if mandatory fields are set, and deprecated fields don't exist.
   """
-  ro_vpd = vpd.VPDTool().GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME)
-  rw_vpd = vpd.VPDTool().GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME)
+  ro_vpd = GetGooftool(options).vpd.GetAllData(
+      partition=vpd.VPD_READONLY_PARTITION_NAME)
+  rw_vpd = GetGooftool(options).vpd.GetAllData(
+      partition=vpd.VPD_READWRITE_PARTITION_NAME)
   event_log.Log('vpd', ro=FilterDict(ro_vpd), rw=FilterDict(rw_vpd))
-  return GetGooftool(options).VerifyVPD()
+  return GetGooftool(options).vpd_utils.VerifyVPD()
 
 
 @Command(
@@ -601,7 +603,7 @@ def VerifyCrosConfig(options):
 def VerifySnBits(options):
   rma_mode = options.factory_process == FactoryProcessEnum.RMA
   if options.enable_zero_touch and not rma_mode:
-    GetGooftool(options).VerifySnBits()
+    GetGooftool(options).gsc_utils.VerifySnBits()
 
 
 @Command(
@@ -704,22 +706,22 @@ def ClearGBBFlags(options):
   No GBB flags are set in release/shipping state, but they are useful
   for factory/development.  See "futility gbb --flags" for details.
   """
-  gbb_flags_in_factory = GetGooftool(options).GetGBBFlags()
-  GetGooftool(options).ClearGBBFlags()
+  gbb_flags_in_factory = GetGooftool(options).futility.GetGBBFlags()
+  GetGooftool(options).futility.SetGBBFlags(0)
   event_log.Log('clear_gbb_flags', old_value=gbb_flags_in_factory)
 
 
 @Command('clear_factory_vpd_entries', *GetGooftool.__args__)
 def ClearFactoryVPDEntries(options):
   """Clears factory.* items in the RW VPD."""
-  entries = GetGooftool(options).ClearFactoryVPDEntries()
+  entries = GetGooftool(options).vpd_utils.ClearFactoryVPDEntries()
   event_log.Log('clear_factory_vpd_entries', entries=FilterDict(entries))
 
 
 @Command('clear_unknown_vpd_entries', *GetGooftool.__args__)
 def ClearUnknownVPDEntries(options):
   """Clears unknown RW VPDs, which are VPDs not in py/gooftool/vpd_data.py."""
-  entries = GetGooftool(options).ClearUnknownVPDEntries()
+  entries = GetGooftool(options).vpd_utils.ClearUnknownVPDEntries()
   event_log.Log('clear_unknown_vpd_entries', entries=FilterDict(entries))
 
 
@@ -769,7 +771,6 @@ def Cr50DisableFactoryMode(options):
     'gsc_finalize',
     *GSCDisableFactoryMode.__args__,
     *GSCWriteFlashInfo.__args__,
-    *GetGooftool.__args__,
 )
 def GSCFinalize(options):
   """Finalize steps for GSC."""
@@ -1326,7 +1327,7 @@ def GetLogicalBlockSize(options):
     *GetGooftool.__args__)
 def Ti50SetSPIData(options):
   """Sets the ti50 addressing mode and wpsr."""
-  gsc_utils.GSCUtils().Ti50ProvisionSPIData(options.no_write_protect)
+  GetGooftool(options).gsc_utils.Ti50ProvisionSPIData(options.no_write_protect)
 
 
 def main():

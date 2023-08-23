@@ -187,7 +187,7 @@ class Gooftool:
 
     self._util = Util()
     self._flashrom = flashrom
-    self._vpd = vpd.VPDTool()
+    self.vpd = vpd.VPDTool()
     self.vpd_utils = vpd_utils.VPDUtils(self._project)
     self._unpack_gbb = gbb.UnpackGBB
     self._unpack_bmpblock = bmpblk.unpack_bmpblock
@@ -195,9 +195,9 @@ class Gooftool:
     self._db = None
     self._cros_config = cros_config.CrosConfig()
     self._gsctool = gsctool.GSCTool()
-    self._gsc_utils = gsc_utils.GSCUtils()
+    self.gsc_utils = gsc_utils.GSCUtils()
     self._ifdtool = ifdtool
-    self._futility = futility.Futility()
+    self.futility = futility.Futility()
 
   def GetLogicalBlockSize(self):
     """Get the logical block size of a DUT by reading file under /sys/block.
@@ -332,9 +332,6 @@ class Gooftool:
       if error_messages:
         raise Error(f'{error_messages!r}. {_DLC_ERROR_TEMPLATE}')
 
-  def VerifyECKey(self, pubkey_path=None, pubkey_hash=None):
-    self._futility.VerifyECKey(pubkey_path=pubkey_path, pubkey_hash=pubkey_hash)
-
   def VerifyFpKey(self):
     """Verify Fingerprint firmware public key.
 
@@ -359,7 +356,7 @@ class Gooftool:
       fp_fw_files = glob.glob(fp_fw_pattern)
       if len(fp_fw_files) != 1:
         raise Error('No uniquely matched fingerprint firmware blob')
-      release_key_id = self._futility.GetKeyHashFromFutil(fp_fw_files[0])
+      release_key_id = self.futility.GetKeyHashFromFutil(fp_fw_files[0])
 
     key_id_result = self._util.shell(['ectool', '--name=cros_fp', 'rwsig',
                                       'dump', 'key_id'])
@@ -658,11 +655,6 @@ class Gooftool:
     main_fw = self._ifdtool.LoadIntelMainFirmware()
     management_engine.VerifyMELocked(main_fw, self._util.shell)
 
-  def VerifyVPD(self):
-    """Verify that VPD values are set properly."""
-
-    self.vpd_utils.VerifyVPD()
-
   def VerifyReleaseChannel(self, enforced_channels=None):
     """Verify that release image channel is correct.
 
@@ -804,21 +796,6 @@ class Gooftool:
           in release_configs]
       raise Error('\n'.join(error))
 
-  def GetGBBFlags(self):
-    return self._futility.GetGBBFlags()
-
-  def SetGBBFlags(self, flags):
-    self._futility.SetGBBFlags(flags)
-
-  def ClearGBBFlags(self):
-    """Zeros out the GBB flags, in preparation for transition to release state.
-
-    No GBB flags are set in release/shipping state, but they are useful
-    for factory/development.  See "futility gbb --flags" for details.
-    """
-
-    self._futility.SetGBBFlags(0)
-
   def EnableReleasePartition(self, release_rootfs=None):
     """Enables a release image partition on the disk.
 
@@ -846,7 +823,7 @@ class Gooftool:
     try:
       main_fw = self._flashrom.LoadMainFirmware()
       fw_filename = main_fw.GetFileName(sections=['GBB'])
-      gbb_flags = self._futility.GetGBBFlags(fw_filename)
+      gbb_flags = self.futility.GetGBBFlags(fw_filename)
     except Exception:
       logging.warning('Failed to get GBB flags, assume it is 0', exc_info=1)
       gbb_flags = 0
@@ -880,7 +857,7 @@ class Gooftool:
     embargo_date = datetime.date.today()
     embargo_date += datetime.timedelta(days=embargo_offset)
 
-    self._vpd.UpdateData(
+    self.vpd.UpdateData(
         {
             'should_send_rlz_ping': '1',
             'rlz_embargo_end_date': embargo_date.isoformat(),
@@ -889,9 +866,8 @@ class Gooftool:
   def WriteVPDForMFGDate(self):
     """Write manufacturing date into VPD."""
     mfg_date = datetime.date.today()
-    self._vpd.UpdateData({
-        'mfg_date': mfg_date.isoformat()
-    }, partition=vpd.VPD_READONLY_PARTITION_NAME)
+    self.vpd.UpdateData({'mfg_date': mfg_date.isoformat()},
+                        partition=vpd.VPD_READONLY_PARTITION_NAME)
 
   def WriteHWID(self, hwid=None):
     """Writes specified HWID value into the system BB.
@@ -903,14 +879,14 @@ class Gooftool:
     assert hwid
     main_fw = self._flashrom.LoadMainFirmware()
     fw_filename = main_fw.GetFileName(sections=['GBB'])
-    self._futility.WriteHWID(fw_filename, hwid)
+    self.futility.WriteHWID(fw_filename, hwid)
     main_fw.Write(fw_filename)
 
   def ReadHWID(self):
     """Reads the HWID string from firmware GBB."""
     fw_filename = self._flashrom.LoadMainFirmware().GetFileName(
         sections=['GBB'])
-    return self._futility.ReadHWID(fw_filename)
+    return self.futility.ReadHWID(fw_filename)
 
   def VerifyWPSwitch(self, has_ectool=True):
     """Verifies hardware write protection switch is enabled.
@@ -931,9 +907,6 @@ class Gooftool:
     if not re.search('^Flash protect flags:.+wp_gpio_asserted',
                      ectool_flashprotect, re.MULTILINE):
       raise Error('write protectioin switch of EC is disabled.')
-
-  def VerifySnBits(self):
-    self._gsc_utils.VerifySnBits()
 
   def VerifyCBIEEPROMWPStatus(self, cbi_eeprom_wp_status):
     """Verifies CBI EEPROM write protection status."""
@@ -988,8 +961,7 @@ class Gooftool:
       not supported.
     """
     image_file = self._flashrom.LoadMainFirmware().GetFileName()
-    ro_vpd = self._vpd.GetAllData(
-        partition=vpd.VPD_READONLY_PARTITION_NAME)
+    ro_vpd = self.vpd.GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME)
     region = ro_vpd.get('region')
     if region is None:
       raise Error('Missing VPD "region".')
@@ -1026,12 +998,6 @@ class Gooftool:
       Note that the outputs could be multi-line strings.
     """
     return self._util.GetSystemInfo(filter_vpd=True)
-
-  def ClearFactoryVPDEntries(self):
-    return self.vpd_utils.ClearFactoryVPDEntries()
-
-  def ClearUnknownVPDEntries(self):
-    return self.vpd_utils.ClearUnknownVPDEntries()
 
   def GenerateStableDeviceSecret(self):
     """Generates a fresh stable device secret and stores it in RO VPD.
@@ -1104,10 +1070,11 @@ class Gooftool:
         raise Error
 
     with scrub_exceptions('Error writing device secret to VPD'):
-      self._vpd.UpdateData(
-          {'stable_device_secret_DO_NOT_SHARE':
-           codecs.encode(secret_bytes, 'hex').decode('utf-8')},
-          partition=vpd.VPD_READONLY_PARTITION_NAME)
+      self.vpd.UpdateData(
+          {
+              'stable_device_secret_DO_NOT_SHARE':
+                  codecs.encode(secret_bytes, 'hex').decode('utf-8')
+          }, partition=vpd.VPD_READONLY_PARTITION_NAME)
 
   def VerifyGSCBoardID(self):
     board_id = self._gsctool.GetBoardID()
@@ -1125,7 +1092,7 @@ class Gooftool:
 
     if is_custom_label:
       # If we can't find custom_label_tag in VPD, this will be None.
-      vpd_custom_label_tag = self._vpd.GetValue('custom_label_tag')
+      vpd_custom_label_tag = self.vpd.GetValue('custom_label_tag')
       if vpd_custom_label_tag != custom_label_tag:
         if vpd_custom_label_tag is None and custom_type != 'rebrand':
           # custom_label_tag is not set in VPD.  Technically, this is allowed by
@@ -1154,7 +1121,7 @@ class Gooftool:
     # The MLB is still not finalized, and some dependencies of
     # SN bits or AP RO Hash might be uncertain at this time.
     # So we only set Board ID flags for security issue.
-    self._gsc_utils.GSCSetBoardId(two_stages=True, is_flags_only=True)
+    self.gsc_utils.GSCSetBoardId(two_stages=True, is_flags_only=True)
 
   def GSCWriteFlashInfo(
       self, enable_zero_touch=False, factory_process=FactoryProcessEnum.FULL,
@@ -1172,31 +1139,31 @@ class Gooftool:
 
     set_sn_bits = enable_zero_touch and not rma_mode
     if set_sn_bits:
-      self._gsc_utils.GSCSetSnBits()
+      self.gsc_utils.GSCSetSnBits()
 
-    if self._gsc_utils.IsTi50():
-      self._gsc_utils.Ti50ProvisionSPIData(no_write_protect)
+    if self.gsc_utils.IsTi50():
+      self.gsc_utils.Ti50ProvisionSPIData(no_write_protect)
     else:
-      self._gsc_utils.Cr50SetROHashForShipping()
+      self.gsc_utils.Cr50SetROHashForShipping()
 
     skip_feature_tiering_steps |= (
-        rma_mode and self._gsc_utils.IsGSCFeatureManagementFlagsLocked())
+        rma_mode and self.gsc_utils.IsGSCFeatureManagementFlagsLocked())
 
     # Setting the feature management flags to GSC is a write-once operation,
     # so we should set these flags right before GSCSetBoardId.
     if not skip_feature_tiering_steps:
-      self._gsc_utils.GSCSetFeatureManagementFlags()
+      self.gsc_utils.GSCSetFeatureManagementFlags()
 
     if not rma_mode:
-      self._gsc_utils.GSCSetBoardId(
+      self.gsc_utils.GSCSetBoardId(
           two_stages=factory_process == FactoryProcessEnum.TWOSTAGES)
       return
 
     # In RMA center, we don't know the process that the device was produced.
     try:
-      self._gsc_utils.GSCSetBoardId(two_stages=True)
+      self.gsc_utils.GSCSetBoardId(two_stages=True)
     except Exception:
-      self._gsc_utils.GSCSetBoardId(two_stages=False)
+      self.gsc_utils.GSCSetBoardId(two_stages=False)
 
   def GSCDisableFactoryMode(self):
     """Disable GSC Factory mode.
@@ -1209,7 +1176,7 @@ class Gooftool:
     if not self._gsctool.IsGSCBoardIdTypeSet():
       raise Error('GSC board ID not set.')
     self.VerifyGSCBoardID()
-    self._gsc_utils.GSCDisableFactoryMode()
+    self.gsc_utils.GSCDisableFactoryMode()
 
   def FpmcuInitializeEntropy(self):
     """Initialze entropy of FPMCU.
@@ -1276,7 +1243,7 @@ class Gooftool:
       return ''
 
     def get_vpd_val(tag_name):
-      return self._vpd.GetValue(tag_name, 'empty')
+      return self.vpd.GetValue(tag_name, 'empty')
 
     db_identity = CrosConfigIdentity(IdentitySourceEnum.cros_config)
     product_name, product_name_match = self._cros_config.GetProductName()

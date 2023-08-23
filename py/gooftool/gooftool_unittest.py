@@ -217,12 +217,12 @@ class GooftoolTest(unittest.TestCase):
         hwid_version=3, project='chromebook', hwdb_path=_TEST_DATA_PATH)
     self._gooftool._util = mock.Mock(core.Util)
     self._gooftool._util.shell = mock.Mock(Shell)
-    self._gooftool._futility = mock.Mock(futility.Futility)
+    self._gooftool.futility = mock.Mock(futility.Futility)
 
     self._gooftool._flashrom = mock.Mock(flashrom)
     self._gooftool._ifdtool = mock.Mock(ifdtool)
     self._gooftool._unpack_bmpblock = mock.Mock(unpack_bmpblock)
-    self._gooftool._vpd = mock.Mock(self._gooftool._vpd)
+    self._gooftool.vpd = mock.Mock(self._gooftool.vpd)
     self._gooftool._named_temporary_file = mock.Mock(NamedTemporaryFile)
     self._gooftool._cros_config = mock.Mock(self._gooftool._cros_config)
     self._gooftool._cros_config.GetCustomLabelTag.return_value = (True,
@@ -233,10 +233,6 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._gsctool.GetFeatureManagementFlags.return_value = (
         FeatureManagementFlags(False, 0))
 
-  def testVerifyECKey(self):
-    self._gooftool.VerifyECKey(pubkey_hash='hash', pubkey_path='path')
-    self._gooftool._futility.VerifyECKey.assert_called_with(
-        pubkey_path='path', pubkey_hash='hash')
 
   def testLoadHWIDDatabase(self):
     db = self._gooftool.db  # Shouldn't raise any exception.
@@ -503,11 +499,6 @@ class GooftoolTest(unittest.TestCase):
     self.assertRaises(ManagementEngineError,
                       self._gooftool.VerifyManagementEngineLocked)
 
-
-  def testClearGBBFlags(self):
-    self._gooftool.ClearGBBFlags()
-    self._gooftool._futility.SetGBBFlags.assert_called_with(0)
-
   def testGenerateStableDeviceSecretSuccess(self):
     self._gooftool._util.GetReleaseImageVersion.return_value = '6887.0.0'
     self._gooftool._util.shell.return_value = StubStdout('00' * 32 + '\n')
@@ -516,7 +507,7 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._util.GetReleaseImageVersion.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
         'libhwsec_client get_random 32', log=False)
-    self._gooftool._vpd.UpdateData.assert_called_once_with(
+    self._gooftool.vpd.UpdateData.assert_called_once_with(
         dict(stable_device_secret_DO_NOT_SHARE='00' * 32),
         partition=vpd.VPD_READONLY_PARTITION_NAME)
 
@@ -560,14 +551,14 @@ class GooftoolTest(unittest.TestCase):
   def testGenerateStableDeviceSecretVPDWriteFailed(self):
     self._gooftool._util.GetReleaseImageVersion.return_value = '6887.0.0'
     self._gooftool._util.shell.return_value = StubStdout('00' * 32 + '\n')
-    self._gooftool._vpd.UpdateData.side_effect = Exception()
+    self._gooftool.vpd.UpdateData.side_effect = Exception()
 
     self.assertRaisesRegex(Error, 'Error writing device secret',
                            self._gooftool.GenerateStableDeviceSecret)
     self._gooftool._util.GetReleaseImageVersion.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
         'libhwsec_client get_random 32', log=False)
-    self._gooftool._vpd.UpdateData.assert_called_once_with(
+    self._gooftool.vpd.UpdateData.assert_called_once_with(
         dict(stable_device_secret_DO_NOT_SHARE='00' * 32),
         partition=vpd.VPD_READONLY_PARTITION_NAME)
 
@@ -576,7 +567,7 @@ class GooftoolTest(unittest.TestCase):
 
     self._gooftool.WriteHWID('hwid')
 
-    self._gooftool._futility.WriteHWID.assert_called_with('firmware', 'hwid')
+    self._gooftool.futility.WriteHWID.assert_called_with('firmware', 'hwid')
     self._gooftool._flashrom.LoadMainFirmware.assert_called()
 
   def testVerifyWPSwitch(self):
@@ -624,7 +615,7 @@ class GooftoolTest(unittest.TestCase):
         return rw
       return None
 
-    self._gooftool._vpd.GetAllData.side_effect = GetAllDataSideEffect
+    self._gooftool.vpd.GetAllData.side_effect = GetAllDataSideEffect
 
   def testVerifyReleaseChannel_CanaryChannel(self):
     self._gooftool._util.GetReleaseImageChannel.return_value = 'canary-channel'
@@ -816,7 +807,7 @@ class GooftoolTest(unittest.TestCase):
     # custom type is 'custom_label' but no custom label field in VPD
     config = self._SIMPLE_MODEL_SKU_CONFIG_CUSTOM_LABEL
     model_sku_utils.GetDesignConfig.return_value = config
-    self._gooftool._vpd.GetValue.return_value = None
+    self._gooftool.vpd.GetValue.return_value = None
 
     self.assertRaisesRegex(
         Error, 'This is a custom label device, but custom_label_tag is not set '
