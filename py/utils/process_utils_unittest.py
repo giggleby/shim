@@ -6,7 +6,6 @@
 
 from io import StringIO
 import logging
-from logging import handlers
 import os
 import subprocess
 import sys
@@ -37,22 +36,8 @@ class MockFile:
 
 class SpawnTest(unittest.TestCase):
 
-  def setUp(self):
-    log_entries = self.log_entries = []
-
-    class Target:
-
-      def handle(self, record):
-        log_entries.append((record.levelname, record.msg % record.args))
-
-    self.handler = handlers.MemoryHandler(capacity=0,
-                                          target=Target())  # type: ignore
-    logging.getLogger().addHandler(self.handler)
-
-  def tearDown(self):
-    logging.getLogger().removeHandler(self.handler)
-
-  def testNoShell(self):
+  @mock.patch('logging.info')
+  def testNoShell(self, mock_info):
     process = Spawn(['echo', 'f<o>o'],
                     stdout=PIPE, stderr=PIPE,
                     log=True)
@@ -60,18 +45,18 @@ class SpawnTest(unittest.TestCase):
     self.assertEqual('f<o>o\n', stdout)
     self.assertEqual('', stderr)
     self.assertEqual(0, process.returncode)
-    self.assertEqual([('INFO', '''Running command: "echo \'f<o>o\'"''')],
-                     self.log_entries)
+    mock_info.assert_called_with('''Running command: "echo \'f<o>o\'"''')
 
-  def testShell(self):
+  @mock.patch('logging.info')
+  def testShell(self, mock_info):
     process = Spawn('echo foo', shell=True,
                     stdout=PIPE, stderr=PIPE, log=True)
     stdout, stderr = process.communicate()
     self.assertEqual('foo\n', stdout)
     self.assertEqual('', stderr)
     self.assertEqual(0, process.returncode)
-    self.assertEqual([('INFO', 'Running command: "echo foo"')],
-                     self.log_entries)
+
+    mock_info.assert_called_with('Running command: "echo foo"')
 
   def testCall(self):
     process = Spawn('echo blah; exit 3', shell=True, call=True)
@@ -86,18 +71,20 @@ class SpawnTest(unittest.TestCase):
     self.assertRaises(ValueError,
                       lambda: Spawn(['echo'], call=True, stderr=PIPE))
 
-  def testCheckCall(self):
+  @mock.patch('logging.info')
+  @mock.patch('logging.error')
+  def testCheckCall(self, mock_error, mock_info):
     Spawn('exit 0', shell=True, check_call=True)
     self.assertRaises(subprocess.CalledProcessError,
                       lambda: Spawn('exit 3', shell=True, check_call=True))
 
-    self.assertFalse(self.log_entries)
+    mock_info.assert_not_called()
+    mock_error.assert_not_called()
     self.assertRaises(
         subprocess.CalledProcessError,
         lambda: Spawn('exit 3', shell=True, check_call=True, log=True))
-    self.assertEqual([('INFO', 'Running command: "exit 3"'),
-                      ('ERROR', 'Exit code 3 from command: "exit 3"')],
-                     self.log_entries)
+    mock_info.assert_called_with('Running command: "exit 3"')
+    mock_error.assert_called_with('Exit code 3 from command: "exit 3"')
 
   def testCheckCallFunction(self):
     Spawn('exit 3', shell=True, check_call=lambda code: code == 3)
@@ -136,16 +123,15 @@ class SpawnTest(unittest.TestCase):
     self.assertEqual(('foo\n', 'bar\n'), process.communicate())
     self.assertEqual(0, process.returncode)
 
-  def testLogStderrOnError(self):
+  @mock.patch('logging.error')
+  def testLogStderrOnError(self, mock_error):
     Spawn('echo foo >& 2', shell=True, log_stderr_on_error=True)
-    self.assertFalse(self.log_entries)
+    mock_error.assert_not_called()
 
     Spawn('echo foo >& 2; exit 3', shell=True, log_stderr_on_error=True)
-    self.assertEqual(
-        [('ERROR',
-          'Exit code 3 from command: "echo foo >& 2; exit 3"; '
-          'stderr: """\nfoo\n\n"""')],
-        self.log_entries)
+    mock_error.assert_called_with(
+        'Exit code 3 from command: "echo foo >& 2; exit 3"; '
+        'stderr: """\nfoo\n\n"""')
 
   def testIgnoreStdout(self):
     process = Spawn('echo ignored; echo foo >& 2', shell=True,
