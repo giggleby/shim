@@ -437,7 +437,7 @@ class GSCUtils:
     If there's any ambiguity, we need to config a mapping in
     spi_flash_transform manually.
     """
-    probe_result = flash_chip.FlashChipFunction.ProbeDevices('host')
+    probe_result = flash_chip.FlashChipFunction.ProbeDevices('internal')
     flash_name = probe_result.get('name') or probe_result.get('partname')
 
     # Reads `.../factory/py/test/pytests/model_sku.json`

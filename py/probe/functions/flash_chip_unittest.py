@@ -19,7 +19,7 @@ class FlashChipFunctionTest(unittest.TestCase):
     results = flash_chip.FlashChipFunction(chip='main')()
     self.assertEqual(results, [expected])
     MockCheckOutput.assert_called_with(
-        ['flashrom', '-p', 'host', '--flash-name'])
+        ['flashrom', '-p', 'internal', '--flash-name'])
 
   @mock.patch('cros.factory.utils.process_utils.CheckOutput',
               side_effect=subprocess.CalledProcessError(1, 'command'))

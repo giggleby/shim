@@ -81,7 +81,7 @@ _MRC_CACHE_LAST_EVENTLOG = device_data.JoinKeys(device_data.KEY_FACTORY,
 
 def GetMRCSections(dut):
   with dut.temp.TempFile() as temp_file:
-    dut.CheckCall(f'flashrom -p host -r {temp_file} -i FMAP', log=True)
+    dut.CheckCall(f'flashrom -p internal -r {temp_file} -i FMAP', log=True)
     fmap_sections = dut.CheckOutput(f'dump_fmap -p {temp_file}', log=True)
 
   mrc_sections = []
@@ -100,7 +100,7 @@ def HasRecoveryMRCCache(dut):
 def EraseTrainingData(dut):
   mrc_sections = GetMRCSections(dut)
   if mrc_sections:
-    cmd = ['flashrom', '-p', 'host', '-E']
+    cmd = ['flashrom', '-p', 'internal', '-E']
     for section in mrc_sections:
       cmd += ['-i', section]
     dut.CheckCall(cmd, log=True)

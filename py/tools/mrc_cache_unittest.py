@@ -113,8 +113,8 @@ class MRCCacheTestHasRecovery(unittest.TestCase):
 
     check_call_calls = [
         mock.call([
-            'flashrom', '-p', 'host', '-E', '-i', 'RECOVERY_MRC_CACHE', '-i',
-            'RW_MRC_CACHE'
+            'flashrom', '-p', 'internal', '-E', '-i', 'RECOVERY_MRC_CACHE',
+            '-i', 'RW_MRC_CACHE'
         ], log=True),
     ]
     self.assertEqual(self.dut.CheckCall.call_args_list, check_call_calls)
@@ -208,7 +208,7 @@ class MRCCacheTestNoRecovery(unittest.TestCase):
     mrc_cache.EraseTrainingData(self.dut)
 
     check_call_calls = [
-        mock.call(['flashrom', '-p', 'host', '-E', '-i', 'RW_MRC_CACHE'],
+        mock.call(['flashrom', '-p', 'internal', '-E', '-i', 'RW_MRC_CACHE'],
                   log=True),
     ]
     self.assertEqual(self.dut.CheckCall.call_args_list, check_call_calls)

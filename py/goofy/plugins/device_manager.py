@@ -233,7 +233,8 @@ class DeviceManager(plugin.Plugin):
     def GetWPStatus():
       """Returns current write protection status info."""
       host_wp_stat = (
-          process_utils.CheckOutput(['flashrom', '-p', 'host', '--wp-status']))
+          process_utils.CheckOutput(
+              ['flashrom', '-p', 'internal', '--wp-status']))
 
       try:
         ec_wp_stat = (

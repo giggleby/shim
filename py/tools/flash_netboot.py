@@ -80,7 +80,7 @@ class FlashNetboot:
         '***\n')
 
   def _Flashrom(self, params):
-    cmd = ['flashrom', '-p', 'host'] + params
+    cmd = ['flashrom', '-p', 'internal'] + params
     if self._on_output is None:
       Spawn(cmd, log=True, check_call=True)
     else:

@@ -34,7 +34,7 @@ class FlashChipFunction(cached_probe_function.LazyCachedProbeFunction):
      * - Argument ``chip``
        - Corresponding ``<chip_type>``
      * - ``main``
-       - ``host``
+       - ``internal``
      * - ``ec``
        - ``ec``
      * - ``pd``
@@ -42,7 +42,7 @@ class FlashChipFunction(cached_probe_function.LazyCachedProbeFunction):
 
   Examples
   --------
-  Let's assume that the output of ``flashrom -p host --flash-name`` is ::
+  Let's assume that the output of ``flashrom -p internal --flash-name`` is ::
 
     vendor="Google"
     name="Chip1"
@@ -64,7 +64,7 @@ class FlashChipFunction(cached_probe_function.LazyCachedProbeFunction):
 
   """
   TARGET_MAP = {
-      'main': 'host',
+      'main': 'internal',
       'ec': 'ec',
       'pd': 'ec:type=pd',
   }

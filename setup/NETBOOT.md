@@ -71,7 +71,7 @@ You can use Servo to flash the netboot firmware:
 
 or run `flashrom` on DUT:
 ```
-(dut)$ flashrom -p host -w image-${MODEL}.net.bin
+(dut)$ flashrom -p internal -w image-${MODEL}.net.bin
 ```
 
 After flash netboot firmware,the device will boot into netboot mode

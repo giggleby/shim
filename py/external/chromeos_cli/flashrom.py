@@ -19,6 +19,7 @@ from cros.factory.utils import fmap
 
 from cros.factory.external.chromeos_cli import shell
 
+
 # Names to select target bus.
 TARGET_MAIN = 'main'
 TARGET_EC = 'ec'
@@ -38,7 +39,7 @@ class Flashrom:
   # flashrom(8) command line parameters
   _VALID_TARGETS = (TARGET_MAIN, TARGET_EC)
   _TARGET_MAP = {
-      TARGET_MAIN: '-p host',
+      TARGET_MAIN: '-p internal',
       TARGET_EC: '-p ec',
   }
   _WRITE_FLAGS = '--noverify-all'

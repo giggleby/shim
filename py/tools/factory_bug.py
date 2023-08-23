@@ -378,7 +378,7 @@ def CreateABTFile(files, exclude_patterns):
 
 def GenerateDRAMCalibrationLog():
   with file_utils.UnopenedTemporaryFile() as bios_bin:
-    Spawn(['flashrom', '-p', 'host', '-r', bios_bin], check_call=True,
+    Spawn(['flashrom', '-p', 'internal', '-r', bios_bin], check_call=True,
           ignore_stdout=True, ignore_stderr=True)
     # This command generates files under current directory.
     Spawn(['dump_fmap', '-x', bios_bin] + DRAM_CALIBRATION_LOG_FILES,

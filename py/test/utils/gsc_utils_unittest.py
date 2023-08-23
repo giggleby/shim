@@ -418,7 +418,7 @@ class GSCUtilsTest(unittest.TestCase):
 
     flash_name = self.gsc.GetFlashName()
     self.assertEqual(flash_name, 'mock_name')
-    mock_probe_device.assert_called_once_with('host')
+    mock_probe_device.assert_called_once_with('internal')
     mock_get_config.assert_called_once_with(
         self.gsc._dut,  # pylint: disable=protected-access
         default_config_dirs=f'{paths.FACTORY_DIR}/py/test/pytests',
@@ -442,7 +442,7 @@ class GSCUtilsTest(unittest.TestCase):
 
     flash_name = self.gsc.GetFlashName()
     self.assertEqual(flash_name, 'transformed_mock_partname')
-    mock_probe_device.assert_called_once_with('host')
+    mock_probe_device.assert_called_once_with('internal')
     mock_get_config.assert_called_once_with(
         self.gsc._dut,  # pylint: disable=protected-access
         default_config_dirs=f'{paths.FACTORY_DIR}/py/test/pytests',
