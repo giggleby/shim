@@ -26,6 +26,7 @@ function responseHandler<T>(response: Response): Promise<T> {
   throw new Error(response.statusText);
 }
 
+// TODO: Add session to this class
 export abstract class BaseService {
   protected backendURL: string;
   protected baseOptions: RequestInit;
