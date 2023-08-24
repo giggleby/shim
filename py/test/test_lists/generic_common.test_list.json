@@ -1324,6 +1324,7 @@
         {
           "pytest_name": "ti50_ap_ro_verification",
           "label": "Ti50 AP RO Verification (PVT)",
+          "run_if": "constants.phase == 'PVT'",
           "allow_reboot": true,
           "args": {
             "enable_swwp": true,
