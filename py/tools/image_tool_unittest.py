@@ -54,6 +54,16 @@ class ImageToolTest(unittest.TestCase):
       '%(command)s add -i 1 -s 16384 -b 6185 -t data %(file)s',
   ]
 
+  @classmethod
+  def setUpClass(cls):
+    # Support `cros_payload` in bin/ folder.
+    new_path = os.path.realpath(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), '..', '..', 'bin'))
+    os.putenv('PATH', ':'.join(os.getenv('PATH', '').split(':') + [new_path]))
+
+    sys.path.append(new_path)
+
   def CheckCall(self, command):
     return subprocess.check_call(command, shell=True, cwd=self.temp_dir)
 
@@ -216,7 +226,7 @@ class ImageToolTest(unittest.TestCase):
     image_tool.Partition('disk.bin', 1).CopyFile(
         image_tool.PATH_PREFLASH_PAYLOADS_JSON, 'preflash.json')
     data = json_utils.LoadFile('preflash.json')
-    self.assertEqual(data['toolkit']['version'], u'Toolkit Version 1.0')
+    self.assertEqual(data['toolkit']['version'], 'Toolkit Version 1.0')
 
     self.ImageTool('bundle', '--no-firmware', '--timestamp', '20180101')
     bundle_name = 'factory_bundle_test_20180101_proto.tar.bz2'
@@ -308,12 +318,5 @@ class UserInputTest(unittest.TestCase):
     answer = image_tool.UserInput.GetString(title, optional=True)
     self.assertEqual(answer, None)
 
-
 if __name__ == '__main__':
-  # Support `cros_payload` in bin/ folder.
-  new_path = os.path.realpath(os.path.join(
-      os.path.dirname(os.path.realpath(__file__)), '..', '..', 'bin'))
-  os.putenv('PATH', ':'.join(os.getenv('PATH', '').split(':') + [new_path]))
-
-  sys.path.append(new_path)
   unittest.main()
