@@ -76,7 +76,7 @@ class TestInputSocket(unittest.TestCase):
     self._AssertSocketClosed()
     self.assertEqual(self.core.emit_calls, [[datatypes.Event({})]])
 
-  @mock.patch('socket_common.SOCKET_TIMEOUT', 0.1)
+  @mock.patch('cros.factory.instalog.plugins.socket_common.SOCKET_TIMEOUT', 0.1)
   def testOutputTimeout(self):
     self.sock.sendall(b'1\0'
                       b'8\0[{}, {}]'
