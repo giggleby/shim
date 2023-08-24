@@ -20,6 +20,7 @@ from cros.factory.hwid.service.appengine import verification_payload_generator_c
 from cros.factory.hwid.v3 import common as hwid_common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import rule as hwid_rule
+from cros.factory.probe.runtime_probe import generic_probe_statement
 from cros.factory.probe.runtime_probe import probe_config_definition
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.utils import json_utils
@@ -29,114 +30,6 @@ from cros.factory.utils import type_utils
 BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH = 7
 BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH = 7
 COMMON_HWID_TECHNOLOGY = frozenset(['Li-ion', 'Li-poly', 'LION', 'LiP', 'LIP'])
-
-
-class GenericProbeStatementInfoRecord:
-  """Placeholder for info. related to the generic probe statement.
-
-  Attributes:
-    probe_category: The name of the probe category.
-    probe_func_name: The name of the probe function.
-    allowlist_fields: A dictionary which keys are the allowed fields in the
-        output while the corresponding value can be `None` or some value for
-        filtering unwanted generic probed result.  Type of the values must
-        match the definition declared in
-        `cros.factory.probe.runtime_probe.probe_config_definitions` because
-        they will be fed to the probe statement generator.
-  """
-
-  def __init__(self, probe_category, probe_func_name, allowlist_fields,
-               probe_function_argument=None):
-    """Constructor.
-
-    Args:
-      probe_category: The name of the probe category.
-      probe_func_name: The name of the probe function.
-      allowlist_fields: Either a list of allowed fields in the output or
-          a dictionary of allowed fields with values for filtering.
-      probe_function_argument: A dictionary which will be passed to the probe
-          function.
-    """
-    self.probe_category = probe_category
-    self.probe_func_name = probe_func_name
-    self.allowlist_fields = (
-        allowlist_fields if isinstance(allowlist_fields, dict) else
-        {fn: None
-         for fn in allowlist_fields})
-    self.probe_function_argument = probe_function_argument
-
-  def GenerateProbeStatement(self):
-    return probe_config_definition.GetProbeStatementDefinition(
-        self.probe_category).GenerateProbeStatement(
-            'generic', self.probe_func_name, self.allowlist_fields,
-            probe_function_argument=self.probe_function_argument)
-
-
-# TODO(yhong): Remove the expect field when runtime_probe converts the output
-#              format automatically (b/133641904).
-@type_utils.CachedGetter
-def _GetAllGenericProbeStatementInfoRecords():
-  return [
-      GenericProbeStatementInfoRecord(
-          'battery', 'generic_battery',
-          ['chemistry', 'manufacturer', 'model_name', 'technology']),
-      GenericProbeStatementInfoRecord('storage', 'generic_storage', [
-          'type', 'sectors', 'mmc_hwrev', 'mmc_manfid', 'mmc_name', 'mmc_oemid',
-          'mmc_prv', 'mmc_serial', 'pci_vendor', 'pci_device', 'pci_class',
-          'nvme_model', 'ata_vendor', 'ata_model', 'ufs_vendor', 'ufs_model'
-      ]),
-      GenericProbeStatementInfoRecord(
-          'cellular', 'network', [
-              'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
-              'pci_subsystem', 'usb_vendor_id', 'usb_product_id',
-              'usb_bcd_device'
-          ], probe_function_argument={'device_type': 'cellular'}),
-      GenericProbeStatementInfoRecord(
-          'ethernet', 'network', [
-              'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
-              'pci_subsystem', 'usb_vendor_id', 'usb_product_id',
-              'usb_bcd_device'
-          ], probe_function_argument={'device_type': 'ethernet'}),
-      GenericProbeStatementInfoRecord(
-          'wireless', 'network', [
-              'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
-              'pci_subsystem', 'usb_vendor_id', 'usb_product_id',
-              'usb_bcd_device', 'sdio_vendor_id', 'sdio_device_id'
-          ], probe_function_argument={'device_type': 'wifi'}),
-      GenericProbeStatementInfoRecord('dram', 'memory',
-                                      ['part', 'size', 'slot']),
-      GenericProbeStatementInfoRecord('camera', 'generic_camera', [
-          'bus_type', 'usb_vendor_id', 'usb_product_id', 'usb_bcd_device',
-          'usb_removable', 'mipi_module_id', 'mipi_name', 'mipi_sensor_id',
-          'mipi_vendor'
-      ]),
-      GenericProbeStatementInfoRecord(
-          'display_panel', 'edid', ['height', 'product_id', 'vendor', 'width']),
-      GenericProbeStatementInfoRecord(
-          'touchpad', 'input_device', [
-              'name',
-              'product',
-              'vendor',
-              'fw_version',
-              'device_type',
-          ], probe_function_argument={'device_type': 'touchpad'}),
-      GenericProbeStatementInfoRecord(
-          'touchscreen', 'input_device', [
-              'name',
-              'product',
-              'vendor',
-              'fw_version',
-              'device_type',
-          ], probe_function_argument={'device_type': 'touchscreen'}),
-      GenericProbeStatementInfoRecord(
-          'stylus', 'input_device', [
-              'name',
-              'product',
-              'vendor',
-              'fw_version',
-              'device_type',
-          ], probe_function_argument={'device_type': 'stylus'}),
-  ]
 
 
 class IValueConverter(abc.ABC):
@@ -996,7 +889,8 @@ def GenerateVerificationPayload(dbs):
       _MergeExpectedFields(probe_config, vp_pieces)
 
     # Append the generic probe statements.
-    for ps_gen in _GetAllGenericProbeStatementInfoRecords():
+    for ps_gen in (
+        generic_probe_statement.GetAllGenericProbeStatementInfoRecords()):
       if ps_gen.probe_category not in vpg_config.waived_comp_categories:
         probe_config.AddComponentProbeStatement(ps_gen.GenerateProbeStatement())
 
@@ -1012,7 +906,8 @@ def GenerateVerificationPayload(dbs):
       key=lambda ci: (ci.component_category, ci.component_uuid))
 
   # Append the allowlists in the verification spec.
-  for ps_info in _GetAllGenericProbeStatementInfoRecords():
+  for ps_info in generic_probe_statement.GetAllGenericProbeStatementInfoRecords(
+  ):
     hw_verification_spec.generic_component_value_allowlists.add(
         component_category=_ProbeRequestSupportCategory.Value(
             ps_info.probe_category), field_names=list(ps_info.allowlist_fields))

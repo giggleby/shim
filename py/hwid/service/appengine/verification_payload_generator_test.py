@@ -15,6 +15,7 @@ from cros.factory.hwid.service.appengine import verification_payload_generator
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import common as hwid_common
 from cros.factory.hwid.v3 import database
+from cros.factory.probe.runtime_probe import generic_probe_statement
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.utils import json_utils
 
@@ -692,6 +693,24 @@ class MIPICameraV4L2ProbeStatementGeneratorTest(unittest.TestCase):
         'vendor': '0x1234',
         'bus_type': 'mipi'
     })
+
+
+class GetAllProbeStatementGeneratorsTest(unittest.TestCase):
+
+  def testHasGenericGenerator(self):
+    generic_categories = set()
+    for ps_gen in (
+        generic_probe_statement.GetAllGenericProbeStatementInfoRecords()):
+      generic_categories.add(ps_gen.probe_category)
+
+    # Categories that exist in HWID, but will not be used for generic probe
+    # statements.
+    extra_categories = set(['video'])
+    generic_categories.update(extra_categories)
+
+    all_categories = set(
+        verification_payload_generator.GetAllProbeStatementGenerators())
+    self.assertSetEqual(all_categories, generic_categories)
 
 
 if __name__ == '__main__':
