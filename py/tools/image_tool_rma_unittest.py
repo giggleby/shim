@@ -177,6 +177,16 @@ class ImageToolRMATest(unittest.TestCase):
 
   LSB_CONTENT = 'CHROMEOS_RELEASE_VERSION=1.0\nCHROMEOS_RELEASE_BOARD={}\n'
 
+  @classmethod
+  def setUpClass(cls):
+    # Support `cros_payload` in bin/ folder.
+    new_path = os.path.realpath(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), '..', '..', 'bin'))
+    os.putenv('PATH', ':'.join(os.getenv('PATH', '').split(':') + [new_path]))
+
+    sys.path.append(new_path)
+
   def CheckCall(self, command):
     return subprocess.check_call(command, shell=True, cwd=self.temp_dir)
 
@@ -350,10 +360,4 @@ class ImageToolRMATest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  # Support `cros_payload` in bin/ folder.
-  new_path = os.path.realpath(os.path.join(
-      os.path.dirname(os.path.realpath(__file__)), '..', '..', 'bin'))
-  os.putenv('PATH', ':'.join(os.getenv('PATH', '').split(':') + [new_path]))
-
-  sys.path.append(new_path)
   unittest.main()
