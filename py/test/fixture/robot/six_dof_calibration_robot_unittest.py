@@ -41,8 +41,8 @@ class SixDoFCalibrationRobotTest(unittest.TestCase):
 
     disconnect.assert_called_with()
 
-  @mock.patch('six_dof_calibration_robot.serial.serial_for_url',
-              autospec=True)
+  @mock.patch('cros.factory.test.fixture.robot.six_dof_calibration_robot'
+              '.serial.serial_for_url', autospec=True)
   def testConnect(self, serial_for_url):
     self._robot.Connect()
 
