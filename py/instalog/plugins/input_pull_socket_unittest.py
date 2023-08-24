@@ -103,7 +103,7 @@ class TestInputPullSocket(unittest.TestCase):
     self._AssertSocketClosed()
     self.assertEqual(self.core.emit_calls, [[datatypes.Event({})]])
 
-  @mock.patch('socket_common.SOCKET_TIMEOUT', 0.1)
+  @mock.patch('cros.factory.instalog.plugins.socket_common.SOCKET_TIMEOUT', 0.1)
   def testOutputTimeout(self):
     # Qing.
     self.assertEqual(self.sock.recv(1), socket_common.QING)
