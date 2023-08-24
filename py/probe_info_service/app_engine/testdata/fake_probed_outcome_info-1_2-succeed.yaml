@@ -42,6 +42,10 @@ probe_config_payload: '
           "pci_class": [true, "hex", "!eq 0x012ABC"],
           "nvme_model": [true, "str", "!eq PN_1234"]
         }
+      },
+      "generic": {
+        "eval": {"generic_storage": {}},
+        "expect": {}
       }
     }
   }'

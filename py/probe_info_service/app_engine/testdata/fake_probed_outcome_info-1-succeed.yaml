@@ -27,6 +27,10 @@ probe_config_payload: '
           "mmc_name": [true, "str", "!eq ABCxyz"],
           "mmc_prv": [true, "hex", "!eq 0x12"]
         }
+      },
+      "generic": {
+        "eval": {"generic_storage": {}},
+        "expect": {}
       }
     }
   }'

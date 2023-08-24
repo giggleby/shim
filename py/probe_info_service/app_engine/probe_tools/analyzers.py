@@ -13,6 +13,7 @@ from typing import NamedTuple, Optional, Sequence, Tuple
 
 from google.protobuf import text_format
 
+from cros.factory.probe.runtime_probe import generic_probe_statement
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.probe_info_service.app_engine import bundle_builder
 from cros.factory.probe_info_service.app_engine import probe_info_analytics
@@ -327,6 +328,9 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
     metadata = client_payload_pb2.ProbeBundleMetadata()
     pc_payload = probe_config_types.ProbeConfigPayload()
 
+    categories = set()
+
+    # Add component probe statements to probe config.
     for i, probe_data_source in enumerate(probe_data_sources):
       ps_metadata = metadata.probe_statement_metadatas.add(
           component_name=probe_data_source.component_name,
@@ -334,6 +338,15 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
       for comp_ps in comp_probe_statements_list[i]:
         ps_metadata.component_part_names.append(comp_ps.component_name)
         pc_payload.AddComponentProbeStatement(comp_ps)
+        categories.add(comp_ps.category_name)
+
+    # Add generic probe statements to probe config.
+    for ps_gen in (
+        generic_probe_statement.GetAllGenericProbeStatementInfoRecords()):
+      if ps_gen.probe_category in categories:
+        ps = ps_gen.GenerateProbeStatement()
+        ps.UpdateExpect({})
+        pc_payload.AddComponentProbeStatement(ps)
 
     metadata.probe_config_file_path = 'probe_config.json'
     builder.AddRegularFile(metadata.probe_config_file_path,
@@ -493,6 +506,9 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
           rp_invocation_result.raw_stdout.decode('utf-8'))
       for category_probed_results in probed_result.values():
         for probed_component in category_probed_results:
+          if probed_component['name'] == 'generic':
+            # TODO(b/293377003): Analyze generic probe results.
+            continue
           if probed_component['name'] not in known_component_names:
             raise ValueError(f'Unexpected component: {probed_component}.')
           probed_components.append(probed_component['name'])
