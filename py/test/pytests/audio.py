@@ -141,18 +141,18 @@ def TestAudioDigitPlayback(ui, dut, port_name, card, device, channel='all',
   }
 
   if channel in channel_name:
-    device = i18n.StringFormat(
+    device_info = i18n.StringFormat(
         '{port_name} ({channel_name})',
         port_name=port_name,
         channel_name=channel_name[channel])
   else:
-    device = port_name
+    device_info = port_name
 
   all_keys = [test_ui.ESCAPE_KEY, 'R'] + [str(num) for num in range(10)]
   while True:
     ui.SetState(
         _('Please wait for the {device} playback to finish.',
-          device=device))
+          device=device_info))
 
     locale = ui.GetUILocale()
     audio_file = os.path.join(_SOUND_DIRECTORY, locale,
@@ -162,7 +162,7 @@ def TestAudioDigitPlayback(ui, dut, port_name, card, device, channel='all',
     ui.SetState([
         _('Press the number you hear from {device} to pass the test.<br>'
           'Press "R" to replay.',
-          device=device), test_ui.FAIL_KEY_LABEL
+          device=device_info), test_ui.FAIL_KEY_LABEL
     ])
 
     key = ui.WaitKeysOnce(all_keys)
@@ -234,7 +234,7 @@ class AudioTest(test_case.TestCase):
     args = (self.ui, self._dut, self.args.port_label, self._out_card,
             self._out_device)
     kwargs = {}
-
+    self._dut.audio.EnableSpeaker(self._out_card)
     if self.args.sample_rate is not None:
       kwargs['sample_rate'] = self.args.sample_rate
 
