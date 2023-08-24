@@ -316,6 +316,8 @@ class WebSocketTest(GoofyUITest):
     # If we don't wait server side socket being ready, it may miss some events.
     # This happens because goofy sets states to UNTESTED before runTest and
     # calls InitUI in runTest.
+    time.sleep(0.1)
+    # TODO(b/297156599) Figure out why the socket is still not ready.
     self.goofy.InitUI()
     self.CheckOneTest('test:a', 'a_A', TestState.PASSED, '', spawn_mock)
     self.assertTrue(self.CheckTestStatusChange('test:a', TestState.PASSED))
