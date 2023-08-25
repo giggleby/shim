@@ -95,6 +95,26 @@ class StorageConverterCollectionTest(unittest.TestCase):
 
     self.assertEqual(result.alignment_status, _PVAlignmentStatus.NOT_ALIGNED)
 
+  def testMatchPCIEEMMCStorageAssembly(self):
+    comp_values = {
+        'pci_class': '0x010802',
+        'pci_vendor': '0x1234',
+        'pci_device': '0x5678',
+        'nvme_model': 'MODEL ABCXYZ',
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'bridge_pcie_class': '0x010802',
+        'bridge_pcie_vendor': '0x1234',
+        'bridge_pcie_device': '0x5678',
+        'nvme_model': 'MODEL ABCXYZ',
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info)
+
+    self.assertEqual(result.alignment_status, _PVAlignmentStatus.ALIGNED)
+    self.assertEqual(result.converter_identifier,
+                     'pcie_emmc_storage_assembly_as_nvme')
+
 
 if __name__ == '__main__':
   unittest.main()

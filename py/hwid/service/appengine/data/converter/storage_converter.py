@@ -8,9 +8,12 @@ from typing import Any, Sequence
 
 from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import converter_types
+from cros.factory.hwid.service.appengine.data.converter import pcie_emmc_storage_assembly_converter
 
 
 _ConvertedValueSpec = converter.ConvertedValueSpec
+_StorageAssemblyAVLAttrs = (
+    pcie_emmc_storage_assembly_converter.PCIEEMMCStorageAssemblyAVLAttrs)
 
 
 class StorageAVLAttrs(converter.AVLAttrs):
@@ -219,6 +222,17 @@ _STORAGE_CONVERTERS: Sequence[converter.Converter] = [
                 _ConvertedValueSpec('ufs_vendor'),
             StorageAVLAttrs.SIZE_IN_GB:
                 _ConvertedValueSpec('sectors', _StorageSectorSizeValueType),
+        }),
+    converter.FieldNameConverter.FromFieldMap(
+        'pcie_emmc_storage_assembly_as_nvme', {
+            _StorageAssemblyAVLAttrs.BRIDGE_PCIE_VENDOR:
+                _ConvertedValueSpec('pci_vendor'),
+            _StorageAssemblyAVLAttrs.BRIDGE_PCIE_DEVICE:
+                _ConvertedValueSpec('pci_device'),
+            _StorageAssemblyAVLAttrs.BRIDGE_PCIE_CLASS:
+                _ConvertedValueSpec('pci_class'),
+            _StorageAssemblyAVLAttrs.NVME_MODEL:
+                _ConvertedValueSpec('nvme_model'),
         }),
 ]
 
