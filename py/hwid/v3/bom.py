@@ -21,7 +21,6 @@ The above two use cases can be written to a more simple form (in LaTeX syntax):
 Above two formulas are implemented in `transformer.py`.
 """
 
-import collections
 import logging
 import re
 
@@ -71,8 +70,7 @@ class BOM:
 
 class RamSize:
   """Handle memory size labels."""
-  _UNITS = collections.OrderedDict([
-      ('', 1), ('K', 1 << 10), ('M', 1 << 20), ('G', 1 << 30)])
+  _UNITS = dict([('', 1), ('K', 1 << 10), ('M', 1 << 20), ('G', 1 << 30)])
   # Possible ram strings:
   # dram_micron_1g_dimm2, hynix_2gb_dimm0, 2x2GB_DDR3_1600,
   # K4EBE304EB_EGCF_8gb, H9HCNNN8KUMLHR_1gb_slot2
