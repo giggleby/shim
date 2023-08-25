@@ -196,7 +196,9 @@ class Finalize(test_case.TestCase):
           'see "gooftool finalize --help" for available items.',
           default=[]),
       Arg('enable_zero_touch', bool,
-          'Set SN bits to enable zero-touch.', default=False)
+          'Set SN bits to enable zero-touch.', default=False),
+      Arg('boot_to_shimless', bool,
+          'Initiate Shimless RMA after wiping.', default=False)
   ]
 
   FINALIZE_TIMEOUT = 180
@@ -223,8 +225,10 @@ class Finalize(test_case.TestCase):
     # TODO(hungte) Should we set a percentage of units to run WP on DVT?
     if self.args.write_protection is None:
       self.args.write_protection = phase.GetPhase() >= phase.PVT
-    phase.AssertStartingAtPhase(phase.PVT, self.args.write_protection,
-                                'Write protection must be enabled')
+
+    if not self.args.boot_to_shimless:
+      phase.AssertStartingAtPhase(phase.PVT, self.args.write_protection,
+                                  'Write protection must be enabled')
 
     def GetState(v):
       return (['<b style="color: green;">', MSG_ENABLED, '</b>']
@@ -243,7 +247,7 @@ class Finalize(test_case.TestCase):
 
   def Preflight(self):
     # Check for HWID bundle update from factory server.
-    if self.args.enable_factory_server:
+    if self.args.enable_factory_server and not self.args.boot_to_shimless:
       update_utils.UpdateHWIDDatabase(self.dut)
     self.LogTestStates()
     self.LogImageVersion()
@@ -361,6 +365,9 @@ class Finalize(test_case.TestCase):
     if self.args.mlb_mode:
       command += ' --mlb_mode'
       logging.info('Using MLB mode. Only do cr50 finalize')
+    if self.args.boot_to_shimless:
+      command += ' --boot_to_shimless'
+      logging.info('Using Shimless MLB mode. Will initiate Shimless RMA after wiping.')
     if self.args.is_cros_core:
       command += ' --cros_core'
       logging.info('ChromeOS Core device. Skip some check.')

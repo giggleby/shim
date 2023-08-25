@@ -273,6 +273,13 @@ _enable_zero_touch_cmd_arg = CmdArg(
     '--enable_zero_touch', action='store_true',
     help='Set attested_device_id for zero-touch feature.')
 
+_boot_to_shimless_cmd_arg = CmdArg(
+    '--boot_to_shimless', action='store_true', default=False,
+    help='Initiate the Shimless RMA after performing wiping.')
+
+_fast_cmd_arg = CmdArg(
+    '--fast', action='store_true',
+    help='Use non-secure but faster wipe method.')
 
 @Command(
     'verify_ec_key',
@@ -545,21 +552,21 @@ def EnableReleasePartition(options):
 
 
 @Command('wipe_in_place',
-         CmdArg('--fast', action='store_true',
-                help='use non-secure but faster wipe method.'),
+         _fast_cmd_arg,
          _shopfloor_url_args_cmd_arg,
          _station_ip_cmd_arg,
          _station_port_cmd_arg,
          _wipe_finish_token_cmd_arg,
+         _boot_to_shimless_cmd_arg,
          _test_umount_cmd_arg)
 def WipeInPlace(options):
   """Start factory wipe directly without reboot."""
-
   GetGooftool(options).WipeInPlace(options.fast,
                                    options.shopfloor_url,
                                    options.station_ip,
                                    options.station_port,
                                    options.wipe_finish_token,
+                                   options.boot_to_shimless,
                                    options.test_umount)
 
 @Command('wipe_init',
@@ -827,8 +834,7 @@ def UploadReport(options):
 
 @Command(
     'finalize',
-    CmdArg('--fast', action='store_true',
-           help='use non-secure but faster wipe method.'),
+    _fast_cmd_arg,
     _no_ectool_cmd_arg,
     _shopfloor_url_args_cmd_arg,
     _hwdb_path_cmd_arg,
@@ -860,6 +866,7 @@ def UploadReport(options):
     _skip_list_cmd_arg,
     _no_generate_mfg_date_cmd_arg,
     _enable_zero_touch_cmd_arg,
+    _boot_to_shimless_cmd_arg,
 )
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
@@ -882,6 +889,9 @@ def Finalize(options):
     LogSourceHashes(options)
     LogSystemDetails(options)
     UploadReport(options)
+    if options.boot_to_shimless:
+      # Wipe and boot to shimless.
+      BootToShimless(options)
     return
 
   if not options.rma_mode:
@@ -921,6 +931,39 @@ def Finalize(options):
     wipe_args += ['--station_port', options.station_port]
   if options.wipe_finish_token:
     wipe_args += ['--wipe_finish_token', options.wipe_finish_token]
+  ExecFactoryPar('gooftool', 'wipe_in_place', *wipe_args)
+
+
+@Command('boot_to_shimless',
+         _fast_cmd_arg,
+         _shopfloor_url_args_cmd_arg,
+         _station_ip_cmd_arg,
+         _station_port_cmd_arg,
+         _wipe_finish_token_cmd_arg,)
+def BootToShimless(options):
+  UntarStatefulFiles(options)
+  if options.cros_core:
+    logging.info('SetFirmwareBitmapLocale is skipped for ChromeOS Core device.')
+  else:
+    SetFirmwareBitmapLocale(options)
+  ClearFactoryVPDEntries(options)
+  GenerateStableDeviceSecret(options)
+  ClearGBBFlags(options)
+  FpmcuInitializeEntropy(options)
+
+  event_log.Log('wipe_in_place')
+  wipe_args = ['--boot_to_shimless']
+  if options.shopfloor_url:
+    wipe_args += ['--shopfloor_url', options.shopfloor_url]
+  if options.fast:
+    wipe_args += ['--fast']
+  if options.station_ip:
+    wipe_args += ['--station_ip', options.station_ip]
+  if options.station_port:
+    wipe_args += ['--station_port', options.station_port]
+  if options.wipe_finish_token:
+    wipe_args += ['--wipe_finish_token', options.wipe_finish_token]
+
   ExecFactoryPar('gooftool', 'wipe_in_place', *wipe_args)
 
 
