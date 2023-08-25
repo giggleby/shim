@@ -199,7 +199,7 @@ class VPDUtils:
       reg_code_config = _LoadConfigJsonFile('whitelabel_reg_code')
       if reg_code_config:
         logging.warning(
-            '"whitelabel_reg_code.json is deprecated, please rename it to %s',
+            'whitelabel_reg_code.json is deprecated, please rename it to %s',
             config)
 
     if reg_code_config is None:

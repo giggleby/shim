@@ -82,50 +82,53 @@ class VPDUtilsTest(unittest.TestCase):
         data, {}, known_key_re)
     self.assertEqual(invalid_values, [('key2', '[0-9]'), ('key3', '[0-9]')])
 
-  @mock.patch('logging.info')
   @mock.patch(f'{VPDUTILS}._GetInvalidVPDFields')
   @mock.patch(f'{VPDUTILS}._ClearRWVPDEntries')
-  def testClearUnknownVPDEntries(self, mock_clear_vpd, mock_invalid_vpd,
-                                 mock_info):
+  def testClearUnknownVPDEntries(self, mock_clear_vpd, mock_invalid_vpd):
     self.vpd_utils._vpd.GetAllData.return_value = {
         'ubind_attribute': 1
     }
     mock_invalid_vpd.return_value = ['unknown'], []
 
-    self.vpd_utils.ClearUnknownVPDEntries()
+    with self.assertLogs() as cm:
+      self.vpd_utils.ClearUnknownVPDEntries()
 
     mock_invalid_vpd.assert_called_with({'ubind_attribute': 1},
                                         dict(vpd_data.REQUIRED_RW_DATA,
                                              **vpd_data.KNOWN_RW_DATA),
                                         vpd_data.KNOWN_RW_DATA_RE)
     mock_clear_vpd.assert_called_with(['unknown'])
-    mock_info.assert_called_with('Current RW VPDs: %r',
-                                 {'ubind_attribute': '<redacted type int>'})
+    self.assertIn(
+        "INFO:root:Current RW VPDs: {'ubind_attribute': '<redacted type int>'}",
+        cm.output)
 
-  @mock.patch('logging.info')
   @mock.patch(f'{VPDUTILS}._GetInvalidVPDFields')
-  def testClearUnknownVPDEntriesAllValid(self, mock_invalid_vpd, mock_info):
+  def testClearUnknownVPDEntriesAllValid(self, mock_invalid_vpd):
     self.vpd_utils._vpd.GetAllData.return_value = {
         'known': 1
     }
     mock_invalid_vpd.return_value = [], []
 
-    self.vpd_utils.ClearUnknownVPDEntries()
+    with self.assertLogs() as cm:
+      self.vpd_utils.ClearUnknownVPDEntries()
 
-    mock_info.assert_called_with('No unknown RW VPDs are found. Skip clearing.')
+    self.assertIn('INFO:root:No unknown RW VPDs are found. Skip clearing.',
+                  cm.output)
 
-  @mock.patch('logging.info')
-  def testClearRWVPDEntries(self, mock_info):
+  def testClearRWVPDEntries(self):
     keys = ['key1', 'key2']
 
-    self.vpd_utils._ClearRWVPDEntries(keys)
+    with self.assertLogs() as cm:
+      self.vpd_utils._ClearRWVPDEntries(keys)
 
     self.vpd_utils._vpd.UpdateData.assert_called_with(
         {
             'key1': None,
             'key2': None
         }, partition=vpd.VPD_READWRITE_PARTITION_NAME)
-    mock_info.assert_called_with('Removing VPD entries with key %r', keys)
+
+    self.assertIn("INFO:root:Removing VPD entries with key ['key1', 'key2']",
+                  cm.output)
 
   @mock.patch(f'{VPDUTILS}._GetInvalidVPDFields')
   def testCheckVPDFields(self, mock_invalid_vpd):
@@ -171,26 +174,27 @@ class VPDUtilsTest(unittest.TestCase):
     self.assertRaises(vpd_utils.VPDError, self.vpd_utils.ClearFactoryVPDEntries)
     mock_clear_vpd.assert_not_called()
 
-  @mock.patch('logging.info')
   @mock.patch(f'{VPDUTILS}._ClearRWVPDEntries')
-  def testClearFactoryVPDEntriesNonDot(self, mock_clear_vpd, mock_info):
+  def testClearFactoryVPDEntriesNonDot(self, mock_clear_vpd):
     self.vpd_utils._vpd.GetAllData.return_value = {
         'key': 1
     }
 
-    self.vpd_utils.ClearFactoryVPDEntries()
+    with self.assertLogs() as cm:
+      self.vpd_utils.ClearFactoryVPDEntries()
 
     mock_clear_vpd.assert_not_called()
-    mock_info.assert_called_with(
-        'No factory-related RW VPDs are found. Skip clearing.')
+    self.assertIn(
+        'INFO:root:No factory-related RW VPDs are found. Skip clearing.',
+        cm.output)
 
-  @mock.patch('logging.info')
   @mock.patch('cros.factory.test.utils.smart_amp_utils.GetSmartAmpInfo')
-  def testGetAudioVPDROData(self, mock_get_amp_info, mock_info):
+  def testGetAudioVPDROData(self, mock_get_amp_info):
     mock_get_amp_info.return_value = 'speaker_amp', 'sound_card_init_file', [
         'channel1', 'channel2'
     ]
-    res = self.vpd_utils._GetAudioVPDROData()
+    with self.assertLogs() as cm:
+      res = self.vpd_utils._GetAudioVPDROData()
 
     self.assertEqual(
         res, {
@@ -199,21 +203,23 @@ class VPDUtilsTest(unittest.TestCase):
             'dsm_calib_r0_1': r'[0-9]*',
             'dsm_calib_temp_1': r'[0-9]*'
         })
-    mock_info.assert_has_calls([
-        mock.call('Amplifier %s found on DUT.', 'speaker_amp'),
-        mock.call(
-            'The VPD RO should contain `dsm_calib_r0_N` and'
-            ' `dsm_calib_temp_N` where N ranges from 0 ~ %d.', 1)
+
+    self.assertSequenceEqual(cm.output, [
+        'INFO:root:Amplifier speaker_amp found on DUT.',
+        'INFO:root:The VPD RO should contain `dsm_calib_r0_N` and'
+        ' `dsm_calib_temp_N` where N ranges from 0 ~ 1.'
     ])
 
-  @mock.patch('logging.info')
   @mock.patch('cros.factory.test.utils.smart_amp_utils.GetSmartAmpInfo')
-  def testGetAudioVPDRODataNotFound(self, mock_get_amp_info, mock_info):
+  def testGetAudioVPDRODataNotFound(self, mock_get_amp_info):
     mock_get_amp_info.return_value = 'speaker_amp', '', ['channel']
 
-    self.assertEqual(self.vpd_utils._GetAudioVPDROData(), {})
-    mock_info.assert_called_with(
-        'No smart amplifier found! Skip checking DSM VPD value.')
+    with self.assertLogs() as cm:
+      self.assertEqual(self.vpd_utils._GetAudioVPDROData(), {})
+
+    self.assertIn(
+        'INFO:root:No smart amplifier found! Skip checking DSM VPD value.',
+        cm.output)
 
   @mock.patch('cros.factory.utils.config_utils.LoadConfig')
   def testGetDeviceNameForRegistrationCodeReturnProject(self, mock_cros_config):
@@ -267,11 +273,10 @@ class VPDUtilsTest(unittest.TestCase):
 
     self.assertEqual(self._GetDeviceName(), 'label_key')
 
-  @mock.patch('logging.warning')
   @mock.patch(f'{CROS_CONFIG}.GetCustomLabelTag')
   @mock.patch('cros.factory.utils.config_utils.LoadConfig')
   def testGetDeviceNameForRegistrationCustomLabelFallback(
-      self, mock_cros_config, mock_custom_label, mock_warn):
+      self, mock_cros_config, mock_custom_label):
     mock_cros_config.side_effect = [
         None, {
             self._project: {
@@ -281,14 +286,16 @@ class VPDUtilsTest(unittest.TestCase):
     ]
     mock_custom_label.return_value = True, 'label_key'
 
-    self.assertEqual(self._GetDeviceName(), 'label_key')
+    with self.assertLogs() as cm:
+      self.assertEqual(self._GetDeviceName(), 'label_key')
     mock_cros_config.assert_has_calls([
         mock.call('custom_label_reg_code', validate_schema=False),
         mock.call('whitelabel_reg_code', validate_schema=False)
     ])
-    mock_warn.assert_called_with(
-        '"whitelabel_reg_code.json is deprecated, please rename it to %s',
-        'custom_label_reg_code')
+    self.assertSequenceEqual(cm.output, [
+        'WARNING:root:whitelabel_reg_code.json is deprecated, please '
+        'rename it to custom_label_reg_code'
+    ])
 
   def _GetDeviceName(self):
     return self.vpd_utils._GetDeviceNameForRegistrationCode(self._project)

@@ -126,15 +126,15 @@ class GSCUtilsTest(unittest.TestCase):
 
     self.assertTrue(self.gsc.IsGSCFeatureManagementFlagsLocked())
 
-  @mock.patch('logging.info')
-  def testVerifySnBits(self, mock_info):
+  def testVerifySnBits(self):
     self._SetShellResult(stdout=' out ', stderr=' err ', status=0)
 
-    self.gsc.VerifySnBits()
-    mock_info.assert_has_calls([
-        mock.call('status: %d', 0),
-        mock.call('stdout: %s', 'out'),
-        mock.call('stderr: %s', 'err')
+    with self.assertLogs() as cm:
+      self.gsc.VerifySnBits()
+    self.assertSequenceEqual(cm.output, [
+        'INFO:root:status: 0',
+        'INFO:root:stdout: out',
+        'INFO:root:stderr: err',
     ])
 
   def testVerifySnBitsError(self):
@@ -142,63 +142,72 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertRaisesRegex(gsc_utils.GSCUtilsError, 'out',
                            self.gsc.VerifySnBits)
 
-  @mock.patch('logging.warning')
-  def testVerifySnBitsRMAed(self, mock_warn):
+  def testVerifySnBitsRMAed(self):
     self._SetShellResult(stdout='This device has been RMAed. xxx')
 
-    self.gsc.VerifySnBits()
-    mock_warn.assert_called_with('SN Bits cannot be set anymore.')
+    with self.assertLogs() as cm:
+      self.gsc.VerifySnBits()
+    self.assertIn('WARNING:root:SN Bits cannot be set anymore.', cm.output)
 
-  @mock.patch('logging.warning')
-  def testVerifySnBitsNotSet(self, mock_warn):
+  def testVerifySnBitsNotSet(self):
     self._SetShellResult(stdout='SN Bits have not been set yet. xxx')
-    self.gsc.VerifySnBits()
-    self.assertFalse(mock_warn.called)
+    with self.assertLogs() as cm:
+      self.gsc.VerifySnBits()
+
+    self.assertSequenceEqual(cm.output, [
+        'INFO:root:status: 0',
+        'INFO:root:stdout: SN Bits have not been set yet. xxx',
+        'INFO:root:stderr: ',
+    ])
 
     self._SetShellResult(
         stdout='SN Bits have not been set yet. BoardID is set. xxx')
-    self.gsc.VerifySnBits()
-    mock_warn.assert_called_with('SN Bits cannot be set anymore.')
+    with self.assertLogs() as cm:
+      self.gsc.VerifySnBits()
+    self.assertIn('WARNING:root:SN Bits cannot be set anymore.', cm.output)
 
-  @mock.patch('logging.info')
   @mock.patch(f'{GSCTOOL}.ClearROHash')
   @mock.patch(f'{GSCTOOL}.IsCr50ROHashSet')
   @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
   def testCr50ClearROHash(self, mock_gsc_locked, mock_is_hash_set,
-                          mock_clear_hash, mock_info):
+                          mock_clear_hash):
     mock_gsc_locked.return_value = False
     mock_is_hash_set.return_value = True
 
-    self.gsc.Cr50ClearROHash()
+    with self.assertLogs() as cm:
+      self.gsc.Cr50ClearROHash()
 
     mock_clear_hash.assert_called_once()
-    mock_info.assert_called_with('Successfully clear AP-RO hash on Cr50.')
+    self.assertSequenceEqual(
+        cm.output, ['INFO:root:Successfully clear AP-RO hash on Cr50.'])
 
-  @mock.patch('logging.warning')
   @mock.patch(f'{GSCTOOL}.ClearROHash')
   @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
-  def testCr50ClearROHashLocked(self, mock_gsc_locked, mock_clear_hash,
-                                mock_warn):
+  def testCr50ClearROHashLocked(self, mock_gsc_locked, mock_clear_hash):
     mock_gsc_locked.return_value = True
 
-    self.gsc.Cr50ClearROHash()
+    with self.assertLogs() as cm:
+      self.gsc.Cr50ClearROHash()
 
-    mock_warn.assert_called_with('GSC fields is locked. Skip clearing RO hash.')
+    self.assertSequenceEqual(
+        cm.output,
+        ['WARNING:root:GSC fields is locked. Skip clearing RO hash.'])
     self.assertFalse(mock_clear_hash.called)
 
-  @mock.patch('logging.info')
   @mock.patch(f'{GSCTOOL}.ClearROHash')
   @mock.patch(f'{GSCTOOL}.IsCr50ROHashSet')
   @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
   def testCr50ClearROHashAlreadyClear(self, mock_gsc_locked, mock_is_hash_set,
-                                      mock_clear_hash, mock_info):
+                                      mock_clear_hash):
     mock_gsc_locked.return_value = False
     mock_is_hash_set.return_value = False
 
-    self.gsc.Cr50ClearROHash()
+    with self.assertLogs() as cm:
+      self.gsc.Cr50ClearROHash()
 
     self.assertFalse(mock_clear_hash.called)
-    mock_info.assert_called_with('AP-RO hash is already cleared, do nothing.')
+    self.assertSequenceEqual(
+        cm.output, ['INFO:root:AP-RO hash is already cleared, do nothing.'])
 
   @mock.patch(f'{GSCUTIL}.Cr50SetROHash')
   @mock.patch(f'{FUTILITY}.SetGBBFlags')
@@ -229,16 +238,17 @@ class GSCUtilsTest(unittest.TestCase):
     mock_script.assert_called_with(GSCScriptPath.AP_RO_HASH, '1:2 6:3')
     mock_clear_hash.assert_called_once()
 
-  @mock.patch('logging.warning')
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
-  def testCr50SetROHashSkip(self, mock_gsc_locked, mock_script, mock_warn):
+  def testCr50SetROHashSkip(self, mock_gsc_locked, mock_script):
     mock_gsc_locked.return_value = True
 
-    self.gsc.Cr50SetROHash()
+    with self.assertLogs() as cm:
+      self.gsc.Cr50SetROHash()
 
     self.assertFalse(mock_script.called)
-    mock_warn.assert_called_with('GSC fields is locked. Skip setting RO hash.')
+    self.assertSequenceEqual(
+        cm.output, ['WARNING:root:GSC fields is locked. Skip setting RO hash.'])
 
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(f'{VPD}.GetValue')
@@ -260,15 +270,17 @@ class GSCUtilsTest(unittest.TestCase):
     self.gsc.GSCSetFeatureManagementFlagsWithHwSecUtils(True, 1)
     mock_script.assert_called_with(GSCScriptPath.FACTORY_CONFIG, ['true', '1'])
 
-  @mock.patch('logging.warning')
   @mock.patch(f'{GSCUTIL}.IsGSCFeatureManagementFlagsLocked')
-  def testGSCSetFeatureManagementFlagsLocked(self, mock_locked, mock_warn):
+  def testGSCSetFeatureManagementFlagsLocked(self, mock_locked):
     mock_locked.return_value = True
 
-    self.gsc.GSCSetFeatureManagementFlags()
+    with self.assertLogs() as cm:
+      self.gsc.GSCSetFeatureManagementFlags()
 
-    mock_warn.assert_called_with(
-        'GSC fields is locked. Skip setting feature management flags.')
+    self.assertSequenceEqual(cm.output, [
+        'WARNING:root:GSC fields is locked. Skip setting '
+        'feature management flags.'
+    ])
 
   @mock.patch(f'{GSCUTIL}.GSCSetFeatureManagementFlagsWithHwSecUtils')
   @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
@@ -374,12 +386,11 @@ class GSCUtilsTest(unittest.TestCase):
 
     mock_set_wpsr.assert_called_with('0 0')
 
-  @mock.patch('logging.info')
   @mock.patch(f'{GSCTOOL}.SetWpsr')
   @mock.patch(f'{FUTILITY}.GetWriteProtectInfo')
   @mock.patch(f'{GSCUTIL}.GetFlashName')
   def testTi50SetSWWPRegisterWPEnabled(self, mock_flash_name, mock_wp_info,
-                                       mock_set_wpsr, mock_info):
+                                       mock_set_wpsr):
     mock_flash_name.return_value = 'name'
     mock_wp_info.return_value = {
         'start': 1,
@@ -387,12 +398,14 @@ class GSCUtilsTest(unittest.TestCase):
     }  # To simulate a match object.
     self._SetShellResult(stdout='SR Value/Mask = wpsr')
 
-    self.gsc.Ti50SetSWWPRegister(False)
+    with self.assertLogs() as cm:
+      self.gsc.Ti50SetSWWPRegister(False)
 
     self.shell.assert_called_with(
         ['ap_wpsr', '--name=name', '--start=1', '--length=2'])
     mock_set_wpsr.assert_called_with('wpsr')
-    mock_info.assert_called_with('WPSR: %s', 'SR Value/Mask = wpsr')
+    self.assertSequenceEqual(cm.output,
+                             ['INFO:root:WPSR: SR Value/Mask = wpsr'])
 
   @mock.patch(f'{FUTILITY}.GetWriteProtectInfo')
   @mock.patch(f'{GSCUTIL}.GetFlashName')
@@ -408,29 +421,26 @@ class GSCUtilsTest(unittest.TestCase):
   @mock.patch(
       'cros.factory.probe.functions.flash_chip.FlashChipFunction.ProbeDevices')
   @mock.patch('cros.factory.test.utils.model_sku_utils.GetDesignConfig')
-  @mock.patch('logging.info')
-  def testGetFlashName_NoTransform(self, mock_info, mock_get_config,
-                                   mock_probe_device):
+  def testGetFlashName_NoTransform(self, mock_get_config, mock_probe_device):
     mock_probe_device.return_value = {
         'name': 'mock_name'
     }
     mock_get_config.return_value = {}
 
-    flash_name = self.gsc.GetFlashName()
+    with self.assertLogs() as cm:
+      flash_name = self.gsc.GetFlashName()
     self.assertEqual(flash_name, 'mock_name')
     mock_probe_device.assert_called_once_with('internal')
     mock_get_config.assert_called_once_with(
         self.gsc._dut,  # pylint: disable=protected-access
         default_config_dirs=f'{paths.FACTORY_DIR}/py/test/pytests',
         config_name='model_sku')
-    mock_info.assert_called_once_with('Flash name: %s', 'mock_name')
+    self.assertSequenceEqual(cm.output, ['INFO:root:Flash name: mock_name'])
 
   @mock.patch(
       'cros.factory.probe.functions.flash_chip.FlashChipFunction.ProbeDevices')
   @mock.patch('cros.factory.test.utils.model_sku_utils.GetDesignConfig')
-  @mock.patch('logging.info')
-  def testGetFlashName_Transform(self, mock_info, mock_get_config,
-                                 mock_probe_device):
+  def testGetFlashName_Transform(self, mock_get_config, mock_probe_device):
     mock_probe_device.return_value = {
         'partname': 'mock_partname'
     }
@@ -440,47 +450,51 @@ class GSCUtilsTest(unittest.TestCase):
         }
     }
 
-    flash_name = self.gsc.GetFlashName()
+    with self.assertLogs() as cm:
+      flash_name = self.gsc.GetFlashName()
     self.assertEqual(flash_name, 'transformed_mock_partname')
     mock_probe_device.assert_called_once_with('internal')
     mock_get_config.assert_called_once_with(
         self.gsc._dut,  # pylint: disable=protected-access
         default_config_dirs=f'{paths.FACTORY_DIR}/py/test/pytests',
         config_name='model_sku')
-    mock_info.assert_has_calls([
-        mock.call('Transform flash name from "%s" to "%s".', 'mock_partname',
-                  'transformed_mock_partname'),
-        mock.call('Flash name: %s', 'transformed_mock_partname')
+    self.assertSequenceEqual(cm.output, [
+        'INFO:root:Transform flash name from "mock_partname" to '
+        '"transformed_mock_partname".',
+        'INFO:root:Flash name: transformed_mock_partname'
     ])
 
-  @mock.patch('logging.info')
-  def testExecuteGSCSetScript(self, mock_info):
+  def testExecuteGSCSetScript(self):
     self._SetShellResult(status=0)
 
-    self.gsc.ExecuteGSCSetScript(GSCScriptPath.BOARD_ID, 'args')
+    with self.assertLogs() as cm:
+      self.gsc.ExecuteGSCSetScript(GSCScriptPath.BOARD_ID, 'args')
 
     self.shell.assert_called_with(
         ['/usr/share/cros/hwsec-utils/cr50_set_board_id', 'args'])
-    mock_info.assert_called_with(
-        'Successfully set %s on GSC with `%s`.', 'BOARD_ID',
-        '/usr/share/cros/hwsec-utils/cr50_set_board_id args')
+    self.assertSequenceEqual(cm.output, [
+        'INFO:root:Successfully set BOARD_ID on GSC with '
+        '`/usr/share/cros/hwsec-utils/cr50_set_board_id args`.'
+    ])
 
-  @mock.patch('logging.error')
-  def testExecuteGSCSetScriptAlreadySet(self, mock_error):
+  def testExecuteGSCSetScriptAlreadySet(self):
     self._SetShellResult(status=2)
 
-    self.gsc.ExecuteGSCSetScript(GSCScriptPath.BOARD_ID, 'args')
+    with self.assertLogs() as cm:
+      self.gsc.ExecuteGSCSetScript(GSCScriptPath.BOARD_ID, 'args')
 
-    mock_error.assert_called_with('%s has already been set on GSC!', 'BOARD_ID')
+    self.assertSequenceEqual(
+        cm.output, ['ERROR:root:BOARD_ID has already been set on GSC!'])
 
-  @mock.patch('logging.error')
   @mock.patch(PHASE)
-  def testExecuteGSCSetScriptSetDiff(self, mock_phase, mock_error):
+  def testExecuteGSCSetScriptSetDiff(self, mock_phase):
     self._SetShellResult(status=3)
 
     mock_phase.return_value = phase.DVT
-    self.gsc.ExecuteGSCSetScript(GSCScriptPath.BOARD_ID, 'args')
-    mock_error.assert_called_with('BOARD_ID has been set DIFFERENTLY on GSC!')
+    with self.assertLogs() as cm:
+      self.gsc.ExecuteGSCSetScript(GSCScriptPath.BOARD_ID, 'args')
+    self.assertSequenceEqual(
+        cm.output, ['ERROR:root:BOARD_ID has been set DIFFERENTLY on GSC!'])
 
     mock_phase.return_value = phase.PVT
     self.assertRaisesRegex(

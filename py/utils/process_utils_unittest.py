@@ -36,27 +36,27 @@ class MockFile:
 
 class SpawnTest(unittest.TestCase):
 
-  @mock.patch('logging.info')
-  def testNoShell(self, mock_info):
-    process = Spawn(['echo', 'f<o>o'],
-                    stdout=PIPE, stderr=PIPE,
-                    log=True)
+  def testNoShell(self):
+    with self.assertLogs() as cm:
+      process = Spawn(['echo', 'f<o>o'], stdout=PIPE, stderr=PIPE, log=True)
     stdout, stderr = process.communicate()
     self.assertEqual('f<o>o\n', stdout)
     self.assertEqual('', stderr)
     self.assertEqual(0, process.returncode)
-    mock_info.assert_called_with('''Running command: "echo \'f<o>o\'"''')
+    self.assertSequenceEqual(
+        cm.output, ['''INFO:root:Running command: "echo \'f<o>o\'"'''])
 
-  @mock.patch('logging.info')
-  def testShell(self, mock_info):
-    process = Spawn('echo foo', shell=True,
-                    stdout=PIPE, stderr=PIPE, log=True)
+  def testShell(self):
+    with self.assertLogs() as cm:
+      process = Spawn('echo foo', shell=True, stdout=PIPE, stderr=PIPE,
+                      log=True)
     stdout, stderr = process.communicate()
     self.assertEqual('foo\n', stdout)
     self.assertEqual('', stderr)
     self.assertEqual(0, process.returncode)
 
-    mock_info.assert_called_with('Running command: "echo foo"')
+    self.assertSequenceEqual(cm.output,
+                             ['INFO:root:Running command: "echo foo"'])
 
   def testCall(self):
     process = Spawn('echo blah; exit 3', shell=True, call=True)
@@ -71,20 +71,21 @@ class SpawnTest(unittest.TestCase):
     self.assertRaises(ValueError,
                       lambda: Spawn(['echo'], call=True, stderr=PIPE))
 
-  @mock.patch('logging.info')
-  @mock.patch('logging.error')
-  def testCheckCall(self, mock_error, mock_info):
-    Spawn('exit 0', shell=True, check_call=True)
-    self.assertRaises(subprocess.CalledProcessError,
-                      lambda: Spawn('exit 3', shell=True, check_call=True))
+  def testCheckCall(self):
+    with self.assertLogs() as cm:
+      Spawn('exit 0', shell=True, check_call=True)
+      logging.info('no logs')
+    self.assertSequenceEqual(cm.output, ['INFO:root:no logs'])
 
-    mock_info.assert_not_called()
-    mock_error.assert_not_called()
-    self.assertRaises(
-        subprocess.CalledProcessError,
-        lambda: Spawn('exit 3', shell=True, check_call=True, log=True))
-    mock_info.assert_called_with('Running command: "exit 3"')
-    mock_error.assert_called_with('Exit code 3 from command: "exit 3"')
+    with self.assertLogs() as cm:
+      self.assertRaises(
+          subprocess.CalledProcessError,
+          lambda: Spawn('exit 3', shell=True, check_call=True, log=True))
+
+    self.assertSequenceEqual(cm.output, [
+        'INFO:root:Running command: "exit 3"',
+        'ERROR:root:Exit code 3 from command: "exit 3"'
+    ])
 
   def testCheckCallFunction(self):
     Spawn('exit 3', shell=True, check_call=lambda code: code == 3)
@@ -123,15 +124,19 @@ class SpawnTest(unittest.TestCase):
     self.assertEqual(('foo\n', 'bar\n'), process.communicate())
     self.assertEqual(0, process.returncode)
 
-  @mock.patch('logging.error')
-  def testLogStderrOnError(self, mock_error):
-    Spawn('echo foo >& 2', shell=True, log_stderr_on_error=True)
-    mock_error.assert_not_called()
+  def testLogStderrOnError(self):
+    with self.assertLogs() as cm:
+      Spawn('echo foo >& 2', shell=True, log_stderr_on_error=True)
+      logging.info('no logs')
+    self.assertSequenceEqual(cm.output, ['INFO:root:no logs'])
 
-    Spawn('echo foo >& 2; exit 3', shell=True, log_stderr_on_error=True)
-    mock_error.assert_called_with(
-        'Exit code 3 from command: "echo foo >& 2; exit 3"; '
-        'stderr: """\nfoo\n\n"""')
+    with self.assertLogs() as cm:
+      Spawn('echo foo >& 2; exit 3', shell=True, log_stderr_on_error=True)
+
+    self.assertSequenceEqual(cm.output, [
+        'ERROR:root:Exit code 3 from command: "echo foo >& 2; exit 3"; '
+        'stderr: """\nfoo\n\n"""'
+    ])
 
   def testIgnoreStdout(self):
     process = Spawn('echo ignored; echo foo >& 2', shell=True,
@@ -416,5 +421,4 @@ class TestPipeStdoutLines(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  logging.basicConfig(level=logging.INFO)
   unittest.main()
