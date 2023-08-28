@@ -3,17 +3,51 @@
 # found in the LICENSE file.
 
 import logging
+import os
 import re
 
 from cros.factory.gooftool import vpd_data
 from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.test.utils import smart_amp_utils
 from cros.factory.utils import config_utils
+from cros.factory.utils import file_utils
 from cros.factory.utils.type_utils import Error
 
 from cros.factory.external.chromeos_cli import cros_config
 from cros.factory.external.chromeos_cli import vpd
 
+
+# The change (https://crrev.com/c/3527015) was landed in 14675.0.0.
+# TODO(cyueh) Drop this after all factory branches before 14675.0.0 are
+# removed.
+non_inclusive_custom_label_tag_vpd_key = (
+    bytes.fromhex('77686974656c6162656c5f746167').decode('utf-8'))
+non_inclusive_custom_label_tag_cros_config_key = (
+    bytes.fromhex('77686974656c6162656c2d746167').decode('utf-8'))
+IDENTITY_VPD_FIELDS = {
+    'custom_label_tag':
+        'custom-label-tag',
+    'customization_id':
+        'customization-id',
+    non_inclusive_custom_label_tag_vpd_key:
+        non_inclusive_custom_label_tag_cros_config_key,
+}
+
+# The change (https://crrev.com/c/3527015) was landed in 14675.0.0.
+# TODO(cyueh) Drop this after all factory branches before 14675.0.0 are
+# removed.
+non_inclusive_custom_label_tag_vpd_key = (
+    bytes.fromhex('77686974656c6162656c5f746167').decode('utf-8'))
+non_inclusive_custom_label_tag_cros_config_key = (
+    bytes.fromhex('77686974656c6162656c2d746167').decode('utf-8'))
+IDENTITY_VPD_FIELDS = {
+    'custom_label_tag':
+        'custom-label-tag',
+    'customization_id':
+        'customization-id',
+    non_inclusive_custom_label_tag_vpd_key:
+        non_inclusive_custom_label_tag_cros_config_key,
+}
 
 class VPDError(Error):
   pass
@@ -212,3 +246,27 @@ class VPDUtils:
     if reg_code_config[project][custom_label_tag]:
       return custom_label_tag
     return project
+
+  def VerifyCacheForIdentity(self):
+    """Verify if identity fields in vpd is sync in boot cache.
+
+    crosid reads from boot cache so we have to reboot after VPD is updated and
+    before some critical steps. e.g. GSCFinalize.
+    """
+    RO_VPD_CACHE_PATH = '/sys/firmware/vpd/ro'
+    out_of_sync_fields = []
+    for vpd_key in IDENTITY_VPD_FIELDS:
+      boot_cache_path = os.path.join(RO_VPD_CACHE_PATH, vpd_key)
+      boot_cache_value = None
+      if os.path.isfile(boot_cache_path):
+        boot_cache_value = file_utils.ReadFile(boot_cache_path)
+      vpd_value = self._vpd.GetValue(vpd_key)
+      if boot_cache_value != vpd_value:
+        out_of_sync_fields.append((vpd_key, vpd_value, boot_cache_value))
+    if out_of_sync_fields:
+      messages = ['VPD updated without reboot.'] + [
+          f'{vpd_key!r} is {vpd_value!r} in vpd but is {boot_cache_value!r}'
+          ' in boot cache.'
+          for vpd_key, vpd_value, boot_cache_value in out_of_sync_fields
+      ]
+      raise VPDError('\n'.join(messages))
