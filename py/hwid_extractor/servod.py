@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 import contextlib
+from distutils import sysconfig
+import os
+import re
 import time
 
 from cros.factory.utils import file_utils
@@ -13,6 +16,22 @@ SERVOD_BIN = 'servod'
 DUT_CONTROL_TIMEOUT = 10
 SERVOD_INIT_TIMEOUT_SEC = 10
 SERVOD_KILL_TIMEOUT_SEC = 3
+
+# Directory where hdctools installs configuration files into.
+LIB_DIR = os.path.join(
+    sysconfig.get_python_lib(standard_lib=False), 'servo', 'data')
+
+
+def GetSupportedBoards():
+  """The supported boards for the web UI."""
+  all_boards = []
+  regex = r'servo_([a-zA-Z0-9\-]+)_overlay.xml'
+  for unused_root, unused_dirs, files in os.walk(LIB_DIR):
+    for filename in files:
+      res = re.fullmatch(regex, filename)
+      if res:
+        all_boards.append(res.group(1))
+  return sorted(all_boards)
 
 
 class _DutControl:

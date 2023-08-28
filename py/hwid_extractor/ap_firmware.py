@@ -17,27 +17,6 @@ HWID_RE = re.compile(r'hardware_id: ([A-Z0-9- ]+)')
 SERIAL_NUMBER_RE = re.compile(r'"serial_number"="([A-Za-z0-9]+)"')
 
 
-def GetSupportedBoards():
-  """The supported boards for the web UI."""
-  # This list was initially populated by copying from:
-  # https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:src/platform/factory/py/hwid_extractor/Makefile;drc=e06002c53672b84f8a330efb732dad6c9b61186a;l=65-66
-  return [
-      'brask',
-      'brya',
-      'draco',
-      'drallion',
-      'generic',
-      'grunt',
-      'hades',
-      'hatch',
-      'keeby',
-      'mancomb',
-      'octopus',
-      'puff',
-      'volteer',
-  ]
-
-
 def _GetHWID(firmware_binary_file):
   """Get HWID from ap firmware binary."""
   futility_cmd = [FUTILITY_BIN, 'gbb', firmware_binary_file]

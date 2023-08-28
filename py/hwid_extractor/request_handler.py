@@ -12,8 +12,8 @@ import subprocess
 import traceback
 from urllib import parse as urlparse
 
-from cros.factory.hwid_extractor import ap_firmware
 from cros.factory.hwid_extractor import device
+from cros.factory.hwid_extractor import servod
 from cros.factory.utils import json_utils
 
 
@@ -112,7 +112,7 @@ class RequestHandler(http_server.SimpleHTTPRequestHandler):
     self._SendActionResult(device.DisableTestlab(cr50_serial_name))
 
   def _GetSupportedBoards(self):
-    self._SendJSON({'supportedBoards': ap_firmware.GetSupportedBoards()})
+    self._SendJSON({'supportedBoards': servod.GetSupportedBoards()})
 
   def do_POST(self):
     """Overwrite the parent's do_POST method."""
