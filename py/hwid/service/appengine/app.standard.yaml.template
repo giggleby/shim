@@ -6,7 +6,7 @@
 # `${FACTORY_REPO}/deploy/cros_hwid_service.sh deploy [prod|staging] standard`
 # command.
 
-runtime: python37
+runtime: python38
 entrypoint:
   gunicorn -b :${DOLLAR}PORT cros.factory.hwid.service.appengine.app:hwid_service -t 600
 

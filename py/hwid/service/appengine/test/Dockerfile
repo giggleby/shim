@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-FROM python:3.7
+FROM python:3.8
 
 ARG workdir="/usr/src"
 ARG gcloud_archive_name="google-cloud-sdk-426.0.0-linux-x86_64.tar.gz"
