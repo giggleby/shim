@@ -24,7 +24,7 @@ import sys
 import tempfile
 import threading
 import time
-from typing import cast, Collection, Generator, MutableMapping, Optional, Sequence, Set, Tuple
+from typing import Collection, Generator, MutableMapping, Optional, Sequence, Set, Tuple, cast
 
 from cros.factory.tools.unittest_tools import mock_loader
 from cros.factory.unittest_utils import label_utils
@@ -78,7 +78,7 @@ class _TestProc:
   """
 
   def __init__(self, test_name: str, log_name: str, port_server: str,
-               python_path: str, timeout: int):
+               python_path: str, timeout: int, coverage: bool):
     self.test_name = test_name
     self.log_file_name = log_name
     self._port_server = port_server
@@ -87,6 +87,7 @@ class _TestProc:
     self._cros_factory_data_dir = cast(str, None)
     self.start_time = cast(float, None)
     self.proc = cast(process_utils.ExtendedPopen, None)
+    self.coverage = coverage
 
   def __enter__(self):
     self._cros_factory_data_dir = tempfile.mkdtemp(
@@ -113,8 +114,14 @@ class _TestProc:
         'CROS_FACTORY_UNITTEST_PORT_DISTRIBUTE_SERVER'] = self._port_server
     with open(self.log_file_name, 'w', encoding='utf8') as log_file:
       self.start_time = time.time()
-      self.proc = process_utils.Spawn([self.test_name], stdout=log_file,
-                                      stderr=STDOUT, env=child_env)
+      if self.coverage:
+        self.proc = process_utils.Spawn(['coverage', 'run', self.test_name],
+                                        stdout=log_file, stderr=STDOUT,
+                                        env=child_env)
+      else:
+        self.proc = process_utils.Spawn([self.test_name], stdout=log_file,
+                                        stderr=STDOUT, env=child_env)
+
     process_utils.StartDaemonThread(target=self._WatchTest)
     return self
 
@@ -212,6 +219,7 @@ class RunTests:
       timeout: int,
       isolated_tests: Optional[Sequence[str]] = None,
       fallback: bool = True,
+      coverage: bool = False,
   ):
     self._tests = tests
     self._max_jobs = max_jobs
@@ -221,6 +229,7 @@ class RunTests:
     self._isolated_tests = isolated_tests if isolated_tests else []
     self._fallback = fallback
     self._start_time = time.time()
+    self.coverage = coverage
 
     # A dict to store running subprocesses. pid: (_TestProc, test_name).
     self._running_proc: MutableMapping[int, Tuple[_TestProc, str]] = {}
@@ -328,7 +337,8 @@ class RunTests:
         try:
           p = stack.enter_context(
               _TestProc(test_name, self._GetLogFilename(test_name),
-                        port_server_socket_file, python_path, self._timeout))
+                        port_server_socket_file, python_path, self._timeout,
+                        self.coverage))
         except Exception:
           self._FailMessage(f'Error running test {test_name!r}')
           raise
@@ -496,6 +506,8 @@ def main():
                       help='disable color and progress in log.')
   parser.add_argument('--timeout', default=TEST_DEFAULT_TIMEOUT_SECS, type=int,
                       help='The timeout for each test.')
+  parser.add_argument('--coverage', action='store_true',
+                      help='Calculate coverage when running tests.')
   parser.add_argument('test', nargs='*', help='Unittest filename.')
   args = parser.parse_args()
 
@@ -513,7 +525,7 @@ def main():
 
   runner = RunTests(args.test, args.jobs, args.log_dir, args.plain_log,
                     args.timeout, isolated_tests=args.isolated,
-                    fallback=not args.nofallback)
+                    fallback=not args.nofallback, coverage=args.coverage)
   return_value = runner.Run()
   if return_value == 0 and args.pass_mark:
     with open(TEST_PASSED_MARK, 'a', encoding='utf8'):

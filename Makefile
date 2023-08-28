@@ -520,6 +520,10 @@ else
 	  PYTHONDONTWRITEBYTECODE=true $(MAKE) $(target)${\n})
 endif
 
+coverage:
+	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
+	$(ENTER_CHROOT_PREFIX)$(MK_DIR)/coverage.sh
+
 test:
 	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
 	$(ENTER_CHROOT_PREFIX)$(TEST_RUNNER)

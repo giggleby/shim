@@ -1,0 +1,11 @@
+[run]
+
+parallel = True
+
+source = .
+
+data_file = .coverage_data/.coverage
+
+[report]
+
+sort = cover
