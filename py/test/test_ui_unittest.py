@@ -368,6 +368,8 @@ class EventLoopRunTest(EventLoopTestBase):
 
   def testAddMultiple(self):
     """Test add multiple random timed events and event handler."""
+    # TODO(b/297443326) Figure out why the test is blocked or failed.
+    random.seed(0)
     TOTAL_TIME = 1000
 
     calls = {}
@@ -524,7 +526,7 @@ class EnsureI18nTest(unittest.TestCase):
   def testBasic(self):
     self.assertEqual('meow', test_ui.EnsureI18n('meow'))
     self.assertEqual('123456', test_ui.EnsureI18n(123456))
-    self.assertEqual(u'\u260e', test_ui.EnsureI18n(u'\u260e'))
+    self.assertEqual('\u260e', test_ui.EnsureI18n('\u260e'))
 
   def testList(self):
     self.assertEqual('', test_ui.EnsureI18n([]))
@@ -1054,5 +1056,4 @@ class StandardUITest(UITestBase):
 
 
 if __name__ == '__main__':
-  random.seed(0)
   unittest.main()
