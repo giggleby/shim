@@ -1015,8 +1015,7 @@ class GooftoolTest(unittest.TestCase):
     identity['sku-id'] = 'sku1'
     identity['customization-id'] = '1'
     identity['custom-label-tag'] = 'custom-label-tag'
-    identity[CrosConfigIdentity
-             .non_inclusive_custom_label_tag_cros_config_key] = 'empty'
+    identity[vpd_utils.non_inclusive_custom_label_tag_cros_config_key] = 'empty'
 
     configs = [
         {
@@ -1057,8 +1056,7 @@ class GooftoolTest(unittest.TestCase):
     identity['sku-id'] = 'sku1'
     identity['customization-id'] = 'empty'
     identity['custom-label-tag'] = 'custom-label-tag'
-    identity[CrosConfigIdentity
-             .non_inclusive_custom_label_tag_cros_config_key] = 'empty'
+    identity[vpd_utils.non_inclusive_custom_label_tag_cros_config_key] = 'empty'
 
     configs = [
         {
@@ -1079,8 +1077,7 @@ class GooftoolTest(unittest.TestCase):
     identity['sku-id'] = 'sku1'
     identity['customization-id'] = 'empty'
     identity['custom-label-tag'] = 'empty'
-    identity[CrosConfigIdentity
-             .non_inclusive_custom_label_tag_cros_config_key] = 'empty'
+    identity[vpd_utils.non_inclusive_custom_label_tag_cros_config_key] = 'empty'
 
     configs = [
         {
@@ -1103,8 +1100,7 @@ class GooftoolTest(unittest.TestCase):
     identity['sku-id'] = '1'
     identity['customization-id'] = '1'
     identity['custom-label-tag'] = 'custom-label-tag'
-    identity[CrosConfigIdentity
-             .non_inclusive_custom_label_tag_cros_config_key] = 'empty'
+    identity[vpd_utils.non_inclusive_custom_label_tag_cros_config_key] = 'empty'
 
     configs = [
         {
@@ -1146,8 +1142,7 @@ class GooftoolTest(unittest.TestCase):
     identity['sku-id'] = 'sku1'
     identity['customization-id'] = '1'
     identity['custom-label-tag'] = 'custom-label-tag'
-    identity[CrosConfigIdentity
-             .non_inclusive_custom_label_tag_cros_config_key] = 'empty'
+    identity[vpd_utils.non_inclusive_custom_label_tag_cros_config_key] = 'empty'
 
     configs = [
         {
@@ -1190,8 +1185,7 @@ class GooftoolTest(unittest.TestCase):
     identity['sku-id'] = '1'
     identity['customization-id'] = '1'
     identity['custom-label-tag'] = 'custom-label-tag'
-    identity[CrosConfigIdentity
-             .non_inclusive_custom_label_tag_cros_config_key] = 'empty'
+    identity[vpd_utils.non_inclusive_custom_label_tag_cros_config_key] = 'empty'
 
     configs = [
         {
@@ -1233,8 +1227,7 @@ class GooftoolTest(unittest.TestCase):
     identity['sku-id'] = ''
     identity['customization-id'] = '1'
     identity['custom-label-tag'] = 'custom-label-tag'
-    identity[CrosConfigIdentity
-             .non_inclusive_custom_label_tag_cros_config_key] = 'empty'
+    identity[vpd_utils.non_inclusive_custom_label_tag_cros_config_key] = 'empty'
 
     configs = [
         {

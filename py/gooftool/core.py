@@ -95,13 +95,6 @@ class IdentitySourceEnum(str, enum.Enum):
 class CrosConfigIdentity(dict):
   message_template = '%s:\nproduct name: %s\nsku id: %s\n' + \
       'frid: %s\ncustomization id: %s\ncustom label tag: %s\n'
-  # The change (https://crrev.com/c/3527015) was landed in 14675.0.0.
-  # TODO(cyueh) Drop this after all factory branches before 14675.0.0 are
-  # removed.
-  non_inclusive_custom_label_tag_cros_config_key = (
-      bytes.fromhex('77686974656c6162656c2d746167').decode('utf-8'))
-  non_inclusive_custom_label_tag_vpd_key = (
-      bytes.fromhex('77686974656c6162656c5f746167').decode('utf-8'))
 
   def __init__(self, config_source):
     dict.__init__(self)
@@ -109,12 +102,9 @@ class CrosConfigIdentity(dict):
     identity_key_list = [
         'smbios-name-match',
         'sku-id',
-        'customization-id'
         'frid',
-        'custom-label-tag',
         'device-tree-compatible-match',
-        self.non_inclusive_custom_label_tag_cros_config_key,
-    ]
+    ] + [vpd_utils.IDENTITY_VPD_FIELDS.values()]
     for key in identity_key_list:
       self[key] = ''
 
@@ -774,9 +764,7 @@ class Gooftool:
       if mismatch:
         continue
 
-      for key in (
-          'customization-id', 'custom-label-tag',
-          CrosConfigIdentity.non_inclusive_custom_label_tag_cros_config_key):
+      for key in vpd_utils.IDENTITY_VPD_FIELDS.values():
         if key not in config_identity and identity[key] != 'empty':
           mismatch = True
           break
@@ -791,6 +779,8 @@ class Gooftool:
     if not model:
       db_identity, cur_identity = self.GetIdentity()
       raise CrosConfigError('Model name is empty', db_identity, cur_identity)
+
+    self.vpd_utils.VerifyCacheForIdentity()
 
     def _ParseCrosConfig(config_path):
       with open(config_path, encoding='utf8') as f:
@@ -1692,11 +1682,8 @@ class Gooftool:
     cur_identity['sku-id'] = get_file_if_exist(
         cros_config_module.PRODUCT_SKU_ID_PATH) or get_file_if_exist(
             cros_config_module.DEVICE_TREE_SKU_ID_PATH, True) or 'empty'
-    cur_identity['customization-id'] = get_vpd_val('customization_id')
-    cur_identity['custom-label-tag'] = get_vpd_val('custom_label_tag')
-    cur_identity[CrosConfigIdentity
-                 .non_inclusive_custom_label_tag_cros_config_key] = get_vpd_val(
-                     CrosConfigIdentity.non_inclusive_custom_label_tag_vpd_key)
+    for vpd_key, cros_id_key in vpd_utils.IDENTITY_VPD_FIELDS.items():
+      cur_identity[cros_id_key] = get_vpd_val(vpd_key)
 
     return db_identity, cur_identity
 
