@@ -37,8 +37,13 @@ from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-BLOCKLIST_PROJECT = []
 
+BLOCKLIST_PROJECT = []
+ALLOWLIST_PROJECT = (
+    'BRASK',
+    'BRYA',
+    'SKOLAS',
+)
 
 def _CheckProject(args):
   """Check if HWID database of a V3 HWID is valid.
@@ -59,6 +64,10 @@ def _CheckProject(args):
   try:
     if project_name in BLOCKLIST_PROJECT:
       logging.warning('%s in the blocklist, skip.', project_name)
+      return None
+
+    if ALLOWLIST_PROJECT is not None and project_name not in ALLOWLIST_PROJECT:
+      logging.warning('%s is not in the allowlist, skip.', project_name)
       return None
 
     if project_info is None:
