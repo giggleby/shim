@@ -20,7 +20,6 @@ import yaml
 
 from cros.factory.gooftool import bmpblk
 from cros.factory.gooftool.common import Util
-from cros.factory.gooftool import gbb
 from cros.factory.gooftool import management_engine
 from cros.factory.gooftool import vpd_utils
 from cros.factory.gooftool import wipe
@@ -179,7 +178,6 @@ class Gooftool:
     self._flashrom = flashrom
     self.vpd = vpd.VPDTool()
     self.vpd_utils = vpd_utils.VPDUtils(self._project)
-    self._unpack_gbb = gbb.UnpackGBB
     self._unpack_bmpblock = bmpblk.unpack_bmpblock
     self._named_temporary_file = tempfile.NamedTemporaryFile
     self._db = None

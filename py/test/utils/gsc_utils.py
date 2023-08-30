@@ -8,6 +8,7 @@ import logging
 import os
 import re
 
+from cros.factory.gooftool import gbb
 from cros.factory.probe.functions import flash_chip
 from cros.factory.test import device_data
 from cros.factory.test.env import paths
@@ -49,7 +50,6 @@ class GSCUtils:
     self._shell = shell.Shell(dut=self._dut)
     self._gsctool = gsctool.GSCTool(dut=self._dut)
     self._futility = futility.Futility(dut=self._dut)
-    self._flashrom = flashrom.Flashrom(dut=self._dut)
     self._vpd = vpd.VPDTool(dut=self._dut)
 
   def _GetConstant(self, constant_name):
@@ -205,13 +205,12 @@ class GSCUtils:
         GSCScriptPath.AP_RO_HASH,
         ' '.join([(f'{i.start:x}:{i.size:x}') for i in hash_intervals]))
 
-  # TODO(jasonchuang) Add unit tests for better coverage
   def _CalculateHashInterval(self):
-    firmware_image = self._flashrom.LoadMainFirmware().GetFirmwareImage()
+    firmware_image = flashrom.LoadMainFirmware().GetFirmwareImage()
     ro_offset, ro_size = firmware_image.get_section_area('RO_SECTION')
     ro_vpd_offset, ro_vpd_size = firmware_image.get_section_area('RO_VPD')
     gbb_offset, gbb_size = firmware_image.get_section_area('GBB')
-    gbb_content = self._unpack_gbb(firmware_image.get_blob(), gbb_offset)
+    gbb_content = gbb.UnpackGBB(firmware_image.get_blob(), gbb_offset)
     hwid = gbb_content.hwid
     hwid_digest = gbb_content.hwid_digest
 

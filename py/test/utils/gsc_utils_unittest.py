@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=protected-access
 # Copyright 2023 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,11 +8,13 @@ import os
 import unittest
 from unittest import mock
 
+from cros.factory.gooftool import gbb
 from cros.factory.test.env import paths
 from cros.factory.test.rules import phase
 from cros.factory.test.utils import gsc_utils
 from cros.factory.test.utils.gsc_utils import GSCScriptPath
 from cros.factory.utils import file_utils
+from cros.factory.utils import fmap
 from cros.factory.utils import interval
 
 from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
@@ -24,6 +27,12 @@ VPD = 'cros.factory.external.chromeos_cli.vpd.VPDTool'
 GSCUTIL = 'cros.factory.test.utils.gsc_utils.GSCUtils'
 PHASE = 'cros.factory.test.rules.phase.GetPhase'
 
+
+class FakeFirmwareImage(fmap.FirmwareImage):
+  # pylint: disable=super-init-not-called
+  def __init__(self, areas, image_source):
+    self._image = image_source
+    self._areas = areas
 
 class GSCUtilsTest(unittest.TestCase):
   _GSC_CONSTANTS = """
@@ -249,6 +258,37 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertFalse(mock_script.called)
     self.assertSequenceEqual(
         cm.output, ['WARNING:root:GSC fields is locked. Skip setting RO hash.'])
+
+  @mock.patch('cros.factory.gooftool.gbb.UnpackGBB')
+  @mock.patch('cros.factory.external.chromeos_cli.flashrom.'
+              'FirmwareContent.GetFirmwareImage')
+  def testCalculateHashInterval(self, mock_fw, mock_gbb):
+    mock_fw.return_value = FakeFirmwareImage(
+        {
+            'RO_SECTION': (0x100, 0x900000),  # All [0x100, 0x900100)
+            'RO_VPD': (0x200, 0x100),  # Exclude [0x200, 0x300)
+            'GBB': (0x400, 0x100)  # Include [0x400, 0x500)
+        },
+        'image_source')
+    mock_gbb.return_value = gbb.GBBContent(
+        hwid=gbb.GBBField(value='unused', offset=0x1000,
+                          size=0x1000),  # Exclude [0x1000, 0x2000)
+        hwid_digest=gbb.GBBField(value='unused', offset=0x3000,
+                                 size=0x1000),  # Exclude [0x3000, 0x4000)
+        rootkey='unused',
+        recovery_key='unused')
+
+    res = self.gsc._CalculateHashInterval()
+    mock_gbb.assert_called_with('image_source', 0x400)
+    self.assertEqual(res, [
+        interval.Interval(0x100, 0x200),
+        interval.Interval(0x300, 0x1000),
+        interval.Interval(0x2000, 0x3000),
+        interval.Interval(0x4000, 0x404000),
+        interval.Interval(0x404000, 0x804000),
+        interval.Interval(0x804000, 0x900100)
+    ])
+    self.assertTrue(all(r.size <= 0x400000 for r in res))
 
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(f'{VPD}.GetValue')
