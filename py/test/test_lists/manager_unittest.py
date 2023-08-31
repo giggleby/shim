@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import collections
 import glob
 import json
 import os
@@ -131,14 +132,15 @@ class TestListLoaderTest(unittest.TestCase):
     test_list = self.manager.GetTestListByID('b')
     factory_test_list = test_list.ToFactoryTestList()
 
-    expected = dict([('b:SMT.RebootStep', 'PARENT'),
-                     ('b:SMT.Group.RebootStep', 'PARENT'),
-                     ('b:SMT.Group.RebootStep_2', 'PARENT'),
-                     ('b:SMT.Group_2.RebootStep', 'STOP'),
-                     ('b:SMT.Group_2.RebootStep_2', 'STOP'),
-                     ('b:SMT.RebootStep_2', 'PARENT'),
-                     ('b:SMT.RebootStep_3', 'PARENT'),
-                     ('b:SMT.RebootStep_4', 'STOP')])
+    expected = collections.OrderedDict([
+        ('b:SMT.RebootStep', 'PARENT'),
+        ('b:SMT.Group.RebootStep', 'PARENT'),
+        ('b:SMT.Group.RebootStep_2', 'PARENT'),
+        ('b:SMT.Group_2.RebootStep', 'STOP'),
+        ('b:SMT.Group_2.RebootStep_2', 'STOP'),
+        ('b:SMT.RebootStep_2', 'PARENT'),
+        ('b:SMT.RebootStep_3', 'PARENT'),
+        ('b:SMT.RebootStep_4', 'STOP')])
 
     self.assertListEqual(
         list(expected),
@@ -251,25 +253,12 @@ class TestListLoaderTest(unittest.TestCase):
   def testFlattenGroup(self):
     test_list = self.manager.GetTestListByID('flatten_group')
 
-    expected = dict([
-        ("flatten_group:NOP", {
-            "foo": "FOO"
-        }),
-        ("flatten_group:NOP_2", {
-            "foo": "FOO",
-            "bar": "BAR"
-        }),
-        ("flatten_group:NOP_3", {
-            "foo": "FOO",
-            "bar": "BAR"
-        }),
-        ("flatten_group:Group3.NOP", {
-            "foo": "FOO",
-            "baz": "BAZ"
-        }),
-        ("flatten_group:Group3.NOP_2", {
-            "baz": "BAZ"
-        }),
+    expected = collections.OrderedDict([
+        ("flatten_group:NOP", {"foo": "FOO"}),
+        ("flatten_group:NOP_2", {"foo": "FOO", "bar": "BAR"}),
+        ("flatten_group:NOP_3", {"foo": "FOO", "bar": "BAR"}),
+        ("flatten_group:Group3.NOP", {"foo": "FOO", "baz": "BAZ"}),
+        ("flatten_group:Group3.NOP_2", {"baz": "BAZ"}),
     ])
 
     self.assertListEqual(

@@ -4,6 +4,7 @@
 
 """Implementation of cros.factory.device.device_types.IDeviceLink using SSH."""
 
+import collections
 import enum
 import logging
 import pipes
@@ -296,7 +297,7 @@ class SSHLink(device_types.IDeviceLink):
       self._exclude_ip_prefix = exclude_ip_prefix
 
       self._lock = threading.Lock()
-      self._devices = {}
+      self._devices = collections.OrderedDict()
 
     def _SetLastDUT(self):
       with self._lock:

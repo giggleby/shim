@@ -219,7 +219,7 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
       self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
   ) -> Tuple[List[Any], Sequence[_ProbeParameterSuggestion]]:
     """See base class."""
-    converted_values = {}
+    converted_values = collections.OrderedDict()
     suggestions = []
     for probe_info_param in self._probe_info_params:
       param_name = next(iter(probe_info_param.probe_info_param_definitions))

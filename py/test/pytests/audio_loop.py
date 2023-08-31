@@ -167,6 +167,7 @@ for your sound card. Otherwise the test will use audio.json instead of ucm::
     }
 """
 
+import collections
 import io
 import logging
 import os
@@ -292,7 +293,7 @@ _ARG_RANGE_THRESHOLD_SCHEMA_DICT = {
     'maxItems': 2
 }
 
-_FREQUENCY_STRATEGY = dict({
+_FREQUENCY_STRATEGY = collections.OrderedDict({
     'serial': 'serial',
     'low_hi_uniform': 'serial',
     'random': 'random',
