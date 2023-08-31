@@ -1050,10 +1050,7 @@
     "SetWidevineKeybox": {
       "pytest_name": "provision_drm_key",
       "label": "Set Widevine Keybox",
-      "run_if": "constants.has_keybox",
-      "args": {
-        "from_device_data": true
-      }
+      "run_if": "constants.has_keybox"
     },
     "SetWidevineKeyboxGroup": {
       "label": "Widevine Keybox provisioning Test Group",

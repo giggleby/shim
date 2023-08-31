@@ -40,13 +40,6 @@ class GetDeviceSerialTest(unittest.TestCase):
     self.assertTrue(device_serial.isalnum())
 
 
-class FakeArgs:
-
-  def __init__(self, url_spec=None, from_device_data=False):
-    self.proxy_server_url = url_spec
-    self.from_device_data = from_device_data
-
-
 class MockProxy:
 
   def Request(self, device_serial, soc_serial, soc_id):
@@ -85,7 +78,7 @@ class ProvisionDRMKeyTest(unittest.TestCase):
     mock_oemcrypto.GetFactoryTransportKeyMaterial.return_value = (16, '7f' * 32)
     mock_oemcrypto.WrapFactoryKeybox.return_value = '7f' * 176
     self.test.oemcrypto_client = mock_oemcrypto
-    self.test.args = FakeArgs()
+    self.test.args = object()
     patcher = mock.patch(
         'cros.factory.test.utils.oemcrypto_utils.OEMCryptoClient')
     patcher.start()
@@ -110,36 +103,9 @@ class ProvisionDRMKeyTest(unittest.TestCase):
     with self.assertRaisesRegex(Exception, 'CRC verification failed'):
       self.test.GetKeyboxFromDeviceData()
 
-  @mock.patch('cros.factory.test.utils.url_spec.URLSpec.FindServerURL')
-  @mock.patch('xmlrpc.client.ServerProxy')
-  def testConnectToServer(self, mock_proxy, mock_find_url):
-    mock_find_url.return_value = 'http://123.45.67.89:3456'
-
-    self.test.setUp()
-
-    mock_proxy.assert_called_with('http://123.45.67.89:3456')
-
-  @mock.patch('cros.factory.test.utils.url_spec.URLSpec.FindServerURL')
-  def testUrlNotFound(self, mock_find_url):
-    mock_find_url.return_value = ''
-
-    self.assertRaisesRegex(ValueError,
-                           'Server Url not found, please check arguments.',
-                           self.test.setUp)
-
-  def testRunTestFromDKPSProxy(self):
-    self.test.dkps_proxy = MockProxy()
-
-    self.test.runTest()
-
-    # 'df9c1a9e' is the CRC32 sum of b'\x7f' * 176 in hex.
-    self.test.dut.vpd.ro.Update.assert_called_with(
-        {'widevine_keybox': '7f' * 176 + 'df9c1a9e'})
-
   @mock.patch(
       provision_drm_key.__name__ + '.ProvisionDRMKey.GetKeyboxFromDeviceData')
   def testRunTestFromDeviceData(self, mock_get_keybox):
-    self.test.args = FakeArgs(from_device_data=True)
     mock_get_keybox.return_value = '0a' * 128
 
     self.test.runTest()

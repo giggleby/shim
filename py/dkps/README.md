@@ -2,6 +2,7 @@
 
 [TOC]
 
+**The server implementation is deprecated and removed from ToT.**
 
 ## Introduction
 
