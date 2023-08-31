@@ -229,6 +229,7 @@ process_end() {
   # The operator might not do this immediately, so we set the charge status to
   # idle to keep the charge percentage stable, and set back to normal just
   # before doing cutting off.
+  clear
   charge_control "idle"
   check_ac_state "${CUTOFF_AC_STATE}"
 
@@ -240,7 +241,6 @@ process_end() {
   # Display the info of the DUT as QR codes. Use comma to separate info
   # between QR codes. Use space to display multiple info in one QR code.
   IFS="," read -r -a needed_info <<< "${QRCODE_INFO}"
-  clear
   local i=0
   while [ "${i}" -lt ${#needed_info[@]} ]; do
     for info in ${needed_info[${i}]}; do
