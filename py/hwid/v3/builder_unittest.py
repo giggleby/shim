@@ -857,6 +857,26 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/204729913)
   @label_utils.Informational
+  def testAddFirmwareComponent_DontRenameValidComponent(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddFirmwareComponent('firmware_keys',
+                                      {'key_recovery': 'some_hash'}, 'key1')
+      db_builder.AddFirmwareComponent('firmware_keys',
+                                      {'key_recovery': 'some_hash2'}, 'key1')
+      db_builder.AddFirmwareComponent(
+          'firmware_keys', {'key_recovery': 'some_hash2'}, 'key1', True)
+
+    db = db_builder.Build()
+
+    components = db.GetComponents('firmware_keys')
+    self.assertIn('key1_1', components)
+    self.assertDictEqual({'key_recovery': 'some_hash2'},
+                         components['key1_1'].values)
+    self.assertEqual(components['key1_1'].status, 'supported')
+
+  # TODO (b/204729913)
+  @label_utils.Informational
   def testAddFirmwareComponent_NameCollision(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:

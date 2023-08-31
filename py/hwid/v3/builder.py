@@ -356,12 +356,16 @@ class DatabaseBuilder:
   @_EnsureInBuilderContext
   def AddFirmwareComponent(self, comp_cls, value, comp_name,
                            supported=False) -> database.ComponentInfo:
-    # Rename instead of add if any old component has same probed value
+    # Update the name, status and bundle_uuis if the probe value exists in the
+    # database.
     for old_comp_name, comp_info in self.GetComponents(comp_cls).items():
       if (value and not comp_info.value_is_none and
           dict.__eq__(comp_info.values, value)):
         status = (
             common.ComponentStatus.supported if supported else comp_info.status)
+        # Only rename if the old component name is incorrect.
+        if re.fullmatch(fr'{re.escape(comp_name)}_\d+', old_comp_name):
+          comp_name = old_comp_name
         self.UpdateComponent(comp_cls, old_comp_name, comp_name,
                              comp_info.values, status, comp_info.information,
                              comp_info.bundle_uuids)
