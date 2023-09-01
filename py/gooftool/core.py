@@ -103,7 +103,7 @@ class CrosConfigIdentity(dict):
         'sku-id',
         'frid',
         'device-tree-compatible-match',
-    ] + [vpd_utils.IDENTITY_VPD_FIELDS.values()]
+    ] + list(vpd_utils.IDENTITY_VPD_FIELDS.values())
     for key in identity_key_list:
       self[key] = ''
 
