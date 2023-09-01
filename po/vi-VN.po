@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-07-12 14:43+CST\n"
+"PO-Revision-Date: 2023-09-01 15:31+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -124,6 +124,10 @@ msgstr "Buzzer"
 #: ../build/pytests_label_generated.json
 msgid "Camera"
 msgstr "Máy ảnh"
+
+#: ../build/pytests_label_generated.json
+msgid "Cec"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Cellular Switch Firmware"
