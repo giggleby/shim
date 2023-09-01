@@ -829,6 +829,13 @@ class GooftoolTest(unittest.TestCase):
         'match.  Have you reboot the device after updating VPD '
         'fields?', self._gooftool.Cr50WriteFlashInfo)
 
+  def testInitialCrosConfigIdentity_KeysAreStrings(self):
+    isString = [
+        isinstance(key, str)
+        for key in CrosConfigIdentity(IdentitySourceEnum.cros_config).keys()
+    ]
+    self.assertEqual(isString, [True] * len(isString))
+
   def testMatchConfigWithIdentity_X86_Frid(self):
     identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
     identity['smbios-name-match'] = 'skolas'
