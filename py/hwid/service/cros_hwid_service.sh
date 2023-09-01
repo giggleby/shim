@@ -28,9 +28,9 @@ DOCKER_TAG="hwid_service"
 FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 REQUEST_SCRIPT="${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/test/\
 send_request.sh"
-# The minor version should match the protobuf library version in
+# The major version should match the minor version of protobuf library in
 # ${APPENGINE_DIR}/requirements.txt.
-PROTOC_VERSION="3.19.0"
+PROTOC_VERSION="21.9"
 # shellcheck disable=SC2269
 REDIS_RDB="${REDIS_RDB}"
 # shellcheck disable=SC2269
