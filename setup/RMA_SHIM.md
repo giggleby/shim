@@ -417,7 +417,6 @@ universal shim.
     (6) Enable/disable autorun in RMA shim.
     (7) Modify cutoff config in cros payload (only for old devices).
     (8) Enable or disable qrcode when factory reset.
-    (9) Enable or disable a confirmation before battery cutoff.
     (w) Apply changes and exit.
     (q) Quit without saving changes.
     Please select an option [1-9, w, q]:
@@ -439,7 +438,6 @@ or
 |CUTOFF_METHOD, CUTOFF_AC_STATE, CUTOFF_BATTERY_MIN_PERCENTAGE, CUTOFF_BATTERY_MAX_PERCENTAGE, CUTOFF_BATTERY_MIN_VOLTAGE, CUTOFF_BATTERY_MAX_VOLTAGE, SHOPFLOOR_URL|[Deprecated](#deprecate_cutoff).|(7)|-|
 |DISPLAY_QRCODE|Display the information of the DUT as a qrcode, to increase the flexibility of customized process of factory reset.|(8)|15448|
 |DISPLAY_INFO|Support fields are: `hwid`, `serial_number`, `mlb_serial_number`, `wifi_mac0`. For example: `hwid serial_number, wifi_mac0` will display hwid and serial_number in the first qrcode, and display wifi_mac0 in the second qrcode. |(8)|15448|
-|CONTINUE_KEY|A string to confirm continuing cutoff after factory reset. User must press the key in order.|(9)|15469|
 |NETBOOT_RAMFS|This flag is automatically set to `1` when using netboot firmware. The factory shim will set the default action to **(I) Install**.|N/A|-|
 
 Note:
@@ -471,7 +469,9 @@ active test list and cutoff config (after version 12162.0.0).
         "CUTOFF_BATTERY_MAX_PERCENTAGE": 90,
         "CUTOFF_BATTERY_MIN_PERCENTAGE": 60,
         "CUTOFF_METHOD": "battery_cutoff",
-        "CUTOFF_AC_STATE": "remove_ac"
+        "CUTOFF_AC_STATE": "remove_ac",
+        "CONTINUE_KEY": "s",
+        "QRCODE_INFO": "serial_number"
       },
       "active_test_list": {
         "id": "main_rma"

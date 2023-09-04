@@ -67,6 +67,11 @@ There are few options you can set:
  - `SHOPFLOOR_URL`: URL to shopfloor server that we can send request to inform
      "device is cut-off and ready for packaging".
  - `TTY`: Path of terminal for output. Defaults to /run/frecon/vt0.
+ - `CONTINUE_KEY`: A string to confirm continuing cutoff. User must press the
+     key in order.
+ - `QRCODE_INFO`: Display the information of the DUT as a qrcode, to increase
+     the flexibility of customized process of battery cutoff. After
+     `CONTINUE_KEY` is pressed, the DUT will perform battery cutoff immediately.
 
 The options should be set in JSON format. For example:
 
