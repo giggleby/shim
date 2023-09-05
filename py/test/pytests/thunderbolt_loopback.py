@@ -12,7 +12,8 @@ Test Procedure
 1. Operator inserts the loopback card.
 2. The tool sends payloads to the loopback card.
 3. The tool receives payloads from the loopback card and checks correctness.
-4. The tool collects lane margining data and uploads it to server.
+4. The tool collects lane margining data and uploads it to factory server or
+   saves it to local factory report.
 5. Operator removes the loopback card.
 
 Dependency
@@ -20,7 +21,7 @@ Dependency
 - Loopback card driver.
 - tdtl tool if we want to test lane margining.
 - Write serial number to device data before the test for data collecting.
-- The DUT must be able to connect factory server when running the test.
+- (Optional) Be able to connect factory server when running the test.
 
 Examples
 --------
@@ -177,7 +178,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       Arg('lane_margining_csv', bool,
           ('If set, will upload the lane margining data to the factory server '
            'at the end of the test. Thus, DUT needs to connect to the server. '
-           'If not set, we can only collect the data in the factory report.'),
+           'If not set, will only save testlog in the factory report.'),
           default=False),
       Arg('check_card_removal', bool,
           'If set, require removing the card after DMA test.', default=True),
@@ -356,7 +357,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
     # self._dut.CheckOutput do not support env and timeout
     # process_utils.Spawn do not support timeout
     cmd = [
-        'cli.py', 'margin_loopback', '-d', domain, '-a', adapter, '-r', '0',
+        './cli.py', 'margin_loopback', '-d', domain, '-a', adapter, '-r', '0',
         '-i', '1'
     ]
     env = {
@@ -433,17 +434,17 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       logging.exception(messages)
       self._errors.append(messages)
 
-  def _UploadLaneMarginingViaTestlog(self, log_result: dict):
-    """Uploads the result of lane margining via Testlog."""
+  def _SaveLaneMarginingViaTestlog(self, log_result: dict):
+    """Saves the result of lane margining via Testlog."""
     with self._group_checker:
       for key, value in log_result.items():
         testlog.LogParam(key, value)
 
-  def _UploadLaneMargining(self, log_result: dict):
-    """Uploads the result of lane margining."""
+  def _UploadOrSaveLaneMargining(self, log_result: dict):
+    """Uploads or Saves the result of lane margining."""
     if self.args.lane_margining_csv:
       self._UploadLaneMarginingViaCSV(log_result)
-    self._UploadLaneMarginingViaTestlog(log_result)
+    self._SaveLaneMarginingViaTestlog(log_result)
 
   def _WaitMuxInfoBecomingTBT(self):
     """Waits until Mux info becomes TBT=1."""
@@ -543,7 +544,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
 
     if self.args.lane_margining:
       log_result = self._TestLaneMargining(domain, adapter)
-      self._UploadLaneMargining(log_result)
+      self._UploadOrSaveLaneMargining(log_result)
 
     if self.args.check_card_removal:
       self._WaitForLoopbackCardRemoval(device_path)
