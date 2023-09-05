@@ -435,8 +435,8 @@ class SystemInfo(device_types.DeviceComponent):
   def ap(self):
     return {
         'active': self.mainfw_act,
-        'ro_version': self.firmware_version,
-        'rw_version': self.ro_firmware_version,
+        'ro_version': self.ro_firmware_version,
+        'rw_version': self.firmware_version,
         'type': self.mainfw_type,
     }
 
