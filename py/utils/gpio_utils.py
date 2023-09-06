@@ -190,7 +190,7 @@ class Gpio:
   _UNEXPORT_FILE = os.path.join(_GPIO_ROOT, 'unexport')
   _GPIO_PIN_PATTERN = os.path.join(_GPIO_ROOT, 'gpio%d')
 
-  def __init__(self, port: int):
+  def __init__(self, port: int, poll_fd: Optional[io.TextIOWrapper] = None):
     """Constructor.
 
     Args:
@@ -207,7 +207,7 @@ class Gpio:
     """
     self._port: int = port
     self._stop_sockets = socket.socketpair()
-    self._poll_fd: Optional[io.TextIOWrapper] = None
+    self._poll_fd = poll_fd
 
   def __enter__(self):
     self._ExportSysfs()
