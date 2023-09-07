@@ -13,9 +13,14 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 main(){
   load_venv "${COVERAGE_VENV}" "${COVERAGE_REQUIREMENTS}" || exit 1
 
+  test_files="$1"
+  report_files="$2"
   mkdir -p .coverage_data
-  bin/run_unittests --coverage
-  bin/factory_env python3 py/tools/coverage_report.py
+  bin/run_unittests ${test_files} --coverage
+  coverage combine >/dev/null
+
+  bin/factory_env python3 py/tools/coverage_report.py \
+   --include "${report_files}"
   mk_success
 }
 

@@ -4,12 +4,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import argparse
 import subprocess
 
 from cros.factory.tools import run_unittests
 
 
 def main():
+  parser = argparse.ArgumentParser(description='Show the coverage report.')
+  parser.add_argument('--include', '-i', default='',
+                      help='Only files matched the pattern will be reported.')
+  args = parser.parse_args()
+
   excluded = ['*_unittest.py', '*/__init__.py']
   for e in run_unittests.TESTS_TO_EXCLUDE:
     if e.endswith('.py'):
@@ -17,8 +23,11 @@ def main():
     else:
       excluded.append(e + '/*')
 
-  subprocess.run(['coverage', 'combine'], check=True, stdout=subprocess.DEVNULL)
-  subprocess.check_call(['coverage', 'report', '--omit', ','.join(excluded)])
+  cmd = ['coverage', 'report', '--omit', ','.join(excluded)]
+  if args.include:
+    cmd += ['--include', args.include]
+
+  subprocess.check_call(cmd)
 
 
 if __name__ == '__main__':
