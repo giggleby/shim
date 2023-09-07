@@ -1434,6 +1434,9 @@ class Gooftool:
       if is_flags_only:
         mode += '_flags'
 
+    if not is_flags_only:
+      self._VerifyBrandCode()
+
     cmd = [script_path, mode]
     try:
       result = self._util.shell(cmd)
@@ -1455,6 +1458,23 @@ class Gooftool:
       logging.exception('Failed to set GSC Board ID.')
       raise
 
+  def _VerifyBrandCode(self):
+    """Makes sure brand code is consistent between RO_GSCVD and cros_config.
+
+    To prevent setting wrong Board ID type, which makes AP RO verification fail.
+    """
+    firmware_image = self._crosfw.LoadMainFirmware().GetFirmwareImage()
+    gscvd = firmware_image.get_section('RO_GSCVD')
+
+    # Need to reverse since the byte string should be read in little endian.
+    # The brand code is stored at the 12~15 bytes.
+    brand_code_in_gscvd = gscvd[12:16][::-1].decode('utf-8')
+    brand_code_in_cros_config = self._cros_config.GetBrandCode()
+
+    if brand_code_in_gscvd != brand_code_in_cros_config:
+      raise Error(f'The brand code in RO_GSCVD {brand_code_in_gscvd}'
+                  ' is different from the brand code in cros_config '
+                  f'{brand_code_in_cros_config}.')
 
   def VerifyCustomLabel(self):
     model_sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
