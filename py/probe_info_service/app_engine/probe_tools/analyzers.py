@@ -9,7 +9,7 @@ import hashlib
 import itertools
 import os
 import typing
-from typing import NamedTuple, Optional, Sequence, Tuple
+from typing import Mapping, NamedTuple, Optional, Sequence, Tuple
 
 from google.protobuf import text_format
 
@@ -26,7 +26,13 @@ from cros.factory.utils import type_utils
 _ProbeInfoArtifact = probe_info_analytics.ProbeInfoArtifact
 
 
-class IProbeStatementConverter(abc.ABC):
+class ParsedProbeParameter(NamedTuple):
+  """Represents a probe parameter extracted from generic probe function."""
+  component_category: str
+  probe_parameter: probe_info_analytics.ProbeParameter
+
+
+class IProbeInfoConverter(abc.ABC):
   """Represents a converter for probe info to probe statement(s)."""
 
   @abc.abstractmethod
@@ -65,6 +71,28 @@ class IProbeStatementConverter(abc.ABC):
     """
 
 
+class IBidirectionalProbeInfoConverter(IProbeInfoConverter):
+  """A converter between probe info and probe statement(s) / probe result."""
+
+  @abc.abstractmethod
+  def ParseProbeResult(
+      self, probe_result: Mapping[str, Sequence[Mapping[str, str]]]
+  ) -> Sequence[ParsedProbeParameter]:
+    """Walks through the given probe result.
+
+    This method parses the given probe result, gets the probe values of the
+    parameters defined by the converter, converts them to the same format as the
+    source probe parameters, and returns them in the form of
+    `ParsedProbeParameter`.
+
+    Args:
+      probe_result: A dictionary mapping component category to the probe values.
+
+    Returns:
+      A list of `ParsedProbeParameter` contains parsed probe parameters and
+      their corresponding component categories.
+    """
+
 _RESOURCE_PATH = os.path.join(
     os.path.realpath(os.path.dirname(__file__)), 'resources')
 
@@ -82,7 +110,7 @@ _IProbeDataSource = probe_info_analytics.IProbeDataSource
 _PayloadInvalidError = probe_info_analytics.PayloadInvalidError
 
 
-class _RawProbeStatementConverter(IProbeStatementConverter):
+class _RawProbeStatementConverter(IProbeInfoConverter):
   """A converter that is simply a wrapper of raw probe statement string."""
 
   _CONVERTER_NAME = 'raw_probe_statement'
@@ -232,7 +260,7 @@ def _GetComponentPartNames(
 class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
   """Provides functionalities related to the probe tool."""
 
-  def __init__(self, converters: Sequence[IProbeStatementConverter]):
+  def __init__(self, converters: Sequence[IProbeInfoConverter]):
     self._converters = {
         c.GetName(): c
         for c in itertools.chain(converters, [_RawProbeStatementConverter()])
@@ -441,7 +469,7 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
 
   def _LookupProbeConverter(
       self, converter_name: str
-  ) -> Tuple[_ProbeInfoParsedResult, IProbeStatementConverter]:
+  ) -> Tuple[_ProbeInfoParsedResult, IProbeInfoConverter]:
     """A helper method to find the probe statement converter instance by name.
 
     When the target probe converter doesn't exist, the method creates and
@@ -455,7 +483,7 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
       A pair of the following:
         - An instance of `_ProbeInfoParsedResult` if not found; otherwise
           `None`.
-        - An instance of `IProbeStatementConverter` if found;
+        - An instance of `IProbeInfoConverter` if found;
           otherwise `None`.
     """
     converter = self._converters.get(converter_name)

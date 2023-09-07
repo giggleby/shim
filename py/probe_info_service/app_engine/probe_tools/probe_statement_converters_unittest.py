@@ -19,12 +19,741 @@ def _CreateStrProbeParam(name: str,
   return probe_info_analytics.ProbeParameter(name=name, string_value=value)
 
 
-def _GetConverter(name: str) -> Optional[analyzers.IProbeStatementConverter]:
+def _CreateIntProbeParam(name: str,
+                         value: int) -> probe_info_analytics.ProbeParameter:
+  return probe_info_analytics.ProbeParameter(name=name, int_value=value)
+
+
+def _GetConverter(name: str) -> Optional[analyzers.IProbeInfoConverter]:
   for converter in ps_converters.GetAllConverters():
     if name == converter.GetName():
       return converter
 
   return None
+
+
+class AudioCodecConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('audio_codec.audio_codec')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "audio_codec.audio_codec"
+        description: "Probe audio codec info."
+        parameter_definitions {
+          name: "name"
+          description: "The probed kernel name of audio codec comp."
+          value_type: STRING
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('name', 'abcd1234'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'audio_codec', 'comp_name', {
+                'eval': {
+                    'audio_codec': {}
+                },
+                'expect': {
+                    'name': [True, 'str', '!eq abcd1234']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'audio_codec': [{
+            'name': 'abcd1234'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter('audio_codec',
+                                       _CreateStrProbeParam('name', 'abcd1234'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class BatteryConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('battery.generic_battery')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "battery.generic_battery"
+        description: "Read battery information from sysfs."
+        parameter_definitions {
+          name: "manufacturer"
+          description: "Manufacturer name exposed from the ACPI interface."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "model_name"
+          description: "Model name exposed from the EC or the ACPI interface."
+          value_type: STRING
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('manufacturer', 'abcd'),
+        _CreateStrProbeParam('model_name', '1234'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'battery', 'comp_name', {
+                'eval': {
+                    'generic_battery': {}
+                },
+                'expect': {
+                    'manufacturer': [True, 'str', '!eq abcd'],
+                    'model_name': [True, 'str', '!eq 1234']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'battery': [{
+            'manufacturer': 'abcd',
+            'model_name': '1234'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'battery', _CreateStrProbeParam('manufacturer', 'abcd')),
+        analyzers.ParsedProbeParameter(
+            'battery', _CreateStrProbeParam('model_name', '1234'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class MipiCameraConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('camera.mipi_camera')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "camera.mipi_camera"
+        description: "A method that probes camera devices on MIPI bus."
+        parameter_definitions {
+          name: "module_vid"
+          description: "The camera module vendor ID."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "module_pid"
+          description: "The camera module product ID."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "sensor_vid"
+          description: "The camera sensor vendor ID."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "sensor_pid"
+          description: "The camera sensor product ID."
+          value_type: STRING
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('module_vid', 'AB'),
+        _CreateStrProbeParam('module_pid', '0x0001'),
+        _CreateStrProbeParam('sensor_vid', 'CD'),
+        _CreateStrProbeParam('sensor_pid', '0x0002'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'camera', 'comp_name', {
+                'eval': {
+                    'mipi_camera': {}
+                },
+                'expect': {
+                    'mipi_module_id': [True, 'str', '!eq AB0001'],
+                    'mipi_sensor_id': [True, 'str', '!eq CD0002'],
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'camera': [{
+            'mipi_module_id': 'AB0001',
+            'mipi_sensor_id': 'CD0002'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter('camera',
+                                       _CreateStrProbeParam('module_vid',
+                                                            'AB')),
+        analyzers.ParsedProbeParameter(
+            'camera', _CreateStrProbeParam('module_pid', '0x0001')),
+        analyzers.ParsedProbeParameter('camera',
+                                       _CreateStrProbeParam('sensor_vid',
+                                                            'CD')),
+        analyzers.ParsedProbeParameter(
+            'camera', _CreateStrProbeParam('sensor_pid', '0x0002'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class UsbCameraConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('camera.usb_camera')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "camera.usb_camera"
+        description: "A method that probes camera devices on USB bus."
+        parameter_definitions {
+          name: "usb_vendor_id"
+          description: "USB Vendor ID."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "usb_product_id"
+          description: "USB Product ID."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "usb_bcd_device"
+          description: "USB BCD Device Info."
+          value_type: STRING
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('usb_vendor_id', '0001'),
+        _CreateStrProbeParam('usb_product_id', '0002'),
+        _CreateStrProbeParam('usb_bcd_device', '0003'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'camera', 'comp_name', {
+                'eval': {
+                    'usb_camera': {}
+                },
+                'expect': {
+                    'usb_vendor_id': [True, 'hex', '!eq 0x0001'],
+                    'usb_product_id': [True, 'hex', '!eq 0x0002'],
+                    'usb_bcd_device': [True, 'hex', '!eq 0x0003']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'camera': [{
+            'usb_vendor_id': '0001',
+            'usb_product_id': '0002',
+            'usb_bcd_device': '0003'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'camera', _CreateStrProbeParam('usb_vendor_id', '0001')),
+        analyzers.ParsedProbeParameter(
+            'camera', _CreateStrProbeParam('usb_product_id', '0002')),
+        analyzers.ParsedProbeParameter(
+            'camera', _CreateStrProbeParam('usb_bcd_device', '0003'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class DisplayPanelConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('display_panel.edid')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "display_panel.edid"
+        description: "A method that probes devices via edid."
+        parameter_definitions {
+          name: "product_id"
+          description: "The product ID, 16 bits"
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "vendor"
+          description: "The vendor code, 3 letters"
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "width"
+          description: "The width of display panel."
+          value_type: INT
+        }
+        parameter_definitions {
+          name: "height"
+          description: "The height of display panel."
+          value_type: INT
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('product_id', '0001'),
+        _CreateStrProbeParam('vendor', 'ABC'),
+        _CreateIntProbeParam('width', 100),
+        _CreateIntProbeParam('height', 200),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'display_panel', 'comp_name', {
+                'eval': {
+                    'edid': {}
+                },
+                'expect': {
+                    'product_id': [True, 'hex', '!eq 0x0001'],
+                    'vendor': [True, 'str', '!eq ABC']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'display_panel': [{
+            'product_id': '0001',
+            'vendor': 'ABC'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'display_panel', _CreateStrProbeParam('product_id', '0001')),
+        analyzers.ParsedProbeParameter('display_panel',
+                                       _CreateStrProbeParam('vendor', 'ABC'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class MemoryConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('dram.memory')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "dram.memory"
+        description: "Probe memory from DMI."
+        parameter_definitions {
+          name: "part"
+          description: "Part number."
+          value_type: STRING
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [_CreateStrProbeParam('part', 'ABCD1234')]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'dram', 'comp_name', {
+                'eval': {
+                    'memory': {}
+                },
+                'expect': {
+                    'part': [True, 'str', '!eq ABCD1234']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'dram': [{
+            'part': 'ABCD1234'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter('dram',
+                                       _CreateStrProbeParam('part', 'ABCD1234'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class MmcStorageConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('storage.mmc_storage')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "storage.mmc_storage"
+        description: "Probe function for eMMC storage."
+        parameter_definitions {
+          name: "mmc_manfid"
+          description: "Manufacturer ID (MID) in CID register."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "mmc_name"
+          description: "Product name (PNM) in CID register."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "mmc_prv"
+          description: "Product revision (PRV) in CID register."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "size_in_gb"
+          description: "The storage size in GB."
+          value_type: INT
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x12'),
+        _CreateStrProbeParam('mmc_name', '0x61626364'),
+        _CreateStrProbeParam('mmc_prv', '0x34'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name', {
+                'eval': {
+                    'mmc_storage': {}
+                },
+                'expect': {
+                    'mmc_manfid': [True, 'hex', '!eq 0x12'],
+                    'mmc_name': [True, 'str', '!eq abcd'],
+                    'mmc_prv': [True, 'hex', '!eq 0x34']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'storage': [{
+            'mmc_manfid': '0x12',
+            'mmc_name': 'abcd',
+            'mmc_prv': '0x34'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('mmc_manfid', '0x12')),
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('mmc_name', '0x61626364')),
+        analyzers.ParsedProbeParameter('storage',
+                                       _CreateStrProbeParam('mmc_prv', '0x34'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class NvmeStorageConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('storage.nvme_storage')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "storage.nvme_storage"
+        description: "Probe function for NVMe storage."
+        parameter_definitions {
+          name: "pci_vendor"
+          description: "PCI Vendor ID."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "pci_device"
+          description: "PCI Device ID."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "pci_class"
+          description: "PCI Device Class Indicator."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "nvme_model"
+          description: "NVMe model name."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "size_in_gb"
+          description: "The storage size in GB."
+          value_type: INT
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('pci_vendor', '0x0001'),
+        _CreateStrProbeParam('pci_device', '0x0002'),
+        _CreateStrProbeParam('pci_class', '0x123456'),
+        _CreateStrProbeParam('nvme_model', 'ABCDE'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name', {
+                'eval': {
+                    'nvme_storage': {}
+                },
+                'expect': {
+                    'pci_vendor': [True, 'hex', '!eq 0x0001'],
+                    'pci_device': [True, 'hex', '!eq 0x0002'],
+                    'pci_class': [True, 'hex', '!eq 0x123456'],
+                    'nvme_model': [True, 'str', '!eq ABCDE']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'storage': [{
+            'pci_vendor': '0x0001',
+            'pci_device': '0x0002',
+            'pci_class': '0x123456',
+            'nvme_model': 'ABCDE'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('pci_vendor', '0x0001')),
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('pci_device', '0x0002')),
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('pci_class', '0x123456')),
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('nvme_model', 'ABCDE'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class UfsStorageConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('storage.ufs_storage')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "storage.ufs_storage"
+        description: "Probe function for UFS storage."
+        parameter_definitions {
+          name: "ufs_vendor"
+          description: "Vendor name."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "ufs_model"
+          description: "Model name."
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "size_in_gb"
+          description: "The storage size in GB."
+          value_type: INT
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('ufs_vendor', 'abcd'),
+        _CreateStrProbeParam('ufs_model', 'wxyz'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name', {
+                'eval': {
+                    'ufs_storage': {}
+                },
+                'expect': {
+                    'ufs_vendor': [True, 'str', '!eq abcd'],
+                    'ufs_model': [True, 'str', '!eq wxyz']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'storage': [{
+            'ufs_vendor': 'abcd',
+            'ufs_model': 'wxyz'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('ufs_vendor', 'abcd')),
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('ufs_model', 'wxyz'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+
+class CpuConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = _GetConverter('cpu.generic_cpu')
+    self.assertIsNotNone(self._converter)
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "cpu.generic_cpu"
+        description: "A currently non-existent runtime probe function for CPU."
+        parameter_definitions {
+          name: "identifier"
+          description: "Model name on x86, chip-id on ARM."
+          value_type: STRING
+        }''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [_CreateStrProbeParam('identifier', 'ABCD1234')]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'cpu', 'comp_name', {
+                'eval': {
+                    'generic_cpu': {}
+                },
+                'expect': {
+                    'identifier': [True, 'str', '!eq ABCD1234']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'cpu': [{
+            'identifier': 'ABCD1234'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'cpu', _CreateStrProbeParam('identifier', 'ABCD1234'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
 
 
 class TouchscreenModuleConverterTest(unittest.TestCase):
@@ -168,6 +897,33 @@ class TouchscreenModuleConverterTest(unittest.TestCase):
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
 
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'touchscreen': [{
+            'vendor': 'AB12',
+            'product': 'CD34'
+        }],
+        'display_panel': [{
+            'vendor': 'ABC',
+            'product_id': '1234'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'touchscreen', _CreateStrProbeParam('module_vendor_id', 'AB12')),
+        analyzers.ParsedProbeParameter(
+            'touchscreen', _CreateStrProbeParam('module_product_id', 'CD34')),
+        analyzers.ParsedProbeParameter(
+            'display_panel',
+            _CreateStrProbeParam('panel_edid_vendor_code', 'ABC')),
+        analyzers.ParsedProbeParameter(
+            'display_panel',
+            _CreateStrProbeParam('panel_edid_product_id', '1234'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
 
 class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
 
@@ -287,6 +1043,58 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
 
+  def testParseProbeResult_CanGenerateMMCAndMMCHostProbeParameter(self):
+    probe_result = {
+        'storage': [{
+            'mmc_manfid': '0x00001a',
+            'mmc_name': 'eeeeee'
+        }],
+        'mmc_host': [{
+            'pci_vendor_id': '0xab12',
+            'pci_device_id': '0xcd34',
+            'pci_class': '0x010809'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('mmc_manfid', '0x1a')),
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('mmc_name', '0x656565656565')),
+        analyzers.ParsedProbeParameter(
+            'mmc_host', _CreateStrProbeParam('bridge_pcie_vendor', '0xab12')),
+        analyzers.ParsedProbeParameter(
+            'mmc_host', _CreateStrProbeParam('bridge_pcie_device', '0xcd34')),
+        analyzers.ParsedProbeParameter(
+            'mmc_host', _CreateStrProbeParam('bridge_pcie_class', '0x010809'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testParseProbeResult_CanGenerateNVMeProbeParameter(self):
+    probe_result = {
+        'storage': [{
+            'nvme_model': 'the_model_with_eeeeee',
+            'pci_vendor': '0xab12',
+            'pci_device': '0xcd34',
+            'pci_class': '0x010809'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('bridge_pcie_vendor', '0xab12')),
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('bridge_pcie_device', '0xcd34')),
+        analyzers.ParsedProbeParameter(
+            'storage', _CreateStrProbeParam('bridge_pcie_class', '0x010809')),
+        analyzers.ParsedProbeParameter(
+            'storage',
+            _CreateStrProbeParam('nvme_model', 'the_model_with_eeeeee')),
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
+
 
 class PCIeeMMCStorageBridgeProbeStatementConverterTest(unittest.TestCase):
 
@@ -345,6 +1153,26 @@ class PCIeeMMCStorageBridgeProbeStatementConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeResult_CanGenerateProbeParameter(self):
+    probe_result = {
+        'mmc_host': [{
+            'pci_vendor_id': '0xab12',
+            'pci_device_id': '0xcd34',
+            'pci_class': '0x010809'
+        }]
+    }
+
+    actual = self._converter.ParseProbeResult(probe_result)
+    expected_probe_parameters = [
+        analyzers.ParsedProbeParameter(
+            'mmc_host', _CreateStrProbeParam('pci_vendor_id', '0xab12')),
+        analyzers.ParsedProbeParameter(
+            'mmc_host', _CreateStrProbeParam('pci_device_id', '0xcd34')),
+        analyzers.ParsedProbeParameter(
+            'mmc_host', _CreateStrProbeParam('pci_class', '0x010809'))
+    ]
+    self.assertCountEqual(actual, expected_probe_parameters)
 
 
 if __name__ == '__main__':

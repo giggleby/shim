@@ -6,7 +6,7 @@
 import os
 import shlex
 import tempfile
-from typing import Sequence
+from typing import Mapping, Sequence
 import unittest
 
 from google.protobuf import text_format
@@ -28,7 +28,7 @@ _ProbeFunctionDefinition = probe_info_analytics.ProbeFunctionDefinition
 _ProbeInfoTestResult = probe_info_analytics.ProbeInfoTestResult
 
 
-class _FakeMultiProbeStatementConverter(analyzers.IProbeStatementConverter):
+class _FakeMultiProbeInfoConverter(analyzers.IBidirectionalProbeInfoConverter):
 
   PARAM_NAMES = ('param1', 'param2')
 
@@ -95,6 +95,27 @@ class _FakeMultiProbeStatementConverter(analyzers.IProbeStatementConverter):
     return _ProbeInfoArtifact(parsed_result, comp_probe_statements)
 
 
+  def ParseProbeResult(
+      self, probe_result: Mapping[str, Sequence[Mapping[str, str]]]
+  ) -> Sequence[analyzers.ParsedProbeParameter]:
+    category_probe_result = probe_result.get('the_category', [])
+    parsed_results = []
+
+    for probe_values in category_probe_result:
+      res = [
+          analyzers.ParsedProbeParameter(
+              'the_category',
+              _ProbeParameter(name=param_name,
+                              string_value=probe_values[param_name]))
+          for param_name in self.PARAM_NAMES
+          if param_name in probe_values
+      ]
+      if len(res) == len(self.PARAM_NAMES):
+        parsed_results.extend(res)
+
+    return parsed_results
+
+
 class ProbeInfoAnalyzerTest(unittest.TestCase):
   # Most test cases are still live in `../probe_tool_utils_unittest.py`.
   # However, developers should put newly test cases (especially for features
@@ -107,8 +128,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
 
   def testWithMultiProbeStatementProbeInfo_ThenCanDump(self):
     # Arrange.
-    pi_analyzer = analyzers.ProbeInfoAnalyzer(
-        [_FakeMultiProbeStatementConverter()])
+    pi_analyzer = analyzers.ProbeInfoAnalyzer([_FakeMultiProbeInfoConverter()])
     pi = text_format.Parse(
         '''probe_function_name: "fake_multi_converter"
            probe_parameters { name: "param1" string_value: "value1" }
@@ -163,8 +183,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
   def testWithMultiProbeStatementProbeInfo_ThenCanGenerateDummyProbeStatement(
       self):
     # Arrange.
-    pi_analyzer = analyzers.ProbeInfoAnalyzer(
-        [_FakeMultiProbeStatementConverter()])
+    pi_analyzer = analyzers.ProbeInfoAnalyzer([_FakeMultiProbeInfoConverter()])
     pi = text_format.Parse(
         '''probe_function_name: "fake_multi_converter"
            probe_parameters { name: "param1" string_value: "value1" }
@@ -187,8 +206,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
 
   def testWithMultiProbeStatementProbeInfo_ThenGenerateRawProbeStatement(self):
     # Arrange.
-    pi_analyzer = analyzers.ProbeInfoAnalyzer(
-        [_FakeMultiProbeStatementConverter()])
+    pi_analyzer = analyzers.ProbeInfoAnalyzer([_FakeMultiProbeInfoConverter()])
     pi = text_format.Parse(
         '''probe_function_name: "fake_multi_converter"
            probe_parameters { name: "param1" string_value: "value1" }
@@ -246,8 +264,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
 
   def testWithMultiProbeStatementProbeInfo_ThenCanTestByQualBundle(self):
     # Arrange.
-    pi_analyzer = analyzers.ProbeInfoAnalyzer(
-        [_FakeMultiProbeStatementConverter()])
+    pi_analyzer = analyzers.ProbeInfoAnalyzer([_FakeMultiProbeInfoConverter()])
     pi = text_format.Parse(
         '''probe_function_name: "fake_multi_converter"
            probe_parameters { name: "param1" string_value: "value1" }
@@ -326,8 +343,7 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
 
   def testWithMultiProbeStatementProbeInfo_ThenCanTestByDeviceBundle(self):
     # Arrange.
-    pi_analyzer = analyzers.ProbeInfoAnalyzer(
-        [_FakeMultiProbeStatementConverter()])
+    pi_analyzer = analyzers.ProbeInfoAnalyzer([_FakeMultiProbeInfoConverter()])
     pi = text_format.Parse(
         '''probe_function_name: "fake_multi_converter"
            probe_parameters { name: "param1" string_value: "value1" }

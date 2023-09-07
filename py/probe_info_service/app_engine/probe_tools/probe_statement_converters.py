@@ -30,7 +30,8 @@ class _IncompatibleError(Exception):
 
 
 _ProbeInfoArtifact = probe_info_analytics.ProbeInfoArtifact
-_IProbeStatementConverter = analyzers.IProbeStatementConverter
+_IBidirectionalProbeInfoConverter = analyzers.IBidirectionalProbeInfoConverter
+_ParsedProbeParameter = analyzers.ParsedProbeParameter
 
 
 class _ParamValueConverter:
@@ -108,7 +109,8 @@ class _IProbeStatementParam(abc.ABC):
   """Interface of parameter definitions.
 
   This is for `_SingleProbeFuncConverter` to convert probe info parameters to
-  expected values in probe statements.
+  expected values in probe statements, and probe values to probe info
+  parameters.
   """
 
   @property
@@ -123,7 +125,7 @@ class _IProbeStatementParam(abc.ABC):
     """The parameter name used in the probe statement."""
 
   @abc.abstractmethod
-  def ConvertValues(
+  def ConvertProbeParams(
       self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
   ) -> Tuple[Sequence[Any], Sequence[_ProbeParameterSuggestion]]:
     """Converts `probe_parameters` to expected values in probe statements.
@@ -142,6 +144,26 @@ class _IProbeStatementParam(abc.ABC):
         1. A list of converted values.
         2. A `_ProbeParameterSuggestion` list containing parameters that were
             failed to convert or validate.
+    """
+
+  @abc.abstractmethod
+  def ConvertProbeValues(
+      self, probe_values: Mapping[str, str]) -> Sequence[_ProbeParameter]:
+    """Converts `probe_values` to probe info parameters.
+
+    This function tries to collect the parameters defined by each derived class
+    in `probe_values`, and convert them to `_ProbeParameter`.
+
+    Args:
+      probe_values: A dictionary contains probe result, mapping parameter names
+          to probe values.
+
+    Returns:
+      A list of converted `_ProbeParameter`.
+
+    Raises:
+      `_IncompatibleError`: if any of the defined parameters are not present in
+          `probe_values`.
     """
 
 
@@ -181,7 +203,7 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
     """See base class."""
     return None if self._is_informational else self._probe_statement_param_name
 
-  def ConvertValues(
+  def ConvertProbeParams(
       self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
   ) -> Tuple[Sequence[Any], Sequence[_ProbeParameterSuggestion]]:
     """See base class."""
@@ -204,6 +226,27 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
             _ProbeParameterSuggestion(index=probe_parameter.index, hint=str(e)))
 
     return converted_values, suggestions
+
+  def ConvertProbeValues(
+      self, probe_values: Mapping[str, str]
+  ) -> Sequence[probe_info_analytics.ProbeParameter]:
+    """See base class."""
+    if self._is_informational:
+      return []
+    return self.ConvertProbeValuesWithInformational(probe_values)
+
+  def ConvertProbeValuesWithInformational(
+      self, probe_values: Mapping[str, str]
+  ) -> Sequence[probe_info_analytics.ProbeParameter]:
+    if self._probe_statement_param_name not in probe_values:
+      raise _IncompatibleError(
+          f'Parameter "{self._probe_statement_param_name}" does not exist in '
+          f'the probe result')
+
+    probe_val = probe_values[self._probe_statement_param_name]
+    converted_probe_val = self._value_converter.RevertValue(
+        self._param_name, probe_val)
+    return [converted_probe_val]
 
 
 class _ConcatProbeStatementParam(_IProbeStatementParam):
@@ -243,7 +286,7 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
     """See base class."""
     return None if self._is_informational else self._name
 
-  def ConvertValues(
+  def ConvertProbeParams(
       self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
   ) -> Tuple[List[Any], Sequence[_ProbeParameterSuggestion]]:
     """See base class."""
@@ -253,7 +296,7 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
       param_name = next(iter(probe_info_param.probe_info_param_definitions))
       converted_values[param_name] = []
       for probe_parameter in probe_parameters[param_name]:
-        sub_values, sub_suggestions = probe_info_param.ConvertValues(
+        sub_values, sub_suggestions = probe_info_param.ConvertProbeParams(
             {param_name: [probe_parameter]})
         suggestions.extend(sub_suggestions)
 
@@ -277,11 +320,32 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
 
     return concat_values, suggestions
 
+  def ConvertProbeValues(
+      self, probe_values: Mapping[str, str]
+  ) -> Sequence[probe_info_analytics.ProbeParameter]:
+    """See base class."""
+    if self._is_informational:
+      return []
+
+    if self._name not in probe_values:
+      raise _IncompatibleError(
+          f'Parameter "{self._name}" does not exist in the probe result')
+
+    converted_probe_vals = []
+    probe_val = probe_values[self._name]
+    for probe_info_param in self._probe_info_params:
+      param_name = next(iter(probe_info_param.probe_info_param_definitions))
+      sub_converted_vals = probe_info_param.ConvertProbeValuesWithInformational(
+          {param_name: probe_val})
+      converted_probe_vals.extend(sub_converted_vals)
+
+    return converted_probe_vals
+
 
 class _IProbeParamSpec(abc.ABC):
   """Interface of probe parameter spec.
 
-  This is for `_IProbeStatementConverter` to define the relationship
+  This is for `_IBidirectionalProbeInfoConverter` to define the relationship
   and conversion between probe info parameters and probe statement parameters.
   """
 
@@ -383,7 +447,7 @@ def _ToProbeParamInputs(
   return probe_param_inputs
 
 
-class _SingleProbeFuncConverter(_IProbeStatementConverter):
+class _SingleProbeFuncConverter(_IBidirectionalProbeInfoConverter):
   """Converts probe info into a statement of one single probe function call."""
 
   _DEFAULT_VALUE_TYPE_MAPPING = {
@@ -542,7 +606,7 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
     probe_param_errors = []
 
     for probe_param in self._probe_params:
-      values, suggestions = probe_param.ConvertValues(probe_param_inputs)
+      values, suggestions = probe_param.ConvertProbeParams(probe_param_inputs)
       if probe_param.probe_statement_param_name:
         expected_values_of_field[
             probe_param.probe_statement_param_name] = values
@@ -551,6 +615,31 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
         probe_param_errors.append(suggestion)
 
     return expected_values_of_field, probe_param_errors
+
+  def ParseProbeResult(
+      self, probe_result: Mapping[str, Sequence[Mapping[str, str]]]
+  ) -> Sequence[_ParsedProbeParameter]:
+    """See base class."""
+    category_probe_result = probe_result.get(self._ps_generator.category_name,
+                                             [])
+    parsed_results = []
+    for probe_values in category_probe_result:
+      try:
+        res = []
+        for param in self.probe_params:
+          converted_values = param.ConvertProbeValues(probe_values)
+          res.extend([
+              _ParsedProbeParameter(self._ps_generator.category_name, val)
+              for val in converted_values
+          ])
+        parsed_results.extend(res)
+      except _IncompatibleError:
+        # Some probe functions have the same component category (e.g. usb_camera
+        # and mipi_camera), so just skip the probe result if any parameters are
+        # not found in the probe result.
+        pass
+
+    return parsed_results
 
 
 def _AggregrateProbeInfoParsedResults(
@@ -574,7 +663,7 @@ def _AggregrateProbeInfoParsedResults(
   return aggregated_result
 
 
-class _MultiProbeFuncConverter(_IProbeStatementConverter):
+class _MultiProbeFuncConverter(_IBidirectionalProbeInfoConverter):
   """Converts a probe info into multiple component probe statements.
 
   It can convert one single probe info into a list of component probe
@@ -655,6 +744,15 @@ class _MultiProbeFuncConverter(_IProbeStatementConverter):
         _ToProbeParamInputs(probe_params), allow_missing_params,
         comp_name_for_probe_statement=comp_name_for_probe_statement)
 
+  def ParseProbeResult(
+      self, probe_result: Mapping[str, Sequence[Mapping[str, str]]]
+  ) -> Sequence[_ParsedProbeParameter]:
+    """See base class."""
+    return [
+        parsed_result for converter in self._sub_converters.values()
+        for parsed_result in converter.ParseProbeResult(probe_result)
+    ]
+
 
 def _RemoveHexPrefixAndCapitalize(value: str) -> str:
   if not value.lower().startswith('0x'):
@@ -718,7 +816,7 @@ def _StringToRegexpOrString(value):
   return value
 
 
-def _BuildCPUProbeStatementConverter() -> _IProbeStatementConverter:
+def _BuildCPUProbeStatementConverter() -> _IBidirectionalProbeInfoConverter:
   builder = probe_config_types.ProbeStatementDefinitionBuilder('cpu')
   builder.AddProbeFunction(
       'generic_cpu', 'A currently non-existent runtime probe function for CPU.')
@@ -726,7 +824,7 @@ def _BuildCPUProbeStatementConverter() -> _IProbeStatementConverter:
   return _SingleProbeFuncConverter(builder.Build(), 'generic_cpu')
 
 
-def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
+def BuildTouchscreenModuleConverter() -> _IBidirectionalProbeInfoConverter:
   # TODO(b/293377003): Confirm the reverter once this is launched.
   sub_converters = {
       'touchscreen_controller':
@@ -771,7 +869,7 @@ _MMC_BASIC_PARAMS = (
 )
 
 
-class MMCWithBridgeProbeStatementConverter(_IProbeStatementConverter):
+class MMCWithBridgeProbeStatementConverter(_IBidirectionalProbeInfoConverter):
 
   _NAME = 'emmc_pcie_assembly.generic'
   _DESCRIPTION = (
@@ -798,7 +896,7 @@ class MMCWithBridgeProbeStatementConverter(_IProbeStatementConverter):
                 _BuildPCIeParam('bridge_pcie_device', 'pci_device_id'),
                 _BuildPCIeParam('bridge_pcie_class', 'pci_class'),
             ], probe_function_argument={'is_emmc_attached': True}))
-    nvme_converter = (
+    self._nvme_converter = (
         _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
             'storage', 'nvme_storage', probe_params=[
                 _BuildPCIeParam('bridge_pcie_vendor', 'pci_vendor'),
@@ -814,7 +912,7 @@ class MMCWithBridgeProbeStatementConverter(_IProbeStatementConverter):
     self._invisible_emmc_and_nvme_converter = _MultiProbeFuncConverter(
         self._NAME, self._DESCRIPTION, {
             self._INVISIBLE_EMMC_TAG: emmc_converter,
-            'assembly': nvme_converter,
+            'assembly': self._nvme_converter,
         })
 
   def GetName(self) -> str:
@@ -868,8 +966,20 @@ class MMCWithBridgeProbeStatementConverter(_IProbeStatementConverter):
         if self._INVISIBLE_EMMC_TAG not in cps.component_name
     ])
 
+  def ParseProbeResult(
+      self, probe_result: Mapping[str, Sequence[Mapping[str, str]]]
+  ) -> Sequence[_ParsedProbeParameter]:
+    """See base class."""
+    for storage_res in probe_result.get('storage', []):
+      if self._NVME_MODEL in storage_res:
+        break
+    else:
+      return self._emmc_and_host_converter.ParseProbeResult(probe_result)
 
-def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
+    return self._nvme_converter.ParseProbeResult(probe_result)
+
+
+def GetAllConverters() -> Sequence[analyzers._IBidirectionalProbeInfoConverter]:
   # TODO(yhong): Separate the data piece out the code logic.
   return [
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
