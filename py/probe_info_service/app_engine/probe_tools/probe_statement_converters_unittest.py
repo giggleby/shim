@@ -239,9 +239,9 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
                     }
                 },
                 'expect': {
-                    'vendor': [True, 'hex', '!eq 0xAB12'],
-                    'device': [True, 'hex', '!eq 0xCD34'],
-                    'class': [True, 'hex', '!eq 0x010809'],
+                    'pci_vendor_id': [True, 'hex', '!eq 0xAB12'],
+                    'pci_device_id': [True, 'hex', '!eq 0xCD34'],
+                    'pci_class': [True, 'hex', '!eq 0x010809'],
                 }
             })
     ]

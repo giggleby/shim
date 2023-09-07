@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import abc
+import binascii
 import collections
 import copy
 import itertools
@@ -33,19 +34,24 @@ _IProbeStatementConverter = analyzers.IProbeStatementConverter
 
 
 class _ParamValueConverter:
-  """Converter for the input of the probe statement from the probe parameter.
+  """Converter between probe parameters and probe statement inputs.
+
+  It offers a bidirectional converters to translate the probe parameter value
+  into the probe statement expect field input, and vice versa.
 
   Properties:
     value_type: Enum item of `_ProbeParameterValueType`.
   """
 
-  def __init__(self, value_type_name, value_converter=None):
+  def __init__(self, value_type_name, value_converter=None,
+               value_reverter=None):
     self._probe_param_field_name = value_type_name + '_value'
     self._value_converter = value_converter or self._DummyValueConverter
+    self._value_reverter = value_reverter or self._DummyValueConverter
 
     self.value_type = getattr(_ProbeParameterValueType, value_type_name.upper())
 
-  def ConvertValue(self, probe_parameter):
+  def ConvertValue(self, probe_parameter: _ProbeParameter):
     """Converts the given probe parameter to the probe statement's value.
 
     Args:
@@ -65,6 +71,28 @@ class _ParamValueConverter:
 
     return self._value_converter(
         getattr(probe_parameter, self._probe_param_field_name))
+
+  def RevertValue(self, param_name: str, probe_val: Any) -> _ProbeParameter:
+    """Reverts the probe statement's value to the probe parameter.
+
+    Args:
+      param_name: The parameter name of the output `_ProbeParameter`.
+      probe_val: The target probe statement's value to revert from.
+
+    Returns:
+      A `_ProbeParameter` with name `param_name` and value `probe_val` in the
+      same format as the source probe parameter.
+    """
+    probe_param = _ProbeParameter(name=param_name)
+    probe_param_val = self._value_reverter(probe_val)
+
+    if self._probe_param_field_name == 'int_value':
+      probe_param_val = int(probe_param_val)
+    elif self._probe_param_field_name == 'string_value':
+      probe_param_val = str(probe_param_val)
+
+    setattr(probe_param, self._probe_param_field_name, probe_param_val)
+    return probe_param
 
   @classmethod
   def _DummyValueConverter(cls, value):
@@ -638,10 +666,47 @@ def _RemoveHexPrefixAndLowerize(value: str) -> str:
   return value[2:].lower()
 
 
+def _ResizeHexStr(length: int) -> Callable:
+  """Creates a function to resize the input hex string.
+
+  The returned function gets the last `length` characters of the input hex
+  string. If `length` is larger than the length of input string, pad the string
+  with zeros at the beginning until the length of the string is equal to
+  `length`.
+
+  Args:
+    length: The expected hex-string length after conversion.
+
+  Returns:
+    The created function with a string as the input and a fixed size string as
+    the output.
+  """
+
+  def _ResizeFunc(value: Any) -> str:
+    if not (isinstance(value, str) and value.lower().startswith('0x')):
+      raise ValueError('Expect hex string value to start with "0x" or "0X".')
+    val_length = min(len(value) - 2, length)
+    return f'0x{value[-val_length:].zfill(length)}'
+
+  return _ResizeFunc
+
+
 def _CapitalizeHexValueWithoutPrefix(value: str) -> str:
   if value.lower().startswith('0x'):
     raise ValueError('Expect hex value not to start with "0x" or "0X".')
   return value.upper()
+
+
+def _MipiVIDReverter(value: Any) -> str:
+  if not (isinstance(value, str) and len(value) == 6):
+    raise ValueError('Expect string value with a length of 6')
+  return value[:2]
+
+
+def _MipiPIDReverter(value: Any) -> str:
+  if not (isinstance(value, str) and len(value) == 6):
+    raise ValueError('Expect string value with a length of 6')
+  return '0x' + value[2:]
 
 
 def _StringToRegexpOrString(value):
@@ -660,6 +725,7 @@ def _BuildCPUProbeStatementConverter() -> _IProbeStatementConverter:
 
 
 def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
+  # TODO(b/293377003): Confirm the reverter once this is launched.
   sub_converters = {
       'touchscreen_controller':
           _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
@@ -694,11 +760,12 @@ def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
 _MMC_BASIC_PARAMS = (
     _ProbeFunctionParam(
         'mmc_manfid', value_converter=_ParamValueConverter(
-            'string', _RemoveHexPrefixAndCapitalize)),
+            'string', _RemoveHexPrefixAndCapitalize, _ResizeHexStr(2))),
     _ProbeFunctionParam(
         'mmc_name', value_converter=_ParamValueConverter(
             'string', lambda hex_with_prefix: bytes.fromhex(hex_with_prefix[2:])
-            .decode('ascii'))),
+            .decode('ascii'), lambda str_val: '0x' + binascii.hexlify(
+                str_val.encode('ascii')).decode('ascii'))),
 )
 
 
@@ -725,9 +792,9 @@ class MMCWithBridgeProbeStatementConverter(_IProbeStatementConverter):
     mmc_host_converter = (
         _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
             'mmc_host', 'mmc_host', [
-                _BuildPCIeParam('bridge_pcie_vendor', 'vendor'),
-                _BuildPCIeParam('bridge_pcie_device', 'device'),
-                _BuildPCIeParam('bridge_pcie_class', 'class'),
+                _BuildPCIeParam('bridge_pcie_vendor', 'pci_vendor_id'),
+                _BuildPCIeParam('bridge_pcie_device', 'pci_device_id'),
+                _BuildPCIeParam('bridge_pcie_class', 'pci_class'),
             ], probe_function_argument={'is_emmc_attached': True}))
     nvme_converter = (
         _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
@@ -800,7 +867,6 @@ class MMCWithBridgeProbeStatementConverter(_IProbeStatementConverter):
     ])
 
 
-
 def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
   # TODO(yhong): Separate the data piece out the code logic.
   return [
@@ -816,24 +882,26 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'camera', 'mipi_camera', [
               _ConcatParam('mipi_module_id', [
-                  _SingleProbeStatementParam('module_vid',
-                                             'The camera module vendor ID.',
-                                             _ParamValueConverter('string')),
+                  _SingleProbeStatementParam(
+                      'module_vid', 'The camera module vendor ID.',
+                      _ParamValueConverter('string',
+                                           value_reverter=_MipiVIDReverter)),
                   _SingleProbeStatementParam(
                       'module_pid', 'The camera module product ID.',
                       _ParamValueConverter('string',
-                                           _RemoveHexPrefixAndLowerize))
+                                           _RemoveHexPrefixAndLowerize,
+                                           _MipiPIDReverter))
               ]),
               _ConcatParam('mipi_sensor_id', [
-                  _SingleProbeStatementParam('sensor_vid',
-                                             'The camera sensor vendor ID.',
-                                             _ParamValueConverter('string')),
+                  _SingleProbeStatementParam(
+                      'sensor_vid', 'The camera sensor vendor ID.',
+                      _ParamValueConverter('string',
+                                           value_reverter=_MipiVIDReverter)),
                   _SingleProbeStatementParam(
                       'sensor_pid', 'The camera sensor product ID.',
-                      _ParamValueConverter(
-                          'string',
-                          _RemoveHexPrefixAndLowerize,
-                      ))
+                      _ParamValueConverter('string',
+                                           _RemoveHexPrefixAndLowerize,
+                                           _MipiPIDReverter))
               ])
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
@@ -868,7 +936,8 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
               *_MMC_BASIC_PARAMS,
               _ProbeFunctionParam(
                   'mmc_prv', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndCapitalize)),
+                      'string', _RemoveHexPrefixAndCapitalize,
+                      _ResizeHexStr(2))),
               _InformationalParam('size_in_gb', 'The storage size in GB.',
                                   _ParamValueConverter('int')),
           ]),

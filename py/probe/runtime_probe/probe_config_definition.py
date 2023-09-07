@@ -103,9 +103,11 @@ def _GetAllProbeStatementDefinitions():
   builder = probe_config_types.ProbeStatementDefinitionBuilder('mmc_host')
   builder.AddProbeFunction('mmc_host',
                            'The probe function for MMC host components.')
-  builder.AddHexOutputField('vendor', 'PCIe vendor ID', num_value_digits=4)
-  builder.AddHexOutputField('device', 'PCIe device ID', num_value_digits=4)
-  builder.AddHexOutputField('class', 'PCIe class code', num_value_digits=6)
+  builder.AddHexOutputField('pci_vendor_id', 'PCIe vendor ID',
+                            num_value_digits=4)
+  builder.AddHexOutputField('pci_device_id', 'PCIe device ID',
+                            num_value_digits=4)
+  builder.AddHexOutputField('pci_class', 'PCIe class code', num_value_digits=6)
   probe_statement_definitions['mmc_host'] = builder.Build()
 
   # Create network builder
