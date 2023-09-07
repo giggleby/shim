@@ -367,9 +367,11 @@ class GSCUtilsTest(unittest.TestCase):
 
     mock_set_flags.assert_called_with(True, 1)
 
+  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(PHASE)
-  def testGSCSetBoardIdTwoStagesFlags(self, mock_phase, mock_script):
+  def testGSCSetBoardIdTwoStagesFlags(self, mock_phase, mock_script,
+                                      mock_verify_bid):
     mock_phase.return_value = phase.PVT
     self._SetShellResult(status=0)
 
@@ -377,31 +379,77 @@ class GSCUtilsTest(unittest.TestCase):
 
     mock_script.assert_called_with(GSCScriptPath.BOARD_ID,
                                    'two_stages_pvt_flags')
+    mock_verify_bid.assert_not_called()
 
+  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(PHASE)
-  def testGSCSetBoardIdTwoStagesPVT(self, mock_phase, mock_script):
+  def testGSCSetBoardIdTwoStagesPVT(self, mock_phase, mock_script,
+                                    mock_verify_bid):
     mock_phase.return_value = phase.PVT
 
     self.gsc.GSCSetBoardId(two_stages=True, is_flags_only=False)
     mock_script.assert_called_with(GSCScriptPath.BOARD_ID, 'two_stages_pvt')
+    mock_verify_bid.assert_called_once()
 
+  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(PHASE)
-  def testGSCSetBoardIdPVT(self, mock_phase, mock_script):
+  def testGSCSetBoardIdPVT(self, mock_phase, mock_script, mock_verify_bid):
     for p in [phase.PVT, phase.PVT_DOGFOOD]:
+      mock_verify_bid.reset_mock()
       mock_phase.return_value = p
       self.gsc.GSCSetBoardId(two_stages=False, is_flags_only=False)
       mock_script.assert_called_with(GSCScriptPath.BOARD_ID, 'pvt')
+      mock_verify_bid.assert_called_once()
 
+  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
   @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
   @mock.patch(PHASE)
-  def testGSCSetBoardIdDev(self, mock_phase, mock_script):
-
+  def testGSCSetBoardIdDev(self, mock_phase, mock_script, mock_verify_bid):
     for p in [phase.DVT, phase.EVT, phase.PROTO]:
       mock_phase.return_value = p
       self.gsc.GSCSetBoardId(two_stages=False, is_flags_only=False)
       mock_script.assert_called_with(GSCScriptPath.BOARD_ID, 'dev')
+      mock_verify_bid.assert_called()
+
+  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
+  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
+  @mock.patch(PHASE)
+  def testGSCSetBoardIdMismatched(self, mock_phase, mock_script,
+                                  mock_verify_bid):
+    mock_phase.return_value = phase.EVT
+    mock_verify_bid.side_effect = gsc_utils.GSCUtilsError()
+
+    self.assertRaises(gsc_utils.GSCUtilsError, self.gsc.GSCSetBoardId,
+                      two_stages=False, is_flags_only=False)
+    mock_script.assert_not_called()
+
+  @mock.patch('cros.factory.external.chromeos_cli.cros_config.'
+              'CrosConfig.GetBrandCode')
+  @mock.patch('cros.factory.external.chromeos_cli.flashrom.'
+              'FirmwareContent.GetFirmwareImage')
+  def testVerifyBrandCode(self, mock_fw, mock_brand_code):
+    mock_brand_code.return_value = 'ZZCR'
+    mock_fw.return_value = FakeFirmwareImage(
+        {'RO_GSCVD': (0x0, 0x1b)},
+        b'wordsbefore RCZZ wordsafter')  # brand code is stored at [12, 15]
+
+    self.gsc._VerifyBrandCode()  # no exception
+
+  @mock.patch('cros.factory.external.chromeos_cli.cros_config.'
+              'CrosConfig.GetBrandCode')
+  @mock.patch('cros.factory.external.chromeos_cli.flashrom.'
+              'FirmwareContent.GetFirmwareImage')
+  def testVerifyBrandCodeMismatched(self, mock_fw, mock_brand_code):
+    mock_brand_code.return_value = 'ABCD'
+    mock_fw.return_value = FakeFirmwareImage({'RO_GSCVD': (0x0, 0x1b)},
+                                             b'wordsbefore RCZZ wordsafter')
+
+    self.assertRaisesRegex(
+        gsc_utils.GSCUtilsError,
+        'The brand code in RO_GSCVD ZZCR is different from '
+        'the brand code in cros_config ABCD.', self.gsc._VerifyBrandCode)
 
   @mock.patch(f'{GSCUTIL}.Ti50SetSWWPRegister')
   @mock.patch(f'{GSCUTIL}.Ti50SetAddressingMode')
