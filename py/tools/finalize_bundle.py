@@ -338,9 +338,10 @@ class FinalizeBundle:
                    'working directory %r', self.bundle_dir)
     else:
       self.bundle_dir = os.path.join(self.work_dir, expected_dir_name)
-      logging.info('The working directory name does not match the expected '
-                   'bundle directory name, will create a new directoy and '
-                   'finalize bundle in %r', self.bundle_dir)
+      logging.info(
+          'The working directory name does not match the expected '
+          'bundle directory name, will create a new directory and '
+          'finalize bundle in %r', self.bundle_dir)
     self.bundle_dir = os.path.realpath(self.bundle_dir)
     file_utils.TryMakeDirs(self.bundle_dir)
 
