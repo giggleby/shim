@@ -12,6 +12,9 @@ DEVICE_TREE_COMPATIBLE_PATH = '/proc/device-tree/compatible'
 PRODUCT_NAME_PATH = '/sys/class/dmi/id/product_name'
 DEVICE_TREE_SKU_ID_PATH = '/proc/device-tree/firmware/coreboot/sku-id'
 PRODUCT_SKU_ID_PATH = '/sys/class/dmi/id/product_sku'
+# Path with legacy chromeos_acpi ("ACPI_CHROMEOS") driver.
+SYSFS_CHROMEOS_ACPI_FRID_LEGACY_DRIVER_PATH = \
+    '/sys/devices/platform/chromeos_acpi/FRID'
 # Path with current chromeos_acpi ("CHROMEOS_ACPI") driver with firmwares
 # without https://crrev.com/c/2266713.
 SYSFS_CHROMEOS_ACPI_FRID_LEGACY_FW_PATH = \

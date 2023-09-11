@@ -1260,6 +1260,8 @@ class Gooftool:
     cur_identity['device-tree-compatible-match'] = get_file_if_exist(
         cros_config.DEVICE_TREE_COMPATIBLE_PATH)
     firmware_ro_info = get_file_if_exist(
+        cros_config.SYSFS_CHROMEOS_ACPI_FRID_LEGACY_DRIVER_PATH
+    ) or get_file_if_exist(
         cros_config.SYSFS_CHROMEOS_ACPI_FRID_LEGACY_FW_PATH
     ) or get_file_if_exist(
         cros_config.SYSFS_CHROMEOS_ACPI_FRID_PATH) or get_file_if_exist(
