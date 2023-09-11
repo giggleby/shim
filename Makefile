@@ -91,6 +91,13 @@ EBUILD_TEST_BLOCKED_LIST = \
 
 PROTO_FILES = $(wildcard proto/*.proto)
 
+HTML_SOURCE_DIR = \
+  misc \
+  py/goofy
+
+HTML_SOURCE_FILES = \
+  $(shell find $(HTML_SOURCE_DIR) -name '*.html')
+
 CLOSURE_DIR = py/goofy/static
 CLOSURE_OUTPUT_FILENAMES = js/goofy.js css/closure.css
 CLOSURE_OUTPUT_DIR ?= \
@@ -132,6 +139,7 @@ PRESUBMIT_TARGETS := \
   presubmit-deps \
   presubmit-format \
   presubmit-lint \
+  presubmit-lint-html \
   presubmit-shebang \
   presubmit-markdown \
   presubmit-po \
@@ -590,3 +598,19 @@ ifneq ($(filter-out $(EBUILD_TEST_BLOCKED_LIST), $(BOARD)),)
 endif
 endif
 endif
+
+# Only update the file if HTML_SOURCE_FILES is changed.
+$(BUILD_DIR)/.html_source_files_list: .phony
+	@echo '$(HTML_SOURCE_FILES)' | cmp -s - $@ || echo '$(HTML_SOURCE_FILES)' > $@
+
+# If we don't depend on .html_source_files_list, makefile won't re-run the
+# check when a file in HTML_SOURCE_FILES is removed.
+$(BUILD_DIR)/.lint-html-passed: $(BUILD_DIR)/.html_source_files_list
+$(BUILD_DIR)/.lint-html-passed: $(HTML_SOURCE_FILES)
+	$(info Re-run presubmit_html ...)
+	@$(MK_DIR)/presubmit_html.py $(HTML_SOURCE_FILES) > $@
+
+presubmit-lint-html: $(BUILD_DIR)/.lint-html-passed
+	$(if $(shell head $<),\
+	  cat $< && $(MK_DIR)/die.sh "lint-html",\
+	  $(info $@ passes.))
