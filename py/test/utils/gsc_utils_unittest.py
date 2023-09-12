@@ -21,13 +21,6 @@ from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
 from cros.factory.external.chromeos_cli import shell
 
 
-GSCTOOL = 'cros.factory.external.chromeos_cli.gsctool.GSCTool'
-FUTILITY = 'cros.factory.external.chromeos_cli.futility.Futility'
-VPD = 'cros.factory.external.chromeos_cli.vpd.VPDTool'
-GSCUTIL = 'cros.factory.test.utils.gsc_utils.GSCUtils'
-PHASE = 'cros.factory.test.rules.phase.GetPhase'
-
-
 class FakeFirmwareImage(fmap.FirmwareImage):
   # pylint: disable=super-init-not-called
   def __init__(self, areas, image_source):
@@ -52,14 +45,30 @@ class GSCUtilsTest(unittest.TestCase):
 
   def setUp(self):
     self.mock_gsc_constants_path = file_utils.CreateTemporaryFile()
-    self.gsc = gsc_utils.GSCUtils(self.mock_gsc_constants_path)
-    self.mock_check_path = mock.patch('cros.factory.utils.file_utils.CheckPath')
-    self.mock_check_path.start()
-    self.addCleanup(self.mock_check_path.stop)
+    self.gsctool = mock.create_autospec(gsc_utils.gsctool.GSCTool,
+                                        instance=True)
+    self.gsc = gsc_utils.GSCUtils(self.mock_gsc_constants_path,
+                                  gsc_tool=self.gsctool)
 
-    self.mock_phase = mock.patch(PHASE)
-    self.mock_phase.start()
-    self.addCleanup(self.mock_phase.stop)
+    self.check_path_patcher = mock.patch.object(gsc_utils.file_utils,
+                                                'CheckPath', autospec=True)
+    self.mock_check_path = self.check_path_patcher.start()
+
+    patcher = mock.patch.object(gsc_utils.cros_config.CrosConfig,
+                                'GetBrandCode', return_value='ZZCR',
+                                autospec=True)
+    self.mock_brand_code = patcher.start()
+
+    patcher = mock.patch.object(
+        gsc_utils.flashrom.FirmwareContent,
+        'GetFirmwareImage', return_value=FakeFirmwareImage(
+            {'RO_GSCVD': (0x0, 0x1b)},
+            b'wordsbefore RCZZ wordsafter'), autospec=True)
+    self.mock_fw = patcher.start()
+
+    patcher = mock.patch.object(gsc_utils.phase, 'GetPhase', autospec=True)
+    self.mock_phase = patcher.start()
+    self.addCleanup(mock.patch.stopall)
     self.shell = mock.Mock(spec=shell.Shell)
 
   def tearDown(self):
@@ -86,39 +95,32 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertTrue(self.gsc.IsTi50())
     self.assertListEqual(self.gsc.GetGSCToolCmd(), ['/usr/sbin/gsctool', '-D'])
 
-  @mock.patch(f'{GSCTOOL}.IsGSCBoardIdTypeSet')
-  @mock.patch(f'{GSCTOOL}.IsTi50InitialFactoryMode')
-  @mock.patch(f'{GSCUTIL}.IsTi50')
-  def testIsGSCFieldLockedTi50CheckInitialFactoryMode(
-      self, mock_is_ti50, mock_init_factory_mode, mock_is_board_id_set):
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsTi50', autospec=True)
+  def testIsGSCFieldLockedTi50CheckInitialFactoryMode(self, mock_is_ti50):
     mock_is_ti50.return_value = True
-    mock_is_board_id_set.return_value = True
+    self.gsctool.IsGSCBoardIdTypeSet.return_value = True
 
-    mock_init_factory_mode.return_value = True
+    self.gsctool.IsTi50InitialFactoryMode.return_value = True
     self.assertFalse(self.gsc.IsGSCFieldLocked())
 
-    mock_init_factory_mode.return_value = False
+    self.gsctool.IsTi50InitialFactoryMode.return_value = False
     self.assertTrue(self.gsc.IsGSCFieldLocked())
 
-  @mock.patch(f'{GSCTOOL}.IsGSCBoardIdTypeSet')
-  @mock.patch(f'{GSCTOOL}.IsTi50InitialFactoryMode')
-  @mock.patch(f'{GSCUTIL}.IsTi50')
-  def testIsGSCFieldLockedCr50CheckBoardIdType(
-      self, mock_is_ti50, mock_init_factory_mode, mock_is_board_id_set):
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsTi50', autospec=True)
+  def testIsGSCFieldLockedCr50CheckBoardIdType(self, mock_is_ti50):
     mock_is_ti50.return_value = False
-    mock_init_factory_mode.return_value = False
+    self.gsctool.IsTi50InitialFactoryMode.return_value = False
 
-    mock_is_board_id_set.return_value = False
+    self.gsctool.IsGSCBoardIdTypeSet.return_value = False
     self.assertFalse(self.gsc.IsGSCFieldLocked())
 
-    mock_is_board_id_set.return_value = True
+    self.gsctool.IsGSCBoardIdTypeSet.return_value = True
     self.assertTrue(self.gsc.IsGSCFieldLocked())
 
-  @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
-  @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
-  def testIsGSCFeatureManagementFlagsLockedNotSet(self, mock_gsc_locked,
-                                                  mock_get_flags):
-    mock_get_flags.return_value = FeatureManagementFlags(False, 0)
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsGSCFieldLocked', autospec=True)
+  def testIsGSCFeatureManagementFlagsLockedNotSet(self, mock_gsc_locked):
+    self.gsctool.GetFeatureManagementFlags.return_value = (
+        FeatureManagementFlags(False, 0))
 
     mock_gsc_locked.return_value = True
     self.assertTrue(self.gsc.IsGSCFeatureManagementFlagsLocked())
@@ -126,11 +128,10 @@ class GSCUtilsTest(unittest.TestCase):
     mock_gsc_locked.return_value = False
     self.assertFalse(self.gsc.IsGSCFeatureManagementFlagsLocked())
 
-  @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
-  @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
-  def testIsGSCFeatureManagementFlagsLockedSet(self, mock_gsc_locked,
-                                               mock_get_flags):
-    mock_get_flags.return_value = FeatureManagementFlags(False, 1)
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsGSCFieldLocked', autospec=True)
+  def testIsGSCFeatureManagementFlagsLockedSet(self, mock_gsc_locked):
+    self.gsctool.GetFeatureManagementFlags.return_value = (
+        FeatureManagementFlags(False, 1))
     mock_gsc_locked.return_value = False
 
     self.assertTrue(self.gsc.IsGSCFeatureManagementFlagsLocked())
@@ -175,24 +176,20 @@ class GSCUtilsTest(unittest.TestCase):
       self.gsc.VerifySnBits()
     self.assertIn('WARNING:root:SN Bits cannot be set anymore.', cm.output)
 
-  @mock.patch(f'{GSCTOOL}.ClearROHash')
-  @mock.patch(f'{GSCTOOL}.IsCr50ROHashSet')
-  @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
-  def testCr50ClearROHash(self, mock_gsc_locked, mock_is_hash_set,
-                          mock_clear_hash):
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsGSCFieldLocked', autospec=True)
+  def testCr50ClearROHash(self, mock_gsc_locked):
     mock_gsc_locked.return_value = False
-    mock_is_hash_set.return_value = True
+    self.gsctool.IsCr50ROHashSet.return_value = True
 
     with self.assertLogs() as cm:
       self.gsc.Cr50ClearROHash()
 
-    mock_clear_hash.assert_called_once()
+    self.gsctool.ClearROHash.assert_called_once()
     self.assertSequenceEqual(
         cm.output, ['INFO:root:Successfully clear AP-RO hash on Cr50.'])
 
-  @mock.patch(f'{GSCTOOL}.ClearROHash')
-  @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
-  def testCr50ClearROHashLocked(self, mock_gsc_locked, mock_clear_hash):
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsGSCFieldLocked', autospec=True)
+  def testCr50ClearROHashLocked(self, mock_gsc_locked):
     mock_gsc_locked.return_value = True
 
     with self.assertLogs() as cm:
@@ -201,26 +198,25 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertSequenceEqual(
         cm.output,
         ['WARNING:root:GSC fields is locked. Skip clearing RO hash.'])
-    self.assertFalse(mock_clear_hash.called)
+    self.assertFalse(self.gsctool.ClearROHash.called)
 
-  @mock.patch(f'{GSCTOOL}.ClearROHash')
-  @mock.patch(f'{GSCTOOL}.IsCr50ROHashSet')
-  @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
-  def testCr50ClearROHashAlreadyClear(self, mock_gsc_locked, mock_is_hash_set,
-                                      mock_clear_hash):
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsGSCFieldLocked', autospec=True)
+  def testCr50ClearROHashAlreadyClear(self, mock_gsc_locked):
     mock_gsc_locked.return_value = False
-    mock_is_hash_set.return_value = False
+    self.gsctool.IsCr50ROHashSet.return_value = False
 
     with self.assertLogs() as cm:
       self.gsc.Cr50ClearROHash()
 
-    self.assertFalse(mock_clear_hash.called)
+    self.assertFalse(self.gsctool.ClearROHash.called)
     self.assertSequenceEqual(
         cm.output, ['INFO:root:AP-RO hash is already cleared, do nothing.'])
 
-  @mock.patch(f'{GSCUTIL}.Cr50SetROHash')
-  @mock.patch(f'{FUTILITY}.SetGBBFlags')
-  @mock.patch(f'{FUTILITY}.GetGBBFlags')
+  @mock.patch.object(gsc_utils.GSCUtils, 'Cr50SetROHash', autospec=True)
+  @mock.patch.object(gsc_utils.futility.Futility, 'SetGBBFlags',
+                     spec=gsc_utils.futility.Futility)
+  @mock.patch.object(gsc_utils.futility.Futility, 'GetGBBFlags',
+                     spec=gsc_utils.futility.Futility)
   def testCr50SetROHashForShipping(self, mock_get_gbb, mock_set_gbb,
                                    mock_set_hash):
     mock_get_gbb.return_value = 0x39
@@ -230,10 +226,12 @@ class GSCUtilsTest(unittest.TestCase):
     mock_set_gbb.assert_has_calls([mock.call(0), mock.call(0x39)])
     mock_set_hash.assert_called_once()
 
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
-  @mock.patch(f'{GSCUTIL}._CalculateHashInterval')
-  @mock.patch(f'{GSCUTIL}.Cr50ClearROHash')
-  @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
+  @mock.patch.object(gsc_utils.GSCUtils, '_CalculateHashInterval',
+                     autospec=True)
+  @mock.patch.object(gsc_utils.GSCUtils, 'Cr50ClearROHash', autospec=True)
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsGSCFieldLocked', autospec=True)
   def testCr50SetROHash(self, mock_gsc_locked, mock_clear_hash,
                         mock_hash_interval, mock_script):
     mock_gsc_locked.return_value = False
@@ -247,8 +245,9 @@ class GSCUtilsTest(unittest.TestCase):
     mock_script.assert_called_with(GSCScriptPath.AP_RO_HASH, '1:2 6:3')
     mock_clear_hash.assert_called_once()
 
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
-  @mock.patch(f'{GSCUTIL}.IsGSCFieldLocked')
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
+  @mock.patch.object(gsc_utils.GSCUtils, 'IsGSCFieldLocked', autospec=True)
   def testCr50SetROHashSkip(self, mock_gsc_locked, mock_script):
     mock_gsc_locked.return_value = True
 
@@ -259,11 +258,9 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertSequenceEqual(
         cm.output, ['WARNING:root:GSC fields is locked. Skip setting RO hash.'])
 
-  @mock.patch('cros.factory.gooftool.gbb.UnpackGBB')
-  @mock.patch('cros.factory.external.chromeos_cli.flashrom.'
-              'FirmwareContent.GetFirmwareImage')
-  def testCalculateHashInterval(self, mock_fw, mock_gbb):
-    mock_fw.return_value = FakeFirmwareImage(
+  @mock.patch.object(gsc_utils.gbb, 'UnpackGBB', autospec=True)
+  def testCalculateHashInterval(self, mock_gbb):
+    self.mock_fw.return_value = FakeFirmwareImage(
         {
             'RO_SECTION': (0x100, 0x900000),  # All [0x100, 0x900100)
             'RO_VPD': (0x200, 0x100),  # Exclude [0x200, 0x300)
@@ -290,8 +287,10 @@ class GSCUtilsTest(unittest.TestCase):
     ])
     self.assertTrue(all(r.size <= 0x400000 for r in res))
 
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
-  @mock.patch(f'{VPD}.GetValue')
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
+  @mock.patch.object(gsc_utils.vpd.VPDTool, 'GetValue',
+                     spec=gsc_utils.vpd.VPDTool)
   def testGSCSetSnBits(self, mock_vpd, mock_script):
     mock_vpd.return_value = 'adid'
 
@@ -299,167 +298,135 @@ class GSCUtilsTest(unittest.TestCase):
     mock_vpd.assert_called_with('attested_device_id')
     mock_script.assert_called_with(GSCScriptPath.SN_BITS)
 
-  @mock.patch(f'{VPD}.GetValue')
+  @mock.patch.object(gsc_utils.vpd.VPDTool, 'GetValue')
   def testGSCSetSnBitsNoVPD(self, mock_vpd):
     mock_vpd.return_value = None
 
     self.assertRaises(gsc_utils.GSCUtilsError, self.gsc.GSCSetSnBits)
 
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
   def testGSCSetFeatureManagementFlagsWithHwSecUtils(self, mock_script):
     self.gsc.GSCSetFeatureManagementFlagsWithHwSecUtils(True, 1)
     mock_script.assert_called_with(GSCScriptPath.FACTORY_CONFIG, ['true', '1'])
 
-  @mock.patch(f'{GSCUTIL}.GSCSetFeatureManagementFlagsWithHwSecUtils')
-  @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
-  @mock.patch('cros.factory.test.device_data.GetDeviceData')
+  @mock.patch.object(gsc_utils.GSCUtils,
+                     'GSCSetFeatureManagementFlagsWithHwSecUtils',
+                     autospec=True)
+  @mock.patch.object(gsc_utils.device_data, 'GetDeviceData', autospec=True)
   def testGSCSetFeatureManagementFlagsSameValue(self, mock_device_data,
-                                                mock_get_flags, mock_set_flags):
+                                                mock_set_flags):
     mock_device_data.side_effect = [True, 1]
-    mock_get_flags.return_value = FeatureManagementFlags(True, 1)
+    self.gsctool.GetFeatureManagementFlags.return_value = (
+        FeatureManagementFlags(True, 1))
 
     self.gsc.GSCSetFeatureManagementFlags()
 
     self.assertFalse(mock_set_flags.called)
 
-  @mock.patch(f'{GSCUTIL}.GSCSetFeatureManagementFlagsWithHwSecUtils')
-  @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
-  @mock.patch('cros.factory.test.device_data.GetDeviceData')
-  def testGSCSetFeatureManagementFlagsSetByScript(
-      self, mock_device_data, mock_get_flags, mock_set_flags):
+  @mock.patch.object(gsc_utils.GSCUtils,
+                     'GSCSetFeatureManagementFlagsWithHwSecUtils',
+                     spec=gsc_utils.GSCUtils)
+  @mock.patch.object(gsc_utils.device_data, 'GetDeviceData', autospec=True)
+  def testGSCSetFeatureManagementFlagsSetByScript(self, mock_device_data,
+                                                  mock_set_flags):
     mock_device_data.side_effect = [True, 2]
-    mock_get_flags.return_value = FeatureManagementFlags(False, 0)
+    self.gsctool.GetFeatureManagementFlags.return_value = (
+        FeatureManagementFlags(False, 0))
 
     self.gsc.GSCSetFeatureManagementFlags()
 
     mock_set_flags.assert_called_with(True, 2)
 
-  @mock.patch('cros.factory.utils.file_utils.CheckPath')
-  @mock.patch(f'{GSCTOOL}.SetFeatureManagementFlags')
-  @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
-  @mock.patch('cros.factory.test.device_data.GetDeviceData')
-  def testGSCSetFeatureManagementFlagsFallback(
-      self, mock_device_data, mock_get_flags, mock_set_flags, mock_path):
-    mock_path.side_effect = IOError
+  @mock.patch.object(gsc_utils.device_data, 'GetDeviceData', autospec=True)
+  def testGSCSetFeatureManagementFlagsFallback(self, mock_device_data):
+    self.mock_check_path.side_effect = IOError
     mock_device_data.side_effect = [True, 1]
-    mock_get_flags.return_value = FeatureManagementFlags(False, 0)
+    self.gsctool.GetFeatureManagementFlags.return_value = (
+        FeatureManagementFlags(False, 0))
 
     self.gsc.GSCSetFeatureManagementFlags()
 
-    mock_set_flags.assert_called_with(True, 1)
+    self.gsctool.SetFeatureManagementFlags.assert_called_with(True, 1)
 
-  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
-  @mock.patch(PHASE)
-  def testGSCSetBoardIdTwoStagesFlags(self, mock_phase, mock_script,
-                                      mock_verify_bid):
-    mock_phase.return_value = phase.PVT
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
+  def testGSCSetBoardIdTwoStagesFlags(self, mock_script):
+    self.mock_phase.return_value = phase.PVT
     self._SetShellResult(status=0)
 
     self.gsc.GSCSetBoardId(two_stages=True, is_flags_only=True)
 
     mock_script.assert_called_with(GSCScriptPath.BOARD_ID,
                                    'two_stages_pvt_flags')
-    mock_verify_bid.assert_not_called()
 
-  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
-  @mock.patch(PHASE)
-  def testGSCSetBoardIdTwoStagesPVT(self, mock_phase, mock_script,
-                                    mock_verify_bid):
-    mock_phase.return_value = phase.PVT
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
+  def testGSCSetBoardIdTwoStagesPVT(self, mock_script):
+    self.mock_phase.return_value = phase.PVT
 
     self.gsc.GSCSetBoardId(two_stages=True, is_flags_only=False)
     mock_script.assert_called_with(GSCScriptPath.BOARD_ID, 'two_stages_pvt')
-    mock_verify_bid.assert_called_once()
 
-  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
-  @mock.patch(PHASE)
-  def testGSCSetBoardIdPVT(self, mock_phase, mock_script, mock_verify_bid):
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
+  def testGSCSetBoardIdPVT(self, mock_script):
     for p in [phase.PVT, phase.PVT_DOGFOOD]:
-      mock_verify_bid.reset_mock()
-      mock_phase.return_value = p
+      self.mock_phase.return_value = p
       self.gsc.GSCSetBoardId(two_stages=False, is_flags_only=False)
       mock_script.assert_called_with(GSCScriptPath.BOARD_ID, 'pvt')
-      mock_verify_bid.assert_called_once()
 
-  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
-  @mock.patch(PHASE)
-  def testGSCSetBoardIdDev(self, mock_phase, mock_script, mock_verify_bid):
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
+  def testGSCSetBoardIdDev(self, mock_script):
     for p in [phase.DVT, phase.EVT, phase.PROTO]:
-      mock_phase.return_value = p
+      self.mock_phase.return_value = p
       self.gsc.GSCSetBoardId(two_stages=False, is_flags_only=False)
       mock_script.assert_called_with(GSCScriptPath.BOARD_ID, 'dev')
-      mock_verify_bid.assert_called()
 
-  @mock.patch(f'{GSCUTIL}._VerifyBrandCode')
-  @mock.patch(f'{GSCUTIL}.ExecuteGSCSetScript')
-  @mock.patch(PHASE)
-  def testGSCSetBoardIdMismatched(self, mock_phase, mock_script,
-                                  mock_verify_bid):
-    mock_phase.return_value = phase.EVT
-    mock_verify_bid.side_effect = gsc_utils.GSCUtilsError()
-
-    self.assertRaises(gsc_utils.GSCUtilsError, self.gsc.GSCSetBoardId,
-                      two_stages=False, is_flags_only=False)
-    mock_script.assert_not_called()
-
-  @mock.patch('cros.factory.external.chromeos_cli.cros_config.'
-              'CrosConfig.GetBrandCode')
-  @mock.patch('cros.factory.external.chromeos_cli.flashrom.'
-              'FirmwareContent.GetFirmwareImage')
-  def testVerifyBrandCode(self, mock_fw, mock_brand_code):
-    mock_brand_code.return_value = 'ZZCR'
-    mock_fw.return_value = FakeFirmwareImage(
-        {'RO_GSCVD': (0x0, 0x1b)},
-        b'wordsbefore RCZZ wordsafter')  # brand code is stored at [12, 15]
-
-    self.gsc._VerifyBrandCode()  # no exception
-
-  @mock.patch('cros.factory.external.chromeos_cli.cros_config.'
-              'CrosConfig.GetBrandCode')
-  @mock.patch('cros.factory.external.chromeos_cli.flashrom.'
-              'FirmwareContent.GetFirmwareImage')
-  def testVerifyBrandCodeMismatched(self, mock_fw, mock_brand_code):
-    mock_brand_code.return_value = 'ABCD'
-    mock_fw.return_value = FakeFirmwareImage({'RO_GSCVD': (0x0, 0x1b)},
-                                             b'wordsbefore RCZZ wordsafter')
+  @mock.patch.object(gsc_utils.GSCUtils, 'ExecuteGSCSetScript',
+                     spec=gsc_utils.GSCUtils)
+  def testGSCSetBoardIdMismatched(self, mock_script):
+    self.mock_phase.return_value = phase.EVT
+    self.mock_brand_code.return_value = 'ABCD'
 
     self.assertRaisesRegex(
         gsc_utils.GSCUtilsError,
         'The brand code in RO_GSCVD ZZCR is different from '
-        'the brand code in cros_config ABCD.', self.gsc._VerifyBrandCode)
+        'the brand code in cros_config ABCD.', self.gsc.GSCSetBoardId,
+        two_stages=False, is_flags_only=False)
+    mock_script.assert_not_called()
 
-  @mock.patch(f'{GSCUTIL}.Ti50SetSWWPRegister')
-  @mock.patch(f'{GSCUTIL}.Ti50SetAddressingMode')
+    # Won't verify brand code when only set board ID flags.
+    self.gsc.GSCSetBoardId(two_stages=True, is_flags_only=True)
+    mock_script.assert_called_once()
+
+  @mock.patch.object(gsc_utils.GSCUtils, 'Ti50SetSWWPRegister',
+                     spec=gsc_utils.GSCUtils)
+  @mock.patch.object(gsc_utils.GSCUtils, 'Ti50SetAddressingMode', autospec=True)
   def testTi50ProvisionSPIData(self, mock_addressing_mode, mock_wpsr):
     self.gsc.Ti50ProvisionSPIData(False)
 
     mock_addressing_mode.assert_called_once()
     mock_wpsr.assert_called_with(False)
 
-  @mock.patch(f'{GSCTOOL}.SetAddressingMode')
-  @mock.patch(f'{FUTILITY}.GetFlashSize')
-  def testTi50SetAddressingMode(self, mock_get_size, mock_set_addressing_mode):
+  @mock.patch.object(gsc_utils.futility.Futility, 'GetFlashSize', autospec=True)
+  def testTi50SetAddressingMode(self, mock_get_size):
     mock_get_size.return_value = 123
 
     self.gsc.Ti50SetAddressingMode()
 
-    mock_set_addressing_mode.assert_called_with(123)
+    self.gsctool.SetAddressingMode.assert_called_with(123)
 
-  @mock.patch(f'{GSCTOOL}.SetWpsr')
-  def testTi50SetSWWPRegisterWPDisnabled(self, mock_set_wpsr):
+  def testTi50SetSWWPRegisterWPDisabled(self):
     self.gsc.Ti50SetSWWPRegister(True)
 
-    mock_set_wpsr.assert_called_with('0 0')
+    self.gsctool.SetWpsr.assert_called_with('0 0')
 
-  @mock.patch(f'{GSCTOOL}.SetWpsr')
-  @mock.patch(f'{FUTILITY}.GetWriteProtectInfo')
-  @mock.patch(f'{GSCUTIL}.GetFlashName')
-  def testTi50SetSWWPRegisterWPEnabled(self, mock_flash_name, mock_wp_info,
-                                       mock_set_wpsr):
+  @mock.patch.object(gsc_utils.futility.Futility, 'GetWriteProtectInfo',
+                     autospec=True)
+  @mock.patch.object(gsc_utils.GSCUtils, 'GetFlashName', autospec=True)
+  def testTi50SetSWWPRegisterWPEnabled(self, mock_flash_name, mock_wp_info):
     mock_flash_name.return_value = 'name'
     mock_wp_info.return_value = {
         'start': 1,
@@ -472,12 +439,13 @@ class GSCUtilsTest(unittest.TestCase):
 
     self.shell.assert_called_with(
         ['ap_wpsr', '--name=name', '--start=1', '--length=2'])
-    mock_set_wpsr.assert_called_with('wpsr')
+    self.gsctool.SetWpsr.assert_called_with('wpsr')
     self.assertSequenceEqual(cm.output,
                              ['INFO:root:WPSR: SR Value/Mask = wpsr'])
 
-  @mock.patch(f'{FUTILITY}.GetWriteProtectInfo')
-  @mock.patch(f'{GSCUTIL}.GetFlashName')
+  @mock.patch.object(gsc_utils.futility.Futility, 'GetWriteProtectInfo',
+                     autospec=True)
+  @mock.patch.object(gsc_utils.GSCUtils, 'GetFlashName', autospec=True)
   def testTi50SetSWWPRegisterUnknownOutput(self, mock_flash_name, mock_wp_info):
     del mock_flash_name  # not  used
     del mock_wp_info  # not  used
@@ -487,9 +455,10 @@ class GSCUtilsTest(unittest.TestCase):
                            'Fail to parse the wpsr from ap_wpsr tool',
                            self.gsc.Ti50SetSWWPRegister, False)
 
-  @mock.patch(
-      'cros.factory.probe.functions.flash_chip.FlashChipFunction.ProbeDevices')
-  @mock.patch('cros.factory.test.utils.model_sku_utils.GetDesignConfig')
+  @mock.patch.object(gsc_utils.flash_chip.FlashChipFunction, 'ProbeDevices',
+                     autospec=True)
+  @mock.patch.object(gsc_utils.model_sku_utils, 'GetDesignConfig',
+                     autospec=True)
   def testGetFlashName_NoTransform(self, mock_get_config, mock_probe_device):
     mock_probe_device.return_value = {
         'name': 'mock_name'
@@ -501,14 +470,15 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertEqual(flash_name, 'mock_name')
     mock_probe_device.assert_called_once_with('internal')
     mock_get_config.assert_called_once_with(
-        self.gsc._dut,  # pylint: disable=protected-access
+        self.gsc._dut,
         default_config_dirs=f'{paths.FACTORY_DIR}/py/test/pytests',
         config_name='model_sku')
     self.assertSequenceEqual(cm.output, ['INFO:root:Flash name: mock_name'])
 
-  @mock.patch(
-      'cros.factory.probe.functions.flash_chip.FlashChipFunction.ProbeDevices')
-  @mock.patch('cros.factory.test.utils.model_sku_utils.GetDesignConfig')
+  @mock.patch.object(gsc_utils.flash_chip.FlashChipFunction, 'ProbeDevices',
+                     autospec=True)
+  @mock.patch.object(gsc_utils.model_sku_utils, 'GetDesignConfig',
+                     autospec=True)
   def testGetFlashName_Transform(self, mock_get_config, mock_probe_device):
     mock_probe_device.return_value = {
         'partname': 'mock_partname'
@@ -524,7 +494,7 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertEqual(flash_name, 'transformed_mock_partname')
     mock_probe_device.assert_called_once_with('internal')
     mock_get_config.assert_called_once_with(
-        self.gsc._dut,  # pylint: disable=protected-access
+        self.gsc._dut,
         default_config_dirs=f'{paths.FACTORY_DIR}/py/test/pytests',
         config_name='model_sku')
     self.assertSequenceEqual(cm.output, [
@@ -555,17 +525,16 @@ class GSCUtilsTest(unittest.TestCase):
     self.assertSequenceEqual(
         cm.output, ['ERROR:root:BOARD_ID has already been set on GSC!'])
 
-  @mock.patch(PHASE)
-  def testExecuteGSCSetScriptSetDiff(self, mock_phase):
+  def testExecuteGSCSetScriptSetDiff(self):
     self._SetShellResult(status=3)
 
-    mock_phase.return_value = phase.DVT
+    self.mock_phase.return_value = phase.DVT
     with self.assertLogs() as cm:
       self.gsc.ExecuteGSCSetScript(GSCScriptPath.BOARD_ID, 'args')
     self.assertSequenceEqual(
         cm.output, ['ERROR:root:BOARD_ID has been set DIFFERENTLY on GSC!'])
 
-    mock_phase.return_value = phase.PVT
+    self.mock_phase.return_value = phase.PVT
     self.assertRaisesRegex(
         gsc_utils.GSCUtilsError, 'BOARD_ID has been set DIFFERENTLY on GSC!',
         self.gsc.ExecuteGSCSetScript, GSCScriptPath.BOARD_ID, 'args')
@@ -578,16 +547,17 @@ class GSCUtilsTest(unittest.TestCase):
         self.gsc.ExecuteGSCSetScript, GSCScriptPath.BOARD_ID, 'args')
 
   def testExecuteGSCSetScriptFileNotFound(self):
-    self.mock_check_path.stop()
+    self.check_path_patcher.stop()
     self.assertRaises(IOError, self.gsc.ExecuteGSCSetScript,
                       GSCScriptPath.BOARD_ID, 'args')
 
-    self.mock_check_path.start()  # To prevent runtime error before python 3.8
+    self.check_path_patcher.start(
+    )  # To prevent runtime error before python 3.8
 
   def _SetShellResult(self, stdout='', stderr='', status=0):
     self.shell.return_value = shell.ShellResult(
         success=status == 0, status=status, stdout=stdout, stderr=stderr)
-    self.gsc._shell = self.shell  # pylint: disable=protected-access
+    self.gsc._shell = self.shell
 
 
 if __name__ == '__main__':

@@ -45,11 +45,12 @@ class GSCUtilsError(type_utils.Error):
 class GSCUtils:
   """GSC related logic and implementation."""
 
-  def __init__(self, gsc_constants_path=GSCScriptPath.GSC_CONSTANTS, dut=None):
+  def __init__(self, gsc_constants_path=GSCScriptPath.GSC_CONSTANTS, dut=None,
+               gsc_tool=None):
     self.gsc_constants_path = gsc_constants_path
     self._dut = dut if dut else sys_interface.SystemInterface()
     self._shell = shell.Shell(dut=self._dut)
-    self._gsctool = gsctool.GSCTool(dut=self._dut)
+    self._gsctool = gsc_tool if gsc_tool else gsctool.GSCTool(dut=self._dut)
     self._futility = futility.Futility(dut=self._dut)
     self._vpd = vpd.VPDTool(dut=self._dut)
 
