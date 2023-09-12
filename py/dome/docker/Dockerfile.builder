@@ -17,7 +17,7 @@
 # 2. sudo docker run -it --rm cros/dome-builder bash
 # 3. Check environment, e.g. "npm -v" or "node -v".
 
-FROM node:10-slim
+FROM node:14-slim
 LABEL maintainer="ChromeOS Factory Eng <chromeos-factory-eng@google.com>"
 
 # mixing ARG and ENV to make CMD able to use the variable, this technique is
