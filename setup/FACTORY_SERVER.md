@@ -61,8 +61,8 @@ officially supported.
 
 #### Linux Server
 
-1. Current recommendation is to use [Ubuntu Linux 16.04.7 server](
-   http://releases.ubuntu.com/16.04/ubuntu-16.04.7-server-amd64.iso) (xenial).
+1. Current recommendation is to use Ubuntu Linux 20.04.x server (focal), please
+   download the server image from [here](https://releases.ubuntu.com/20.04/).
 
 2. During installation, please specify the system to be formatted by GPT instead
    of MBR to gain maximum disk space.
