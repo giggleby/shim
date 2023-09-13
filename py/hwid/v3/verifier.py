@@ -74,7 +74,7 @@ def VerifyComponentStatus(database, bom, mode, current_phase=None,
 
 
 _PRE_MP_KEY_NAME_PATTERN = re.compile('_pre_?mp')
-_MP_KEY_NAME_PATTERN = re.compile('_mp[_0-9v]*?[_a-z]*$')
+_MP_KEY_NAME_PATTERN = re.compile('_mp[_0-9v]*?[_a-z]*(_\d+)?$')
 
 def _IsMPKeyName(name):
   """Returns True if the key name looks like MP (not pre-MP).
