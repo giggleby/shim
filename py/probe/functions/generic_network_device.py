@@ -67,6 +67,20 @@ class NetworkDevices:
     any better solutions. A typical output for 'iw dev' on mwifiex:
 
     phy#0
+          Unnamed/non-netdev interface
+                  wdev 0x5
+                  addr 74:3a:f4:8c:d2:d3
+                  type P2P-device
+                  txpower 0.00 dBm
+          Interface wlan0
+                  ifindex 2
+                  wdev 0x4
+                  addr 74:3a:f4:8c:d2:d2
+                  type managed
+                  txpower 0.00 dBm
+                  multicast TXQ:
+                          qsz-byt  qsz-pkt  flows  drops  marks  overlmt  hashcol  tx-bytes  tx-packets
+                          0        0        0      0      0      0        0        0         0
           Interface p2p0
                   ifindex 4
                   wdev 0x3
@@ -83,7 +97,8 @@ class NetworkDevices:
                   addr 28:c2:dd:45:94:39
                   type managed
 
-    p2p0 and uap0 are virtual nodes and what we really want is mlan0 (managed).
+    p2p0, uap0 and "Unnamed/non-netdev interface" are virtual nodes.
+    What we really want is mlan0 and wlan0 (managed).
 
     Returns:
       A list of network objects with correct iw type.
@@ -91,12 +106,12 @@ class NetworkDevices:
     data = [line.split()[1]
             for line in process_utils.CheckOutput(
                 'iw dev', shell=True, log=True).splitlines()
-            if ' ' in line and line.split()[0] in ['Interface', 'type']]
-    i = iter(data)
+            if ' ' in line and line.split()[0] == 'Interface']
     return [
         Obj(devtype='wifi', path=f'/sys/class/net/{name}/device')
-        for name in i
-        if next(i) == iw_type
+        for name in data
+        if f'type {iw_type}' in process_utils.CheckOutput(
+            f'iw dev {name} info', shell=True, log=True)
     ]
 
   @classmethod
