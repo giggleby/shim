@@ -7,8 +7,9 @@ services:
   rsync: {}
   shop_floor: {}
   instalog:
+    active: false
     archive:
-      enable: true
+      enable: false
       args:
         interval: 21600  # 6 hours
     forward:
