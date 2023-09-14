@@ -204,7 +204,8 @@ class ContentsAnalyzer:
       form_factor: Optional[common.FormFactor] = None):
     if not form_factor:
       return
-    db_comps = db_instance.GetComponentClasses()
+    db_comps = db_instance.GetComponentClasses(
+        image_id=db_instance.max_image_id)
     essential_comps = set(common.FORM_FACTOR_COMPS[form_factor])
     for comp_cls in essential_comps - db_comps:
       validation_report.errors.append(

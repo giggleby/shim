@@ -401,26 +401,44 @@ class Database(abc.ABC):
       self, encoded_field_name) -> Mapping[int, Mapping[str, Sequence[str]]]:
     return self._encoded_fields.GetField(encoded_field_name)
 
-  def GetComponentClasses(self,
-                          encoded_field_name: Optional[str] = None) -> Set[str]:
+  def GetComponentClasses(self, encoded_field_name: Optional[str] = None,
+                          image_id: Optional[int] = None) -> Set[str]:
     """Returns a set of component class names with optional conditions.
 
-    If `encoded_field_name` is specified, this function only returns the
-    component classes which will be encoded by the specific encoded field.
-    If `encoded_field_name` is not specified, this function returns all
-    component classes recorded by the database.
+    If `encoded_field_name` or `image_id` is specified, this function only
+    returns the component classes which will be encoded by the specific encoded
+    field or image_id.
+    If both `encoded_field_name` and `image_id` are not specified, this function
+    returns all component classes recorded by the database.
 
     Note that the iteration order of the return value may differ between two
     python script runs.
 
     Args:
       encoded_field_name: None of a string of the name of the encoded field.
+      image_id: An optional image id to restrict the component classes visible
+        at that image. Not filter if set to None.
 
     Returns:
       A set of component class names.
+
+    Raises:
+      HWIDException when both encoded_field_name and image_id are set.
     """
+    if encoded_field_name and image_id is not None:
+      raise common.HWIDException(
+          '`encoded_field_name` and `image_id` cannot be set at the same time.')
+
     if encoded_field_name:
       return self._encoded_fields.GetComponentClasses(encoded_field_name)
+
+    if image_id is not None:
+      return {
+          comp_cls
+          for encoded_field_name in self._pattern.GetFieldsBitLength(image_id)
+          for comp_cls in self._encoded_fields.GetComponentClasses(
+              encoded_field_name)
+      }
 
     ret = set(self._components.component_classes)
     for e in self.encoded_fields:

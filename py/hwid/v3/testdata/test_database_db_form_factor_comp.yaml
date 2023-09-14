@@ -49,6 +49,8 @@ encoded_fields:
     0: { display_panel: null }
   battery_field:
     0: { battery: null }
+  touchscreen_field:
+    0: { touchscreen: null }
 
 components: {}
 

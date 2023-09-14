@@ -229,6 +229,36 @@ class DatabaseTest(unittest.TestCase):
 
     self.assertEqual(db, deserialized_db)
 
+  def testGetComponentClassess(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
+
+    self.assertCountEqual(db.GetComponentClasses(),
+                          ['cls1', 'cls2', 'cls3', 'cls4'])
+
+  def testGetComponentClassessWithEncodedFieldName(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
+
+    self.assertCountEqual(db.GetComponentClasses('field1'), ['cls1'])
+
+  def testGetComponentClassessWithImageId(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
+
+    self.assertCountEqual(
+        db.GetComponentClasses(image_id=2), ['cls2', 'cls3', 'cls4'])
+
+  def testGetComponentClassessWithEncodedFieldNameAndImageId(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'),
+        verify_checksum=False)
+    with self.assertRaises(common.HWIDException):
+      db.GetComponentClasses('field1', image_id=2)
+
 
 class ImageIdTest(unittest.TestCase):
 
