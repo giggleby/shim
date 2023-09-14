@@ -310,25 +310,11 @@ class GSCUtilsTest(unittest.TestCase):
     self.gsc.GSCSetFeatureManagementFlagsWithHwSecUtils(True, 1)
     mock_script.assert_called_with(GSCScriptPath.FACTORY_CONFIG, ['true', '1'])
 
-  @mock.patch(f'{GSCUTIL}.IsGSCFeatureManagementFlagsLocked')
-  def testGSCSetFeatureManagementFlagsLocked(self, mock_locked):
-    mock_locked.return_value = True
-
-    with self.assertLogs() as cm:
-      self.gsc.GSCSetFeatureManagementFlags()
-
-    self.assertSequenceEqual(cm.output, [
-        'WARNING:root:GSC fields is locked. Skip setting '
-        'feature management flags.'
-    ])
-
   @mock.patch(f'{GSCUTIL}.GSCSetFeatureManagementFlagsWithHwSecUtils')
   @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
-  @mock.patch(f'{GSCUTIL}.IsGSCFeatureManagementFlagsLocked')
-  def testGSCSetFeatureManagementFlagsSameValue(
-      self, mock_locked, mock_device_data, mock_get_flags, mock_set_flags):
-    mock_locked.return_value = False
+  def testGSCSetFeatureManagementFlagsSameValue(self, mock_device_data,
+                                                mock_get_flags, mock_set_flags):
     mock_device_data.side_effect = [True, 1]
     mock_get_flags.return_value = FeatureManagementFlags(True, 1)
 
@@ -339,10 +325,8 @@ class GSCUtilsTest(unittest.TestCase):
   @mock.patch(f'{GSCUTIL}.GSCSetFeatureManagementFlagsWithHwSecUtils')
   @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
-  @mock.patch(f'{GSCUTIL}.IsGSCFeatureManagementFlagsLocked')
   def testGSCSetFeatureManagementFlagsSetByScript(
-      self, mock_locked, mock_device_data, mock_get_flags, mock_set_flags):
-    mock_locked.return_value = False
+      self, mock_device_data, mock_get_flags, mock_set_flags):
     mock_device_data.side_effect = [True, 2]
     mock_get_flags.return_value = FeatureManagementFlags(False, 0)
 
@@ -354,12 +338,9 @@ class GSCUtilsTest(unittest.TestCase):
   @mock.patch(f'{GSCTOOL}.SetFeatureManagementFlags')
   @mock.patch(f'{GSCTOOL}.GetFeatureManagementFlags')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
-  @mock.patch(f'{GSCUTIL}.IsGSCFeatureManagementFlagsLocked')
-  def testGSCSetFeatureManagementFlagsFallback(self, mock_locked,
-                                               mock_device_data, mock_get_flags,
-                                               mock_set_flags, mock_path):
+  def testGSCSetFeatureManagementFlagsFallback(
+      self, mock_device_data, mock_get_flags, mock_set_flags, mock_path):
     mock_path.side_effect = IOError
-    mock_locked.return_value = False
     mock_device_data.side_effect = [True, 1]
     mock_get_flags.return_value = FeatureManagementFlags(False, 0)
 

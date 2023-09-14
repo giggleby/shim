@@ -287,11 +287,6 @@ class GSCUtils:
       `GSCToolError` if GSC tool fails.
     """
 
-    if self.IsGSCFeatureManagementFlagsLocked():
-      logging.warning(
-          'GSC fields is locked. Skip setting feature management flags.')
-      return
-
     chassis_branded = device_data.GetDeviceData(
         device_data.KEY_FM_CHASSIS_BRANDED)
     hw_compliance_version = device_data.GetDeviceData(
