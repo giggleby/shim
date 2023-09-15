@@ -1199,25 +1199,26 @@ class Gooftool:
                     'fields?')
 
     set_sn_bits = enable_zero_touch and not rma_mode
-    write_whitelabel_flags = mlb_mode and is_whitelabel
+    write_whitelabel_flags = mlb_mode and (is_whitelabel or rma_mode)
 
     if set_sn_bits:
       self.Cr50SetSnBits()
     if write_whitelabel_flags:
-      self.Cr50WriteWhitelabelFlags()
+      self.Cr50WriteWhitelabelFlags(is_whitelabel)
     else:
       self.Cr50SetBoardId(is_whitelabel)
 
-  def Cr50WriteWhitelabelFlags(self):
+  def Cr50WriteWhitelabelFlags(self, is_whitelabel):
     """Write the flags for whitelabel devices.
 
     The brand-code (cr50 board id) won't be set.  This should be called for
-    spare MLBs of whitelabel devices.
+    spare MLBs or whitelabel devices.
     """
-    cros_config = cros_config_module.CrosConfig(self._util.shell)
-    is_whitelabel, unused_whitelabel_tag = cros_config.GetWhiteLabelTag()
-    if not is_whitelabel:
-      raise Error('This is not a whitelabel device.')
+    if is_whitelabel:
+      cros_config = cros_config_module.CrosConfig(self._util.shell)
+      cros_config_whitelabel, unused_whitelabel_tag = cros_config.GetWhiteLabelTag()
+      if not cros_config_whitelabel:
+        raise Error('This is not a whitelabel device.')
 
     script_path = '/usr/share/cros/cr50-set-board-id.sh'
     if not os.path.exists(script_path):
