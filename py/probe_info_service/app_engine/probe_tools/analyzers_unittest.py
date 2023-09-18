@@ -23,6 +23,7 @@ _ProbeInfo = probe_info_analytics.ProbeInfo
 _ProbeInfoArtifact = probe_info_analytics.ProbeInfoArtifact
 _ProbeInfoParsedResult = probe_info_analytics.ProbeInfoParsedResult
 _ProbeParameter = probe_info_analytics.ProbeParameter
+_ProbeParameterSuggestion = probe_info_analytics.ProbeParameterSuggestion
 _ProbeParameterValueType = probe_info_analytics.ProbeParameterValueType
 _ProbeFunctionDefinition = probe_info_analytics.ProbeFunctionDefinition
 _ProbeInfoTestResult = probe_info_analytics.ProbeInfoTestResult
@@ -323,6 +324,33 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
           result_type=_ProbeInfoTestResult.INTRIVIAL_ERROR,
           intrivial_error_msg=(
               "Component(s) not found: ({'comp_name-for_param2'})."))
+      self.assertEqual(result, expected_result)
+
+    with self.subTest('ProbedResultsMismatched'):
+      # Arrange, invoke the probe bundle.
+      bundle_output = self._InvokeProbeBundleWithStubRuntimeProbe(
+          bundle_content, runtime_probe_stdout='''
+              { "the_category": [ {
+                  "name": "generic",
+                  "values": {
+                    "param1": "aaa",
+                    "param2": "bbb"
+              } } ] }''')
+
+      result = pi_analyzer.AnalyzeQualProbeTestResultPayload(pds, bundle_output)
+
+      expected_result = _ProbeInfoTestResult(
+          result_type=_ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION,
+          probe_parameter_suggestions=[
+              _ProbeParameterSuggestion(
+                  index=0,
+                  hint=('expected: \"[\'value1\']\", probed 1 the_category '
+                        'component(s) with value:\ncomponent 1: \"aaa\"')),
+              _ProbeParameterSuggestion(
+                  index=1,
+                  hint=('expected: \"[\'value2\']\", probed 1 the_category '
+                        'component(s) with value:\ncomponent 1: \"bbb\"'))
+          ])
       self.assertEqual(result, expected_result)
 
     with self.subTest('ProbeInfoBecomeOutOfDate'):

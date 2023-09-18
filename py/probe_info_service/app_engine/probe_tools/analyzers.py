@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import abc
+import collections
 import hashlib
 import itertools
 import os
@@ -16,6 +17,7 @@ from google.protobuf import text_format
 from cros.factory.probe.runtime_probe import generic_probe_statement
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.probe_info_service.app_engine import bundle_builder
+from cros.factory.probe_info_service.app_engine import config
 from cros.factory.probe_info_service.app_engine import probe_info_analytics
 from cros.factory.probe_info_service.app_engine.probe_tools import client_payload_pb2  # pylint: disable=no-name-in-module
 from cros.factory.utils import file_utils
@@ -130,6 +132,7 @@ _MultiProbeInfoArtifact = probe_info_analytics.MultiProbeInfoArtifact
 _NamedFile = probe_info_analytics.NamedFile
 _IProbeDataSource = probe_info_analytics.IProbeDataSource
 _PayloadInvalidError = probe_info_analytics.PayloadInvalidError
+_ProbeParameterSuggestion = probe_info_analytics.ProbeParameterSuggestion
 
 
 class _RawProbeStatementConverter(IProbeInfoConverter):
@@ -271,12 +274,31 @@ class _ProbedOutcomePreprocessConclusion(NamedTuple):
   probed_outcome: client_payload_pb2.ProbedOutcome
   intrivial_error_msg: Optional[str]
   probed_components: Optional[Sequence[str]]
+  probed_generic_components: Optional[Mapping[str, Sequence[str]]]
+
+  @classmethod
+  def FromNoProbeResults(cls, probed_outcome, error_msg):
+    return cls(probed_outcome, error_msg, None, None)
+
+  @classmethod
+  def FromProbeResults(cls, probed_outcome, probed_components,
+                       probed_generic_components):
+    return cls(probed_outcome, None, probed_components,
+               probed_generic_components)
 
 
 def _GetComponentPartNames(
     ps_metadata: client_payload_pb2.ProbeStatementMetadata) -> Sequence[str]:
   return (ps_metadata.component_part_names
           if ps_metadata.component_part_names else [ps_metadata.component_name])
+
+
+def _GetProbeParameterValue(probe_param: probe_info_analytics.ProbeParameter):
+  which_one_of = probe_param.WhichOneof('value')
+  if which_one_of is None:
+    return None
+
+  return getattr(probe_param, which_one_of)
 
 
 class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
@@ -443,7 +465,16 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
     if not missing_component_parts:
       return _ProbeInfoTestResult(result_type=_ProbeInfoTestResult.PASSED)
 
-    # TODO(yhong): Provide hints from generic probed result.
+    # TODO(b/293377003): Enable in production.
+    if not config.Config().is_prod:
+      suggestions = self._AnalyzeGenericProbeResult(
+          preproc_conclusion.probed_generic_components, probe_data_source)
+
+      if suggestions:
+        return _ProbeInfoTestResult(
+            result_type=_ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION,
+            probe_parameter_suggestions=suggestions)
+
     return _ProbeInfoTestResult(
         result_type=_ProbeInfoTestResult.INTRIVIAL_ERROR, intrivial_error_msg=(
             f'Component(s) not found: ({missing_component_parts}).'))
@@ -471,23 +502,30 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
       return _DeviceProbeResultAnalyzedResult(
           intrivial_error_msg=preproc_conclusion.intrivial_error_msg,
           probe_info_test_results=None)
-    pi_test_result_types = []
+    pi_test_results = []
     probed_components = set(preproc_conclusion.probed_components)
     for pds in probe_data_sources:
+      pi_test_res = _ProbeInfoTestResult()
       comp_name = pds.component_name
       ps_metadata = ps_metadata_of_comp_name.get(comp_name, None)
       if ps_metadata is None:
-        pi_test_result_types.append(_ProbeInfoTestResult.NOT_INCLUDED)
+        pi_test_res.result_type = _ProbeInfoTestResult.NOT_INCLUDED
       elif ps_metadata.fingerprint != pds.fingerprint:
-        pi_test_result_types.append(_ProbeInfoTestResult.LEGACY)
+        pi_test_res.result_type = _ProbeInfoTestResult.LEGACY
       elif not set(_GetComponentPartNames(ps_metadata)) - probed_components:
-        pi_test_result_types.append(_ProbeInfoTestResult.PASSED)
+        pi_test_res.result_type = _ProbeInfoTestResult.PASSED
       else:
-        pi_test_result_types.append(_ProbeInfoTestResult.NOT_PROBED)
+        suggestions = self._AnalyzeGenericProbeResult(
+            preproc_conclusion.probed_generic_components, pds)
+        if suggestions:
+          pi_test_res.probe_parameter_suggestions.extend(suggestions)
+          pi_test_res.result_type = (
+              _ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION)
+        else:
+          pi_test_res.result_type = _ProbeInfoTestResult.NOT_PROBED
+      pi_test_results.append(pi_test_res)
     return _DeviceProbeResultAnalyzedResult(
-        intrivial_error_msg=None, probe_info_test_results=[
-            _ProbeInfoTestResult(result_type=t) for t in pi_test_result_types
-        ])
+        intrivial_error_msg=None, probe_info_test_results=pi_test_results)
 
   def _LookupProbeConverter(
       self, converter_name: str
@@ -538,33 +576,122 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
 
     rp_invocation_result = probed_outcome.rp_invocation_result
     if rp_invocation_result.result_type != rp_invocation_result.FINISHED:
-      return _ProbedOutcomePreprocessConclusion(
+      return _ProbedOutcomePreprocessConclusion.FromNoProbeResults(
           probed_outcome, ('The invocation of runtime_probe is abnormal: '
-                           f'type={rp_invocation_result.result_type}.'), None)
+                           f'type={rp_invocation_result.result_type}.'))
     if rp_invocation_result.return_code != 0:
-      return _ProbedOutcomePreprocessConclusion(
+      return _ProbedOutcomePreprocessConclusion.FromNoProbeResults(
           probed_outcome, ('The return code of runtime probe is non-zero: '
-                           f'{rp_invocation_result.return_code}.'), None)
+                           f'{rp_invocation_result.return_code}.'))
 
     known_component_names = set(
         itertools.chain.from_iterable(
             _GetComponentPartNames(m)
             for m in probed_outcome.probe_statement_metadatas))
     probed_components = []
+    probed_generic_components = collections.defaultdict(list)
     try:
       probed_result = json_utils.LoadStr(
           rp_invocation_result.raw_stdout.decode('utf-8'))
-      for category_probed_results in probed_result.values():
+      for category, category_probed_results in probed_result.items():
         for probed_component in category_probed_results:
           if probed_component['name'] == 'generic':
-            # TODO(b/293377003): Analyze generic probe results.
+            probed_generic_components[category].append(
+                probed_component['values'])
             continue
           if probed_component['name'] not in known_component_names:
             raise ValueError(f'Unexpected component: {probed_component}.')
           probed_components.append(probed_component['name'])
     except Exception as e:
-      return _ProbedOutcomePreprocessConclusion(
-          probed_outcome, f'The output of runtime_probe is invalid: {e}.', None)
+      return _ProbedOutcomePreprocessConclusion.FromNoProbeResults(
+          probed_outcome, f'The output of runtime_probe is invalid: {e}.')
 
-    return _ProbedOutcomePreprocessConclusion(
-        probed_outcome, None, probed_components=probed_components)
+    return _ProbedOutcomePreprocessConclusion.FromProbeResults(
+        probed_outcome, probed_components, probed_generic_components)
+
+  def _AnalyzeGenericProbeResult(
+      self, generic_probe_result: Mapping[str, Sequence[Mapping[str, str]]],
+      probe_data_source: _ProbeDataSourceImpl
+  ) -> Sequence[_ProbeParameterSuggestion]:
+    generic_parsed_results = []
+    probe_params = collections.defaultdict(set)
+
+    probe_info = probe_data_source.probe_info
+    probe_parameters = probe_info.probe_parameters
+    unused_parsed_result, converter = self._LookupProbeConverter(
+        probe_info.probe_function_name)
+    if not converter or not isinstance(converter,
+                                       IBidirectionalProbeInfoConverter):
+      return []
+
+    generic_parsed_results = converter.ParseProbeResult(generic_probe_result)
+    probe_parameters = converter.GetNormalizedProbeParams(probe_parameters)
+
+    for param in probe_parameters:
+      param_val = _GetProbeParameterValue(param)
+      probe_params[param.name].add(param_val)
+
+    # Collect names of all mismatched parameters.
+    mismatch_param_names = set()
+    param_name_to_category = {}
+    for parsed_result in generic_parsed_results:
+      param = parsed_result.probe_parameter
+      if param.name in mismatch_param_names:
+        continue
+
+      param_val = _GetProbeParameterValue(param)
+      if param_val not in probe_params[param.name]:
+        mismatch_param_names.add(param.name)
+        param_name_to_category[param.name] = parsed_result.component_category
+
+    # Collect the expected values of the mismatched parameters from probe
+    # parameters.
+    expected_params = collections.defaultdict(list)
+    probe_parameters = probe_data_source.probe_info.probe_parameters
+    for probe_param in probe_parameters:
+      if probe_param.name in mismatch_param_names:
+        val = _GetProbeParameterValue(probe_param)
+        expected_params[probe_param.name].append(val)
+
+    # Collect the probed values of the mismatched parameters from generic probe
+    # results.
+    probed_params = collections.defaultdict(list)
+    for parsed_result in generic_parsed_results:
+      probe_param = parsed_result.probe_parameter
+      if probe_param.name in mismatch_param_names:
+        val = _GetProbeParameterValue(probe_param)
+        probed_params[probe_param.name].append(val)
+
+    param_hints = {}
+    for param_name in mismatch_param_names:
+      lines = [
+          (f'expected: "{expected_params[param_name]}", '
+           f'probed {len(probed_params[param_name])} '
+           f'{param_name_to_category[param_name]} component(s) with value:')
+      ]
+
+      for idx, comp_val in enumerate(probed_params[param_name]):
+        lines.append(f'component {idx+1}: "{comp_val}"')
+      param_hints[param_name] = '\n'.join(lines)
+
+    return self._GenerateSuggestions(param_hints, probe_data_source)
+
+  def _GenerateSuggestions(
+      self,
+      param_hints: Mapping[str, str],
+      probe_data_source: _ProbeDataSourceImpl,
+  ) -> Sequence[_ProbeParameterSuggestion]:
+    suggestions = []
+    probe_parameters = probe_data_source.probe_info.probe_parameters
+    probe_params = sorted(
+        enumerate(probe_parameters),
+        key=lambda probe_param: probe_param[1].name)
+
+    suggestions = collections.OrderedDict()
+    for idx, probe_param in probe_params:
+      param_name = probe_param.name
+      if param_name in param_hints and param_name not in suggestions:
+        suggestions[param_name] = _ProbeParameterSuggestion(
+            index=idx, hint=param_hints[param_name])
+
+    return list(suggestions.values())
