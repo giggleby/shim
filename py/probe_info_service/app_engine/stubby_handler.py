@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import copy
 import functools
 from typing import Callable, NamedTuple, Optional, Tuple
 
@@ -34,8 +35,11 @@ def _DeriveSortableValueFromProbeParameter(probe_parameter):
   return (probe_parameter.name, value_type, probe_parameter_value)
 
 
-def InplaceNormalizeProbeInfo(probe_info):
-  probe_info.probe_parameters.sort(key=_DeriveSortableValueFromProbeParameter)
+def GetNormalizedProbeInfo(probe_info):
+  normalized_probe_info = copy.deepcopy(probe_info)
+  normalized_probe_info.probe_parameters.sort(
+      key=_DeriveSortableValueFromProbeParameter)
+  return normalized_probe_info
 
 
 class _ProbeDataSourceLookupResult(NamedTuple):
@@ -86,7 +90,8 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
 
     self._UpdateCompProbeInfo(request.qual_probe_info)
     lookup_result = self._LookupProbeDataSource(
-        request.qual_probe_info.component_identity)
+        request.qual_probe_info.component_identity,
+        request.qual_probe_info.probe_info)
     gen_result = self._pi_analyzer.GenerateProbeBundlePayload(
         [lookup_result.probe_data_source])
 
@@ -108,8 +113,9 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     response = stubby_pb2.UploadQualProbeTestResultResponse()
 
     self._UpdateCompProbeInfo(request.qual_probe_info)
+    probe_info = request.qual_probe_info.probe_info
     component_identity = request.qual_probe_info.component_identity
-    lookup_result = self._LookupProbeDataSource(component_identity)
+    lookup_result = self._LookupProbeDataSource(component_identity, probe_info)
 
     try:
       result = self._pi_analyzer.AnalyzeQualProbeTestResultPayload(
@@ -160,7 +166,8 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     for comp_probe_info in request.component_probe_infos:
       self._UpdateCompProbeInfo(comp_probe_info)
       lookup_results.append(
-          self._LookupProbeDataSource(comp_probe_info.component_identity))
+          self._LookupProbeDataSource(comp_probe_info.component_identity,
+                                      comp_probe_info.probe_info))
 
     gen_result = self._pi_analyzer.GenerateProbeBundlePayload(
         [r.probe_data_source for r in lookup_results])
@@ -187,7 +194,8 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     for comp_probe_info in request.component_probe_infos:
       self._UpdateCompProbeInfo(comp_probe_info)
       lookup_results.append(
-          self._LookupProbeDataSource(comp_probe_info.component_identity))
+          self._LookupProbeDataSource(comp_probe_info.component_identity,
+                                      comp_probe_info.probe_info))
     probe_data_sources = [r.probe_data_source for r in lookup_results]
 
     try:
@@ -266,7 +274,7 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     for comp_probe_info in request.component_probe_infos:
       entry, unused_parsed_result = self._UpdateCompProbeInfo(comp_probe_info)
       lookup_result = self._LookupProbeDataSource(
-          comp_probe_info.component_identity)
+          comp_probe_info.component_identity, comp_probe_info.probe_info)
       if lookup_result.source_type != stubby_pb2.ProbeMetadata.AUTO_GENERATED:
         probe_metadata = response.probe_metadatas.add(
             probe_statement_type=lookup_result.source_type,
@@ -314,12 +322,12 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     parsed_result = self._pi_analyzer.ValidateProbeInfo(
         comp_probe_info.probe_info,
         not comp_probe_info.component_identity.qual_id)
-    InplaceNormalizeProbeInfo(comp_probe_info.probe_info)
+    normalized_probe_info = GetNormalizedProbeInfo(comp_probe_info.probe_info)
     need_save, entry = self._avl_probe_entry_mngr.GetOrCreateAVLProbeEntry(
         comp_probe_info.component_identity.component_id,
         comp_probe_info.component_identity.qual_id)
-    if entry.probe_info != comp_probe_info.probe_info:
-      entry.probe_info = comp_probe_info.probe_info
+    if entry.probe_info != normalized_probe_info:
+      entry.probe_info = normalized_probe_info
       entry.is_valid = (
           parsed_result.result_type == _ProbeInfoParsedResult.ResultType.PASSED)
       entry.is_tested = False
@@ -347,8 +355,8 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
     return (gen_result.output or
             self.MSG_NO_PROBE_STATEMENT_PREVIEW_INVALID_AVL_DATA)
 
-  def _LookupProbeDataSource(
-      self, component_identity) -> _ProbeDataSourceLookupResult:
+  def _LookupProbeDataSource(self, component_identity,
+                             probe_info=None) -> _ProbeDataSourceLookupResult:
     """Gets the probe data source for the component.
 
     It loads and returns the correct probe data source with the
@@ -362,6 +370,9 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
 
     Args:
       component_identity: AVL IDs of the target.
+      probe_info: If passed, use it as the probe info of the returned
+          probe_data_source. Otherwise, use the probe info of the queried
+          entry.
 
     Returns:
       The factory instance for the loaded probe data source.
@@ -387,7 +398,8 @@ class ProbeInfoService(ProbeInfoServiceProtoRPCBase):
         component_identity.component_id, component_identity.qual_id)
     if entry:
       probe_data_source = self._pi_analyzer.CreateProbeDataSource(
-          component_name, entry.probe_info)
+          component_name,
+          probe_info if probe_info is not None else entry.probe_info)
       preview_generator = functools.partial(
           self._GeneratePreviewForProbeDataSourceFromAVL, probe_data_source)
       return _ProbeDataSourceLookupResult(

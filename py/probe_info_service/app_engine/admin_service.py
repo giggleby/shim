@@ -61,12 +61,13 @@ class AdminServiceServerStub(AdminServiceProtoRPCBase):
     parsed_result = self._pi_analyzer.ValidateProbeInfo(
         comp_probe_info.probe_info,
         not comp_probe_info.component_identity.qual_id)
-    stubby_handler.InplaceNormalizeProbeInfo(comp_probe_info.probe_info)
+    normalized_probe_info = stubby_handler.GetNormalizedProbeInfo(
+        comp_probe_info.probe_info)
     need_save, entry = self._avl_probe_entry_mngr.GetOrCreateAVLProbeEntry(
         comp_probe_info.component_identity.component_id,
         comp_probe_info.component_identity.qual_id)
-    if entry.probe_info != comp_probe_info.probe_info:
-      entry.probe_info = comp_probe_info.probe_info
+    if entry.probe_info != normalized_probe_info.probe_info:
+      entry.probe_info = normalized_probe_info.probe_info
       need_save = True
     if need_save:
       self._avl_probe_entry_mngr.SaveAVLProbeEntry(entry)
