@@ -3,11 +3,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import Optional
+from typing import Optional, Sequence
 import unittest
 
 from google.protobuf import text_format
 
+from cros.factory.probe.runtime_probe import generic_probe_statement
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.probe_info_service.app_engine import probe_info_analytics
 from cros.factory.probe_info_service.app_engine.probe_tools import analyzers
@@ -32,7 +33,26 @@ def _GetConverter(name: str) -> Optional[analyzers.IProbeInfoConverter]:
   return None
 
 
-class AudioCodecConverterTest(unittest.TestCase):
+RUNTIME_PROBE_SUPPORTED_CATEGORIES = frozenset([
+    ps.probe_category for ps in
+    generic_probe_statement.GetAllRuntimeProbeSupportedGenericProbeStatements()
+])
+# Categories that are supported by Probe Info Service, but are not yet
+# available in Runtime Probe
+SKIP_CATEGORIES = frozenset(['cpu'])
+
+
+class ConverterTestCase(unittest.TestCase):
+
+  def assertCanGenerateGenericProbeStatements(
+      self,
+      probe_statements: Sequence[probe_config_types.ComponentProbeStatement]):
+    for ps in probe_statements:
+      self.assertIn(ps.category_name,
+                    SKIP_CATEGORIES | RUNTIME_PROBE_SUPPORTED_CATEGORIES)
+
+
+class AudioCodecConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('audio_codec.audio_codec')
@@ -73,6 +93,7 @@ class AudioCodecConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
@@ -124,7 +145,7 @@ class AudioCodecConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class BatteryConverterTest(unittest.TestCase):
+class BatteryConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('battery.generic_battery')
@@ -196,6 +217,7 @@ class BatteryConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -233,7 +255,7 @@ class BatteryConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class MipiCameraConverterTest(unittest.TestCase):
+class MipiCameraConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('camera.mipi_camera')
@@ -319,6 +341,7 @@ class MipiCameraConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -369,7 +392,7 @@ class MipiCameraConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class UsbCameraConverterTest(unittest.TestCase):
+class UsbCameraConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('camera.usb_camera')
@@ -450,6 +473,7 @@ class UsbCameraConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -493,7 +517,7 @@ class UsbCameraConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class DisplayPanelConverterTest(unittest.TestCase):
+class DisplayPanelConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('display_panel.edid')
@@ -579,6 +603,7 @@ class DisplayPanelConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -617,7 +642,7 @@ class DisplayPanelConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class MemoryConverterTest(unittest.TestCase):
+class MemoryConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('dram.memory')
@@ -676,6 +701,7 @@ class MemoryConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -705,7 +731,7 @@ class MemoryConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class MmcStorageConverterTest(unittest.TestCase):
+class MmcStorageConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('storage.mmc_storage')
@@ -793,6 +819,7 @@ class MmcStorageConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -836,7 +863,7 @@ class MmcStorageConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class NvmeStorageConverterTest(unittest.TestCase):
+class NvmeStorageConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('storage.nvme_storage')
@@ -933,6 +960,7 @@ class NvmeStorageConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -985,7 +1013,7 @@ class NvmeStorageConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class UfsStorageConverterTest(unittest.TestCase):
+class UfsStorageConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('storage.ufs_storage')
@@ -1039,6 +1067,7 @@ class UfsStorageConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
@@ -1102,7 +1131,7 @@ class UfsStorageConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class CpuConverterTest(unittest.TestCase):
+class CpuConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = _GetConverter('cpu.generic_cpu')
@@ -1161,6 +1190,7 @@ class CpuConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -1190,7 +1220,7 @@ class CpuConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class TouchscreenModuleConverterTest(unittest.TestCase):
+class TouchscreenModuleConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = ps_converters.BuildTouchscreenModuleConverter()
@@ -1367,6 +1397,7 @@ class TouchscreenModuleConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
@@ -1419,7 +1450,7 @@ class TouchscreenModuleConverterTest(unittest.TestCase):
     self.assertCountEqual(actual, expected_probe_params)
 
 
-class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
+class MMCWithBridgeProbeStatementConverterTest(ConverterTestCase):
 
   def setUp(self):
     self._converter = ps_converters.MMCWithBridgeProbeStatementConverter()
@@ -1506,6 +1537,7 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeParam_WithUpperCaseParams_CanGenerateMMCAndMMCHostPS(self):
     probe_params = [
@@ -1606,6 +1638,7 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
+    self.assertCanGenerateGenericProbeStatements(expected_probe_statements)
 
   def testParseProbeResult_CanGenerateMMCAndMMCHostProbeParameter(self):
     probe_result = {

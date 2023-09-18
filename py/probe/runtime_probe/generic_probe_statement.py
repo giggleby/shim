@@ -113,3 +113,22 @@ def GetAllGenericProbeStatementInfoRecords():
               'device_type',
           ], probe_function_argument={'device_type': 'stylus'}),
   ]
+
+
+@type_utils.CachedGetter
+def GetAllRuntimeProbeSupportedGenericProbeStatements():
+  return GetAllGenericProbeStatementInfoRecords() + [
+      GenericProbeStatementInfoRecord('audio_codec', 'audio_codec', [
+          'name',
+      ]),
+      GenericProbeStatementInfoRecord(
+          'mmc_host',
+          'mmc_host',
+          [
+              'pci_vendor_id',
+              'pci_device_id',
+              'pci_class',
+          ],
+          probe_function_argument={'is_emmc_attached': True},
+      )
+  ]

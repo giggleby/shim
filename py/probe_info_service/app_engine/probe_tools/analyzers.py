@@ -413,8 +413,8 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
         categories.add(comp_ps.category_name)
 
     # Add generic probe statements to probe config.
-    for ps_gen in (
-        generic_probe_statement.GetAllGenericProbeStatementInfoRecords()):
+    for ps_gen in (generic_probe_statement
+                   .GetAllRuntimeProbeSupportedGenericProbeStatements()):
       if ps_gen.probe_category in categories:
         ps = ps_gen.GenerateProbeStatement()
         ps.UpdateExpect({})
