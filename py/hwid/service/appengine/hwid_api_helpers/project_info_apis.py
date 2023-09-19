@@ -7,6 +7,7 @@ from typing import Optional
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action_manager as hwid_action_mngr_module
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import protorpc_utils
@@ -21,9 +22,11 @@ class ProjectInfoShard(common_helper.HWIDServiceShardBase):
 
   def __init__(self,
                hwid_action_manager: hwid_action_mngr_module.HWIDActionManager,
-               hwid_db_data_manager: hwid_db_data.HWIDDBDataManager):
+               hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
+               bc_helper: bc_helper_module.BOMAndConfiglessHelper):
     self._hwid_action_manager = hwid_action_manager
     self._hwid_db_data_manager = hwid_db_data_manager
+    self._bc_helper = bc_helper
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -88,9 +91,19 @@ class ProjectInfoShard(common_helper.HWIDServiceShardBase):
 
     components_list = []
     for cls, comps in components.items():
-      for comp in comps:
+      for comp, comp_info in comps.items():
+        status = (
+            common_helper.SUPPORT_STATUS_CASE_OF_HWID_STRING[comp_info.status])
+        avl_info, fields = None, []
+        if request.verbose:
+          avl_info = self._bc_helper.GetAVLInfo(cls, comp)
+          if comp_info.values is not None:
+            fields = bc_helper_module.GenerateFieldsMessage(comp_info.values)
+
         components_list.append(
-            hwid_api_messages_pb2.Component(component_class=cls, name=comp))
+            hwid_api_messages_pb2.Component(
+                component_class=cls, name=comp, avl_info=avl_info,
+                fields=fields, has_avl=bool(avl_info), status=status))
 
     return hwid_api_messages_pb2.ComponentsResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS, components=components_list)

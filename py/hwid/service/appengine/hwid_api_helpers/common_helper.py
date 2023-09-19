@@ -6,12 +6,27 @@
 import re
 
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
+from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+
 
 _KNOWN_BAD_HWIDS = ['DUMMY_HWID', 'dummy_hwid']
 _KNOWN_BAD_SUBSTR = [
     '.*TEST.*', '.*CHEETS.*', '^SAMS .*', '.* DEV$', '.*DOGFOOD.*'
 ]
+
+SUPPORT_STATUS_CASE_OF_HWID_STRING = {
+    v3_common.ComponentStatus.supported:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.SUPPORTED,
+    v3_common.ComponentStatus.deprecated:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.DEPRECATED,
+    v3_common.ComponentStatus.unsupported:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.UNSUPPORTED,
+    v3_common.ComponentStatus.unqualified:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.UNQUALIFIED,
+    v3_common.ComponentStatus.duplicate:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.DUPLICATE,
+}
 
 
 def FastFailKnownBadHWID(hwid):

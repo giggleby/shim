@@ -173,24 +173,10 @@ def _ConvertValidationErrorCode(code):
   return ValidationResultMessage.ErrorCode.CONTENTS_ERROR
 
 
-_SUPPORT_STATUS_CASE_OF_HWID_STRING = {
-    v3_common.ComponentStatus.supported:
-        hwid_api_messages_pb2.ComponentSupportStatus.Case.SUPPORTED,
-    v3_common.ComponentStatus.deprecated:
-        hwid_api_messages_pb2.ComponentSupportStatus.Case.DEPRECATED,
-    v3_common.ComponentStatus.unsupported:
-        hwid_api_messages_pb2.ComponentSupportStatus.Case.UNSUPPORTED,
-    v3_common.ComponentStatus.unqualified:
-        hwid_api_messages_pb2.ComponentSupportStatus.Case.UNQUALIFIED,
-    v3_common.ComponentStatus.duplicate:
-        hwid_api_messages_pb2.ComponentSupportStatus.Case.DUPLICATE,
-}
-
-
 def _ConvertSupportStatsCase(
     hwid_value: str) -> hwid_api_messages_pb2.ComponentSupportStatus.Case:
   try:
-    return _SUPPORT_STATUS_CASE_OF_HWID_STRING[hwid_value]
+    return common_helper.SUPPORT_STATUS_CASE_OF_HWID_STRING[hwid_value]
   except KeyError as ex:
     raise HWIDStatusConversionError(
         f'Unrecognizable HWID support status value: {hwid_value!r}.') from ex

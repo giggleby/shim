@@ -5,7 +5,7 @@
 import datetime
 import logging
 import operator
-from typing import Collection, Dict, NamedTuple, Optional, Sequence
+from typing import Collection, Dict, Mapping, NamedTuple, Optional, Sequence
 
 from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data import decoder_data
@@ -108,6 +108,22 @@ def GetBOMAndConfiglessStatusAndError(bom_configless):
   return (hwid_api_messages_pb2.Status.SUCCESS, None)
 
 
+def GenerateFieldsMessage(
+    field_dict: Mapping[str, str]) -> Optional[hwid_api_messages_pb2.Field]:
+  fields = []
+  for fname, fvalue in field_dict.items():
+    field = hwid_api_messages_pb2.Field()
+    field.name = fname
+    if isinstance(fvalue, v3_rule.Value):
+      field.value = ('!re ' +
+                     fvalue.raw_value if fvalue.is_re else fvalue.raw_value)
+    else:
+      field.value = str(fvalue)
+    fields.append(field)
+  fields.sort(key=lambda field: field.name)
+  return fields
+
+
 class BOMAndConfiglessHelper:
 
   def __init__(
@@ -187,7 +203,6 @@ class BOMAndConfiglessHelper:
         continue
       batch_request.append(hwid)
 
-    np_adapter = name_pattern_adapter.NamePatternAdapter()
     for hwid, bom_configless in self.BatchGetBOMAndConfigless(
         hwid_action_getter, batch_request, verbose).items():
       cache_key = _GenerateCacheKey(hwid, verbose, no_avl_name)
@@ -202,32 +217,8 @@ class BOMAndConfiglessHelper:
       components = []
 
       for component in bom.GetComponents():
-        if no_avl_name:
-          avl_name = ''
-        else:
-          avl_name = self._decoder_data_manager.GetAVLName(
-              component.cls, component.name, fallback=False)
-        fields = []
-        if verbose:
-          for fname, fvalue in component.fields.items():
-            field = hwid_api_messages_pb2.Field()
-            field.name = fname
-            if isinstance(fvalue, v3_rule.Value):
-              field.value = ('!re ' + fvalue.raw_value
-                             if fvalue.is_re else fvalue.raw_value)
-            else:
-              field.value = str(fvalue)
-            fields.append(field)
-
-        fields.sort(key=lambda field: field.name)
-
-        name_pattern = np_adapter.GetNamePattern(component.cls)
-        name_info = name_pattern.Matches(component.name)
-        avl_info = name_info.Provide(self._generate_avl_info_acceptor)
-
-        if avl_info is not None:
-          avl_info.avl_name = avl_name
-
+        fields = GenerateFieldsMessage(component.fields) if verbose else []
+        avl_info = self.GetAVLInfo(component.cls, component.name, no_avl_name)
         components.append(
             hwid_api_messages_pb2.Component(
                 component_class=component.cls, name=component.name,
@@ -240,3 +231,16 @@ class BOMAndConfiglessHelper:
                               project=bom.project or '')
       self._bom_data_cacher.SetBOMEntryCache(project, cache_key, result[hwid])
     return result
+
+  def GetAVLInfo(
+      self, comp_cls: str, comp_name: str,
+      no_avl_name: bool = False) -> Optional[hwid_api_messages_pb2.AvlInfo]:
+    np_adapter = name_pattern_adapter.NamePatternAdapter()
+    name_pattern = np_adapter.GetNamePattern(comp_cls)
+    name_info = name_pattern.Matches(comp_name)
+    avl_info = name_info.Provide(self._generate_avl_info_acceptor)
+    if avl_info is not None:
+      avl_info.avl_name = ('' if no_avl_name else
+                           self._decoder_data_manager.GetAVLName(
+                               comp_cls, comp_name, fallback=False))
+    return avl_info

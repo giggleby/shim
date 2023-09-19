@@ -373,6 +373,14 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
     # Only the BOM of 'PROJ2 BBB' is still cached.
     self.assertEqual(fake_hwid_action.GetBOMAndConfigless.call_count, 5)
 
+  def testGetAvlInfo_Success(self):
+    self._module_collection.AddAVLNameMapping(1, 'avl_name_1')
+    avl_info = self._bc_helper.GetAVLInfo('dram', 'dram_1_2')
+    self.assertEqual(avl_info, _AvlInfoMsg(cid=1, qid=2, avl_name='avl_name_1'))
+
+  def testGetAvlInfo_NonAVLComp(self):
+    self.assertEqual(None, self._bc_helper.GetAVLInfo('dram', 'dram1'))
+
   def _PatchBatchGetBOMAndConfigless(self):
     return mock.patch.object(self._bc_helper, 'BatchGetBOMAndConfigless')
 

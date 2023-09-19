@@ -41,6 +41,8 @@ message Component {
   bool has_avl = 5;
   // AVL info
   AvlInfo avl_info = 6;
+  // Support status of the component. Only available in `GetComponents` API.
+  ComponentSupportStatus.Case status = 7;
 }
 
 message Field {
@@ -208,6 +210,8 @@ message ComponentsRequest {
   string project = 1;
   // The included classes to filter the result.
   repeated string with_classes = 2;
+  // A flag to indicate whether to return the detail fields in response.
+  bool verbose = 3;
 }
 
 // The response to a components request.

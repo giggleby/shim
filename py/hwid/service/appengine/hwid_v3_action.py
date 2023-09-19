@@ -4,7 +4,7 @@
 """Defines available actions for HWIDv3 DB."""
 
 import logging
-from typing import List, Optional
+from typing import List, Mapping, Optional
 
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
@@ -16,6 +16,7 @@ from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import common
+from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import hwid_utils
 
 
@@ -86,12 +87,17 @@ class HWIDV3Action(hwid_action.HWIDAction):
   def PatchHeader(self, hwid_db_content: hwid_db_data.HWIDDBData):
     return self._ss_helper.PatchHeader(hwid_db_content)
 
-  def GetComponents(self, with_classes: Optional[List[str]] = None):
+  def GetComponents(
+      self, with_classes: Optional[List[str]] = None
+  ) -> Mapping[str, Mapping[str, database.ComponentInfo]]:
     comps = {}
-    database = self.GetDBV3()
-    with_classes = with_classes or database.GetComponentClasses()
+    db = self.GetDBV3()
+    with_classes = with_classes or db.GetComponentClasses()
     for comp_cls in with_classes:
-      comps[comp_cls] = database.GetComponents(comp_cls)
+      if comp_cls == common.REGION_CLS:
+        comps[comp_cls] = db.GetRegionComponents()
+      else:
+        comps[comp_cls] = db.GetComponents(comp_cls)
     return comps
 
   def ConvertToInternalHWIDDBContent(
