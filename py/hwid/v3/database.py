@@ -501,6 +501,17 @@ class Database(abc.ABC):
   def GetComponentNameByHash(self, comp_cls: str, comp_hash: str) -> str:
     return self._components.GetComponentNameByHash(comp_cls, comp_hash)
 
+  def GetRegionComponents(self) -> Mapping[str, ComponentInfo]:
+    region_comps = self._components.GetComponents('region')
+    ret = {}
+    for region_field_name, is_legacy in self.region_field_legacy_info.items():
+      if is_legacy:
+        continue
+      for region in self.GetEncodedField(region_field_name).values():
+        for region_name in region['region']:
+          ret[region_name] = region_comps[region_name]
+    return ret
+
   @property
   def framework_version(self) -> int:
     return self._framework_version

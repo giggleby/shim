@@ -259,6 +259,12 @@ class DatabaseTest(unittest.TestCase):
     with self.assertRaises(common.HWIDException):
       db.GetComponentClasses('field1', image_id=2)
 
+  def testGetRegionComponents_Succeed(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_region.yaml'),
+        verify_checksum=False)
+    self.assertCountEqual(db.GetRegionComponents(), ['us', 'jp', 'gb'])
+
 
 class ImageIdTest(unittest.TestCase):
 
