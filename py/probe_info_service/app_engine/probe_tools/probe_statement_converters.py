@@ -10,7 +10,8 @@ import collections
 import copy
 import itertools
 import re
-from typing import Any, Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple
+import typing
+from typing import Any, Callable, Collection, List, Mapping, NamedTuple, Optional, Sequence, Tuple
 
 from cros.factory.probe.runtime_probe import probe_config_definition
 from cros.factory.probe.runtime_probe import probe_config_types
@@ -32,6 +33,7 @@ class _IncompatibleError(Exception):
 _ProbeInfoArtifact = probe_info_analytics.ProbeInfoArtifact
 _IBidirectionalProbeInfoConverter = analyzers.IBidirectionalProbeInfoConverter
 _ParsedProbeParameter = analyzers.ParsedProbeParameter
+_CollectedProbeParams = analyzers.CollectedProbeParams
 
 
 class _ParamValueConverter:
@@ -253,6 +255,11 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
     """See base class."""
     return None if self._is_informational else self._probe_statement_param_name
 
+  @property
+  def param_name(self) -> Optional[str]:
+    """The parameter name used in the probe info."""
+    return self._param_name
+
   def ConvertProbeParams(
       self, probe_parameters: Mapping[str, Sequence[_ProbeParamInput]]
   ) -> Tuple[Sequence[Any], Sequence[_ProbeParameterSuggestion]]:
@@ -351,7 +358,7 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
     converted_values = collections.OrderedDict()
     suggestions = []
     for probe_info_param in self._probe_info_params:
-      param_name = next(iter(probe_info_param.probe_info_param_definitions))
+      param_name = probe_info_param.param_name
       converted_values[param_name] = []
       for probe_parameter in probe_parameters[param_name]:
         sub_values, sub_suggestions = probe_info_param.ConvertProbeParams(
@@ -391,7 +398,7 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
     converted_probe_vals = []
     probe_val = probe_values[self._name]
     for probe_info_param in self._probe_info_params:
-      param_name = next(iter(probe_info_param.probe_info_param_definitions))
+      param_name = probe_info_param.param_name
       sub_converted_vals = probe_info_param.ConvertProbeValuesWithInformational(
           {param_name: probe_val})
       converted_probe_vals.extend(sub_converted_vals)
@@ -1130,14 +1137,54 @@ class MMCWithBridgeProbeStatementConverter(_IBidirectionalProbeInfoConverter):
     return normalized_params
 
 
-def GetAllConverters() -> Sequence[analyzers._IBidirectionalProbeInfoConverter]:
+class BatteryProbeInfoConverter(_SingleProbeFuncConverter):
+  """A converter for the battery probe function."""
+
+  PROBED_TRUNCATED_BATTERY = (
+      'Truncated values for battery components are '
+      'probed. Please use the latest ChromeOS test image '
+      'and firmware, and run the probe test bundle again.'
+      ' If the probe test still fails, please contact '
+      'Google.')
+
+  def GenerateSuggestionMsg(
+      self, expected_params: _CollectedProbeParams,
+      generic_probe_params: _CollectedProbeParams,
+      mismatch_param_names: Collection[str]) -> Sequence[str]:
+    """See base class."""
+
+    def IsProbedValueTruncatedOfAnyExpectedValue(comp_idx, param_name):
+      probed_value = generic_probe_params[param_name][comp_idx]
+      return any(
+          expected_value.startswith(probed_value)
+          for expected_value in expected_params[param_name])
+
+    battery_param_names = set()
+    for param in self.probe_params:
+      param = typing.cast(_SingleProbeStatementParam, param)
+      battery_param_names.add(param.param_name)
+
+    mismatch_battery_params = list(mismatch_param_names & battery_param_names)
+
+    if mismatch_battery_params:
+      for comp_idx in range(
+          len(generic_probe_params[mismatch_battery_params[0]])):
+        if all(
+            IsProbedValueTruncatedOfAnyExpectedValue(comp_idx, param_name)
+            for param_name in mismatch_battery_params):
+          return [self.PROBED_TRUNCATED_BATTERY]
+
+    return []
+
+
+def GetAllConverters() -> Sequence[_IBidirectionalProbeInfoConverter]:
   # TODO(yhong): Separate the data piece out the code logic.
   return [
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'audio_codec', 'audio_codec', probe_params=[
               _ProbeFunctionParam('name'),
           ]),
-      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+      BatteryProbeInfoConverter.FromDefaultRuntimeProbeStatementGenerator(
           'battery', 'generic_battery', probe_params=[
               _ProbeFunctionParam('manufacturer'),
               _ProbeFunctionParam('model_name'),

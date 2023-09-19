@@ -10,7 +10,7 @@ import hashlib
 import itertools
 import os
 import typing
-from typing import Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
+from typing import Collection, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 from google.protobuf import text_format
 
@@ -116,6 +116,26 @@ class IBidirectionalProbeInfoConverter(IProbeInfoConverter):
       `ValueError` if the normalization fails.
     """
 
+  def GenerateSuggestionMsg(
+      self, expected_params: CollectedProbeParams,
+      generic_probe_params: CollectedProbeParams,
+      mismatch_param_names: Collection[str]) -> Sequence[str]:
+    """Returns the converter-specific suggestion messages.
+
+    Args:
+      expected_params: A `CollectedProbeParams` whose keys are parameter names
+          and whose values are the corresponding expected values.
+      generic_probe_params: A `CollectedProbeParams` whose keys are parameter
+          names and whose values are the corresponding generic probe values.
+      mismatch_param_names: A set of names of the parameters that do not match
+          between `expected_params` and `generic_probe_params`.
+
+    Returns:
+      A list of generated suggestion messages.
+    """
+    del expected_params, generic_probe_params, mismatch_param_names  # Unused.
+    return []
+
 
 _RESOURCE_PATH = os.path.join(
     os.path.realpath(os.path.dirname(__file__)), 'resources')
@@ -134,7 +154,8 @@ _IProbeDataSource = probe_info_analytics.IProbeDataSource
 _PayloadInvalidError = probe_info_analytics.PayloadInvalidError
 _ProbeParameterSuggestion = probe_info_analytics.ProbeParameterSuggestion
 _ProbeParamValues = Sequence[Union[str, int]]
-_CollectedProbeParams = Mapping[str, _ProbeParamValues]
+
+CollectedProbeParams = Mapping[str, _ProbeParamValues]
 
 
 class _RawProbeStatementConverter(IProbeInfoConverter):
@@ -691,8 +712,8 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
       param_hints[param_name] = '\n'.join(lines)
 
     return (self._GenerateSuggestions(param_hints, probe_data_source),
-            self._GenerateSuggestionMsg(generic_probe_params,
-                                        mismatch_param_names))
+            self._GenerateSuggestionMsg(expected_params, generic_probe_params,
+                                        mismatch_param_names, converter))
 
   def _GenerateSuggestions(
       self,
@@ -714,18 +735,25 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
 
     return list(suggestions.values())
 
-  def _GenerateSuggestionMsg(self, generic_probe_params: _CollectedProbeParams,
-                             mismatch_param_names: Set[str]) -> str:
+  def _GenerateSuggestionMsg(
+      self, expected_params: CollectedProbeParams,
+      generic_probe_params: CollectedProbeParams,
+      mismatch_param_names: Collection[str],
+      converter: IBidirectionalProbeInfoConverter) -> str:
     if not mismatch_param_names:
       return ''
 
     msg_list = [PROBED_GENERIC_COMPS]
 
+    # Check for multiple probe results of the same component category.
     if any(
         len(generic_probe_params[param_name]) > 1
         for param_name in mismatch_param_names):
       msg_list.append(MULTIPLE_PROBED_COMPS)
 
-    # TODO(b/293377003): Generate message specifically for battery components.
+    # Converter-specific checks.
+    converter_msg = converter.GenerateSuggestionMsg(
+        expected_params, generic_probe_params, mismatch_param_names)
+    msg_list.extend(converter_msg)
 
     return ' '.join(msg_list)

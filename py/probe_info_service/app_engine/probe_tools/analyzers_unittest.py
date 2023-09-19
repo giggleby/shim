@@ -14,6 +14,7 @@ from google.protobuf import text_format
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.probe_info_service.app_engine import probe_info_analytics
 from cros.factory.probe_info_service.app_engine.probe_tools import analyzers
+from cros.factory.probe_info_service.app_engine.probe_tools import probe_statement_converters as ps_converters
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
@@ -457,6 +458,89 @@ class ProbeInfoAnalyzerTest(unittest.TestCase):
           result.probe_info_test_results,
           [_ProbeInfoTestResult(result_type=_ProbeInfoTestResult.NOT_PROBED)])
 
+  def testWithBatteryProbeStatementProbeInfo_ThenCanTestByQualBundle(self):
+    # Arrange.
+    pi_analyzer = analyzers.ProbeInfoAnalyzer([
+        converter for converter in ps_converters.GetAllConverters()
+        if converter.GetName() == 'battery.generic_battery'
+    ])
+    pi = text_format.Parse(
+        '''probe_function_name: "battery.generic_battery"
+           probe_parameters {
+            name: "manufacturer" string_value: "ABCDEFGHIJKLMNOP"
+           }
+           probe_parameters {
+            name: "model_name" string_value: "1234567890123456"
+           }''', _ProbeInfo())
+
+    # Act, generate the probe bundle.
+    pds = pi_analyzer.CreateProbeDataSource('comp_name', pi)
+    actual = pi_analyzer.GenerateProbeBundlePayload([pds])
+
+    # Assert, the bundle is generated.
+    self.assertEqual(actual.probe_info_parsed_results[0].result_type,
+                     _ProbeInfoParsedResult.PASSED)
+    self.assertIsNotNone(actual.output)
+    bundle_content = actual.output.content
+
+    with self.subTest('WithNormalGenericProbeResults'):
+      # Arrange, invoke the probe bundle.
+      bundle_output = self._InvokeProbeBundleWithStubRuntimeProbe(
+          bundle_content, runtime_probe_stdout='''
+              { "battery": [ {
+                  "name": "generic",
+                  "values": {
+                    "manufacturer": "XXX",
+                    "model_name": "YYY"
+              } } ] }''')
+
+      result = pi_analyzer.AnalyzeQualProbeTestResultPayload(pds, bundle_output)
+
+      expected_result = _ProbeInfoTestResult(
+          result_type=_ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION,
+          probe_parameter_suggestions=[
+              _ProbeParameterSuggestion(
+                  index=0,
+                  hint=('expected: \"[\'ABCDEFGHIJKLMNOP\']\", probed 1 '
+                        'battery component(s) with value:\ncomponent 1: '
+                        '\"XXX\"')),
+              _ProbeParameterSuggestion(
+                  index=1,
+                  hint=('expected: \"[\'1234567890123456\']\", probed 1 '
+                        'battery component(s) with value:\ncomponent 1: '
+                        '\"YYY\"'))
+          ], suggestion_msg=analyzers.PROBED_GENERIC_COMPS)
+      self.assertEqual(result, expected_result)
+
+    with self.subTest('WithTruncatedProbeValues'):
+      # Arrange, invoke the probe bundle.
+      bundle_output = self._InvokeProbeBundleWithStubRuntimeProbe(
+          bundle_content, runtime_probe_stdout='''
+              { "battery": [ {
+                  "name": "generic",
+                  "values": {
+                    "manufacturer": "ABCDEFG",
+                    "model_name": "1234567"
+              } } ] }''')
+
+      result = pi_analyzer.AnalyzeQualProbeTestResultPayload(pds, bundle_output)
+
+      expected_result = _ProbeInfoTestResult(
+          result_type=_ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION,
+          probe_parameter_suggestions=[
+              _ProbeParameterSuggestion(
+                  index=0,
+                  hint=('expected: \"[\'ABCDEFGHIJKLMNOP\']\", probed 1 '
+                        'battery component(s) with value:\ncomponent 1: '
+                        '\"ABCDEFG\"')),
+              _ProbeParameterSuggestion(
+                  index=1,
+                  hint=('expected: \"[\'1234567890123456\']\", probed 1 '
+                        'battery component(s) with value:\ncomponent 1: '
+                        '\"1234567\"'))
+          ], suggestion_msg=analyzers.PROBED_GENERIC_COMPS + ' ' +
+          ps_converters.BatteryProbeInfoConverter.PROBED_TRUNCATED_BATTERY)
+      self.assertEqual(result, expected_result)
 
 if __name__ == '__main__':
   unittest.main()
