@@ -10,7 +10,7 @@ import hashlib
 import itertools
 import os
 import typing
-from typing import Mapping, NamedTuple, Optional, Sequence, Tuple
+from typing import Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
 
 from google.protobuf import text_format
 
@@ -133,6 +133,8 @@ _NamedFile = probe_info_analytics.NamedFile
 _IProbeDataSource = probe_info_analytics.IProbeDataSource
 _PayloadInvalidError = probe_info_analytics.PayloadInvalidError
 _ProbeParameterSuggestion = probe_info_analytics.ProbeParameterSuggestion
+_ProbeParamValues = Sequence[Union[str, int]]
+_CollectedProbeParams = Mapping[str, _ProbeParamValues]
 
 
 class _RawProbeStatementConverter(IProbeInfoConverter):
@@ -301,6 +303,17 @@ def _GetProbeParameterValue(probe_param: probe_info_analytics.ProbeParameter):
   return getattr(probe_param, which_one_of)
 
 
+USE_LATEST_IMAGE = ('Please use the latest ChromeOS test image and run the '
+                    'probe test bundle again. If the probe test still fails, '
+                    'please contact Google.')
+PROBED_GENERIC_COMPS = ('No component(s) found with all probe values matching '
+                        'AVL attributes. If the probe values are reasonable, '
+                        'please correct the values in AVL.')
+MULTIPLE_PROBED_COMPS = ('There are multiple components probed on the device. '
+                         'Please confirm which values belong to this component'
+                         ' before correcting AVL values.')
+
+
 class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
   """Provides functionalities related to the probe tool."""
 
@@ -467,17 +480,19 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
 
     # TODO(b/293377003): Enable in production.
     if not config.Config().is_prod:
-      suggestions = self._AnalyzeGenericProbeResult(
+      suggestions, suggestion_msg = self._AnalyzeGenericProbeResult(
           preproc_conclusion.probed_generic_components, probe_data_source)
 
-      if suggestions:
+      if suggestions or suggestion_msg:
         return _ProbeInfoTestResult(
             result_type=_ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION,
-            probe_parameter_suggestions=suggestions)
+            probe_parameter_suggestions=suggestions,
+            suggestion_msg=suggestion_msg)
 
     return _ProbeInfoTestResult(
         result_type=_ProbeInfoTestResult.INTRIVIAL_ERROR, intrivial_error_msg=(
-            f'Component(s) not found: ({missing_component_parts}).'))
+            f'Component(s) not found: ({missing_component_parts}).\n'
+            f'{USE_LATEST_IMAGE}'))
 
   def AnalyzeDeviceProbeResultPayload(
       self, probe_data_sources: Sequence[_IProbeDataSource],
@@ -515,10 +530,11 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
       elif not set(_GetComponentPartNames(ps_metadata)) - probed_components:
         pi_test_res.result_type = _ProbeInfoTestResult.PASSED
       else:
-        suggestions = self._AnalyzeGenericProbeResult(
+        suggestions, suggestion_msg = self._AnalyzeGenericProbeResult(
             preproc_conclusion.probed_generic_components, pds)
-        if suggestions:
+        if suggestions or suggestion_msg:
           pi_test_res.probe_parameter_suggestions.extend(suggestions)
+          pi_test_res.suggestion_msg = suggestion_msg
           pi_test_res.result_type = (
               _ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION)
         else:
@@ -612,7 +628,7 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
   def _AnalyzeGenericProbeResult(
       self, generic_probe_result: Mapping[str, Sequence[Mapping[str, str]]],
       probe_data_source: _ProbeDataSourceImpl
-  ) -> Sequence[_ProbeParameterSuggestion]:
+  ) -> Tuple[Sequence[_ProbeParameterSuggestion], str]:
     generic_parsed_results = []
     probe_params = collections.defaultdict(set)
 
@@ -622,7 +638,7 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
         probe_info.probe_function_name)
     if not converter or not isinstance(converter,
                                        IBidirectionalProbeInfoConverter):
-      return []
+      return [], ''
 
     generic_parsed_results = converter.ParseProbeResult(generic_probe_result)
     probe_parameters = converter.GetNormalizedProbeParams(probe_parameters)
@@ -655,26 +671,28 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
 
     # Collect the probed values of the mismatched parameters from generic probe
     # results.
-    probed_params = collections.defaultdict(list)
+    generic_probe_params = collections.defaultdict(list)
     for parsed_result in generic_parsed_results:
       probe_param = parsed_result.probe_parameter
       if probe_param.name in mismatch_param_names:
         val = _GetProbeParameterValue(probe_param)
-        probed_params[probe_param.name].append(val)
+        generic_probe_params[probe_param.name].append(val)
 
     param_hints = {}
     for param_name in mismatch_param_names:
       lines = [
           (f'expected: "{expected_params[param_name]}", '
-           f'probed {len(probed_params[param_name])} '
+           f'probed {len(generic_probe_params[param_name])} '
            f'{param_name_to_category[param_name]} component(s) with value:')
       ]
 
-      for idx, comp_val in enumerate(probed_params[param_name]):
+      for idx, comp_val in enumerate(generic_probe_params[param_name]):
         lines.append(f'component {idx+1}: "{comp_val}"')
       param_hints[param_name] = '\n'.join(lines)
 
-    return self._GenerateSuggestions(param_hints, probe_data_source)
+    return (self._GenerateSuggestions(param_hints, probe_data_source),
+            self._GenerateSuggestionMsg(generic_probe_params,
+                                        mismatch_param_names))
 
   def _GenerateSuggestions(
       self,
@@ -695,3 +713,19 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
             index=idx, hint=param_hints[param_name])
 
     return list(suggestions.values())
+
+  def _GenerateSuggestionMsg(self, generic_probe_params: _CollectedProbeParams,
+                             mismatch_param_names: Set[str]) -> str:
+    if not mismatch_param_names:
+      return ''
+
+    msg_list = [PROBED_GENERIC_COMPS]
+
+    if any(
+        len(generic_probe_params[param_name]) > 1
+        for param_name in mismatch_param_names):
+      msg_list.append(MULTIPLE_PROBED_COMPS)
+
+    # TODO(b/293377003): Generate message specifically for battery components.
+
+    return ' '.join(msg_list)

@@ -77,6 +77,7 @@ message ProbeInfoTestResult {
   ResultType result_type = 1;  // Required.
   string intrivial_error_msg = 2;
   repeated ProbeParameterSuggestion probe_parameter_suggestions = 3;
+  string suggestion_msg = 4;
 }
 
 message ComponentIdentity {
