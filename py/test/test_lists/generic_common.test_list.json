@@ -418,27 +418,10 @@
     "CheckRetimerFirmware": {
       "pytest_name": "check_retimer_firmware",
       "args": {
-        "wait_all_ports_unplugged": false,
         "controller_ports": "eval! constants.retimer.controller_ports",
         "usb_ports": "eval! constants.retimer.usb_ports",
         "min_retimer_version": "eval! constants.retimer.min_retimer_version"
       }
-    },
-    "CheckRetimerFirmwareGroup": {
-      "run_if": "constants.retimer.controller_ports",
-      "subtests": [
-        {
-          "inherit": "CheckRetimerFirmware",
-          "args": {
-            "wait_all_ports_unplugged": true
-          }
-        },
-        {
-          "inherit": "RebootStep",
-          "run_if": "device.factory.retimer_firmware_reboot"
-        },
-        "CheckRetimerFirmware"
-      ]
     },
     "CheckSecdataVersion": {
       "pytest_name": "check_secdata_version",

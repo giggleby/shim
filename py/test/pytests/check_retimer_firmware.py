@@ -7,20 +7,16 @@ Description
 -----------
 Verifies the retimer firmware version.
 
-We do the test twice because the retimer device only gets enumerated if the
-port connect to nothing before boot. We need to make sure the ports are clean.
-See b/181360981#comment6 for more information.
+Retimer device gets enumerated if the port connect to nothing when booting and
+it offlines itself if there is no updates to perform. We need to poke registers
+to enumerate the retimer. See b/299950312#comment2 for more information.
 
 Test Procedure
 --------------
-1. The test tries to find all retimer nodes.
-2. If the test finds all nodes then go to 7.
-3. If the test fails to find all nodes then tell the operator to remove all
-   devices from usb type c ports.
-4. Reboot.
-5. The test tries to find all retimer nodes.
-6. If the test fails to find all nodes then the test fails.
-7. The test compares the actual version and the expected version.
+1. Operator to remove all devices from usb type c ports.
+2. The device enumerates retimers.
+3. The test compares the actual version and the expected version.
+4. The device offlines retimers.
 
 Dependency
 ----------
@@ -34,7 +30,6 @@ The minimal working example::
     "CheckRetimerFirmware": {
       "pytest_name": "check_retimer_firmware",
       "args": {
-        "wait_all_ports_unplugged": false,
         "controller_ports": [
           "0-0:1.1",
           "0-0:3.1"
@@ -45,21 +40,6 @@ The minimal working example::
         ],
         "min_retimer_version": "21.0"
       }
-    },
-    "CheckRetimerFirmwareGroup": {
-      "subtests": [
-        {
-          "inherit": "CheckRetimerFirmware",
-          "args": {
-            "wait_all_ports_unplugged": true
-          }
-        },
-        {
-          "inherit": "RebootStep",
-          "run_if": "not device.factory.retimer_firmware_checked"
-        },
-        "CheckRetimerFirmware"
-      ]
     }
   }
 """
@@ -68,27 +48,24 @@ from distutils import version
 import logging
 
 from cros.factory.device import device_utils
-from cros.factory.test import device_data
 from cros.factory.test.i18n import _
 from cros.factory.test.rules import phase
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
-from cros.factory.utils import type_utils
 
 
 _RETIMER_VERSION_PATH = '/sys/bus/thunderbolt/devices/%s/nvm_version'
 _CONTROLLER_PORTS = ('0-0:1.1', '0-0:3.1', '1-0:1.1', '1-0:3.1')
-_REBOOT_DEVICE_DATA_PATH = 'factory.retimer_firmware_reboot'
+_CONTROLLER_PORTS_PREFIX = ('0-0', '1-0')
+
 
 
 class RetimerFirmwareTest(test_case.TestCase):
   """Retimer firmware test."""
 
   ARGS = [
-      Arg('wait_all_ports_unplugged', bool,
-          'Tell the operator to unplug all usb c ports if the test fails.',
-          default=None),
+      Arg('wait_all_ports_unplugged', bool, 'Deprecated', default=None),
       Arg('controller_ports', list,
           ('All the controller ports that we want ot test. Must be a subset of '
            f'{_CONTROLLER_PORTS!r}'), default=None),
@@ -116,16 +93,11 @@ class RetimerFirmwareTest(test_case.TestCase):
     phase.AssertStartingAtPhase(phase.PVT, self.args.min_retimer_version,
                                 'min_retimer_version must be specified.')
 
-  def _CheckOneRetimer(self, controller_port: str,
-                       wait_before_get_version: bool):
+  def _CheckOneRetimer(self, controller_port: str):
     """Check the firmware version of the retimer.
 
     Args:
       controller_port: The target controller port.
-      wait_before_get_version: If set to True, wait for 20 seconds before
-        retrieving the firmware version. The retimer doesn't get enumerated
-        until 20 seconds after booting. Otherwise, wait for 1 second since we
-        have waited for 20 seconds already.
 
     Raises:
       type_utils.TimeoutError: The device does not get enumerated.
@@ -134,19 +106,11 @@ class RetimerFirmwareTest(test_case.TestCase):
     retimer_version_path = _RETIMER_VERSION_PATH % controller_port
     logging.info('cat %s', retimer_version_path)
 
-    def _TryToGetVersion():
-      try:
-        return self._dut.ReadFile(retimer_version_path)
-      except Exception:
-        return None
-
-    # We need to wait 20 seconds. See b/181360981#comment6.
-    timeout_secs = 21 if wait_before_get_version else 1
-    version_string = sync_utils.WaitFor(_TryToGetVersion, timeout_secs,
-                                        poll_interval=1)
+    version_string = self._dut.ReadFile(retimer_version_path)
     retimer_version = version.LooseVersion(version_string.strip())
     logging.info('retimer_version %s', retimer_version)
 
+    self.ui.SetState(_('Checking the retimer firmware version...'))
     if self.args.min_retimer_version:
       min_retimer_version = version.LooseVersion(self.args.min_retimer_version)
       if retimer_version < min_retimer_version:
@@ -188,27 +152,29 @@ class RetimerFirmwareTest(test_case.TestCase):
       self._WaitOneUSBUnplugged(usb_port)
     self.ui.SetInstruction('')
 
+  def _RetimerSwitcher(self, controller_port_prefix, mode):
+    retimer_switcher_path = (
+        f'/sys/bus/thunderbolt/devices/{controller_port_prefix}/usb4_port1')
+    if mode == 'ON':
+      self.ui.SetState(_('Enumerating Retimer...'))
+      self._dut.CheckCall(f'echo 1 > {retimer_switcher_path}/offline')
+      self._dut.CheckCall(f'echo 1 > {retimer_switcher_path}/rescan')
+    else:
+      self._dut.CheckCall(f'echo 0 > {retimer_switcher_path}/offline')
+
   def runTest(self):
-    device_data.UpdateDeviceData({_REBOOT_DEVICE_DATA_PATH: False})
     errors = {}
-    not_found_ports = {}
-    wait_before_get_version = True
+    self._WaitUSBUnplugged()
+    for controller_port_prefix in _CONTROLLER_PORTS_PREFIX:
+      if any(
+          controller_port.startswith(controller_port_prefix)
+          for controller_port in self.controller_ports):
+        self._RetimerSwitcher(controller_port_prefix, 'ON')
+        self.addCleanup(self._RetimerSwitcher, controller_port_prefix, 'OFF')
     for controller_port in self.controller_ports:
       try:
-        self._CheckOneRetimer(controller_port, wait_before_get_version)
-      except type_utils.TimeoutError as e:
-        not_found_ports[controller_port] = e
+        self._CheckOneRetimer(controller_port)
       except Exception as e:
         errors[controller_port] = e
-      wait_before_get_version = False
-
-    if self.args.wait_all_ports_unplugged:
-      if errors:
-        self.FailTask(f'{errors!r}')
-      if not_found_ports:
-        self._WaitUSBUnplugged()
-        device_data.UpdateDeviceData({_REBOOT_DEVICE_DATA_PATH: True})
-    else:
-      errors.update(not_found_ports.items())
-      if errors:
-        self.FailTask(f'{errors!r}')
+    if errors:
+      self.FailTask(errors)

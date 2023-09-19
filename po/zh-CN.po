@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-09-08 15:03+HKT\n"
+"PO-Revision-Date: 2023-09-19 18:19+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -1897,8 +1897,16 @@ msgid "Updating {component}...."
 msgstr "正在更新 {component}..."
 
 #: ../py/test/pytests/check_retimer_firmware.py
+msgid "Checking the retimer firmware version..."
+msgstr "正在检查 Retimer 韧体版本"
+
+#: ../py/test/pytests/check_retimer_firmware.py
 msgid "Please remove USB type-C cable from port {port}"
 msgstr "请从 port {port} 中移除 USB type-C 线"
+
+#: ../py/test/pytests/check_retimer_firmware.py
+msgid "Enumerating Retimer..."
+msgstr "正在读取 Retimer..."
 
 #: ../py/test/pytests/check_serial_number.py
 msgid "Checking Device State"
