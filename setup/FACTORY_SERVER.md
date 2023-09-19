@@ -20,7 +20,6 @@ following components:
     software, and also controls other services.
 - [Overlord](../go/src/overlord/README.md), a remote monitoring service.
 - [Instalog](../py/instalog), a robust logging pipeline.
-- [DKPS](../py/dkps), a service for managing keys for provisioning.
 
 And usually you will only need to access the server via browser using
 http://localhost:8000 (default port for Dome), which can configure all other

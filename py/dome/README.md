@@ -6,12 +6,11 @@ Dome: The Factory Server Management Console
 
 Dome is our new factory management console. On the factory server side, we have
 different projects responsible for different parts before: Shopfloor, Umpire,
-DKPS, Instalog, etc. They all have their own ways to manage, and require
-knowledge of the command line interface. Therefore, Dome was born: management
-console for all things in just one place, and best of all, it's GUI. In the
-future, you no longer need to set up Shopfloor, Umpire, or Instalog
-independently. You set up Dome, and let Dome help you finish all the tasks for
-you.
+Instalog, etc. They all have their own ways to manage, and require knowledge of
+the command line interface. Therefore, Dome was born: management console for
+all things in just one place, and best of all, it's GUI. In the future, you no
+longer need to set up Shopfloor, Umpire, or Instalog independently. You set up
+Dome, and let Dome help you finish all the tasks for you.
 
 ## Prerequisite
 

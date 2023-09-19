@@ -49,7 +49,6 @@ UMPIRE_RSYNC_PORT_OFFSET = 4
 UMPIRE_INSTALOG_PULL_SOCKET_PORT_OFFSET = 6
 UMPIRE_START_WAIT_SECS = 5
 UMPIRE_INSTALOG_CUSTOMIZED_OUTPUT_PORT_OFFSET = 8
-UMPIRE_DKPS_PORT_OFFSET = 9
 UMPIRE_MAX_PORT_OFFSET = 19
 
 # TODO(littlecvr): use volume container instead of absolute path.
@@ -602,10 +601,7 @@ class Project(django.db.models.Model):
           ), '--publish',
           (f'{int(port + UMPIRE_INSTALOG_CUSTOMIZED_OUTPUT_PORT_OFFSET)}:'
            f'{UMPIRE_BASE_PORT + UMPIRE_INSTALOG_CUSTOMIZED_OUTPUT_PORT_OFFSET}'
-          ), '--publish',
-          (f'{int(port + UMPIRE_DKPS_PORT_OFFSET)}:'
-           f'{int(UMPIRE_BASE_PORT + UMPIRE_DKPS_PORT_OFFSET)}'), '--env',
-          f'UMPIRE_PROJECT_NAME={self.name}', '--env',
+          ), '--env', f'UMPIRE_PROJECT_NAME={self.name}', '--env',
           f'UMPIRE_PROJECT_PORT={port}', '--restart', 'unless-stopped',
           '--name', container_name
       ]

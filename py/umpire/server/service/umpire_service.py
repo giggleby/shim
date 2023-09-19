@@ -33,8 +33,8 @@ from cros.factory.utils import type_utils
 
 # A list of all available umpire services
 _SERVICE_LIST = [
-    'umpire_http', 'rsync', 'shop_floor', 'instalog', 'dkps', 'multicast',
-    'umpire_sync', 'dkps_proxy', 'umpire_timezone'
+    'umpire_http', 'rsync', 'shop_floor', 'instalog', 'multicast',
+    'umpire_sync', 'umpire_timezone'
 ]
 # Service package path
 _SERVICE_PACKAGE = 'cros.factory.umpire.server.service'
