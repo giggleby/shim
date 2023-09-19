@@ -965,7 +965,7 @@ def BuildTouchscreenModuleConverter() -> _IBidirectionalProbeInfoConverter:
                           'string', _CapitalizeHexValueWithoutPrefix,
                           _CapitalizeHexValueWithoutPrefix),
                       probe_statement_param_name='product'),
-              ]),
+              ], probe_function_argument={'device_type': 'touchscreen'}),
       'edid_panel':
           _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
               'display_panel', 'edid', probe_params=[

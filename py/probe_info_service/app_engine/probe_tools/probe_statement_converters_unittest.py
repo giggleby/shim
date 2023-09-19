@@ -1342,7 +1342,9 @@ class TouchscreenModuleConverterTest(ConverterTestCase):
         probe_config_types.ComponentProbeStatement(
             'touchscreen', 'comp_name-touchscreen_controller', {
                 'eval': {
-                    'input_device': {}
+                    'input_device': {
+                        'device_type': 'touchscreen'
+                    }
                 },
                 'expect': {
                     'vendor': [True, 'hex', '!eq 0xAB12'],
@@ -1378,7 +1380,9 @@ class TouchscreenModuleConverterTest(ConverterTestCase):
         probe_config_types.ComponentProbeStatement(
             'touchscreen', 'comp_name-touchscreen_controller', {
                 'eval': {
-                    'input_device': {}
+                    'input_device': {
+                        'device_type': 'touchscreen'
+                    }
                 },
                 'expect': {
                     'vendor': [True, 'hex', '!eq 0xAB12'],
