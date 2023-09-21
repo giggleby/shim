@@ -160,8 +160,9 @@ class UpdateFirmwareTest(test_case.TestCase):
     else:
       command += ['--mode=factory']
 
-    logging.info('Pass --unlock_me to firmware updater to unlock ME region.')
-    command += ['--unlock_me']
+    logging.info('Pass `--quirks unlock_csme_nissa` to firmware updater to '
+                 'unlock CSME region.')
+    command += ['--quirks', 'unlock_csme_nissa']
 
     returncode = self.ui.PipeProcessOutputToUI(command)
 
