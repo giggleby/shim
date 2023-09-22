@@ -19,7 +19,7 @@ from cros.factory.external.py_lib import dbus
 
 try:
   sys.path.append('/usr/local/lib/flimflam/test')
-  import flimflam
+  import flimflam  # type: ignore
 except ImportError:
   pass
 

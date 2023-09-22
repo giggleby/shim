@@ -126,6 +126,9 @@ LINT_BLOCKLIST=$(shell cat $(MK_DIR)/pylint.blocklist | grep -v '^\#')
 LINT_FILES=$(shell find py go po devtools -name '*.py' -type f | sort)
 LINT_ALLOWLIST=$(filter-out $(LINT_BLOCKLIST),$(wildcard $(LINT_FILES)))
 
+MYPY_FILES=./
+MYPY_CONFIG ?= $(MK_DIR)/mypy.ini
+
 CROS_CHROOT_VERSION := $(wildcard /etc/cros_chroot_version)
 ENTER_CHROOT_PREFIX := $(if $(CROS_CHROOT_VERSION)\
   ,,cros_sdk --working-dir . )
@@ -144,6 +147,7 @@ PRESUBMIT_TARGETS := \
   presubmit-shebang \
   presubmit-markdown \
   presubmit-po \
+  presubmit-mypy \
   presubmit-test
 
 # Virtual targets. The '.phony' is a special hack to allow making targets with
@@ -472,6 +476,11 @@ lint:
 	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
 	$(ENTER_CHROOT_PREFIX)$(MK_DIR)/pylint.sh $(LINT_ALLOWLIST)
 
+mypy:
+	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
+	$(ENTER_CHROOT_PREFIX)$(MK_DIR)/mypy.sh mypy \
+		--config-file="$(MYPY_CONFIG)" $(MYPY_FILES)
+
 format:
 	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
 	$(ENTER_CHROOT_PREFIX)$(MK_DIR)/presubmit_format.py \
@@ -509,6 +518,9 @@ presubmit-markdown:
 
 presubmit-po:
 	@$(MK_DIR)/presubmit_po.py po
+
+presubmit-mypy:
+	@$(MAKE) mypy MYPY_FILES="$(filter %.py,$(PRESUBMIT_FILES))" 2>/dev/null
 
 presubmit-test:
 	@$(MK_DIR)/$@.py $(PRESUBMIT_FILES)

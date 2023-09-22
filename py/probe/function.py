@@ -13,7 +13,7 @@ from cros.factory.utils import arg_utils
 # The index for indicating the situation that there is only one argument.
 _FAKE_INDEX = 'FAKE_INDEX'
 NOTHING = []
-INITIAL_DATA = [{}]
+INITIAL_DATA = [{}]  # type: ignore
 
 # The registered function table mapping from the name to the function class.
 _function_map = {}
