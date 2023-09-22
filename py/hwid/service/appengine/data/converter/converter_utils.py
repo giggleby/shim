@@ -12,6 +12,8 @@ from cros.factory.hwid.service.appengine.data.converter import cpu_converter
 from cros.factory.hwid.service.appengine.data.converter import display_panel_converter
 from cros.factory.hwid.service.appengine.data.converter import dram_converter
 from cros.factory.hwid.service.appengine.data.converter import pcie_emmc_storage_assembly_converter
+from cros.factory.hwid.service.appengine.data.converter import pcie_emmc_storage_bridge_converter
+from cros.factory.hwid.service.appengine.data.converter import storage_bridge_converter
 from cros.factory.hwid.service.appengine.data.converter import storage_converter
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
@@ -36,10 +38,14 @@ _DEFAULT_CONVERTER_COLLECTION_MAP = {
         dram_converter.GetConverterCollection(),
     'storage':
         storage_converter.GetConverterCollection(),
+    'storage_bridge':
+        storage_bridge_converter.GetConverterCollection(),
     'video':
         camera_converter.GetConverterCollection(category='video'),
     'pcie_emmc_storage_assembly':
         pcie_emmc_storage_assembly_converter.GetConverterCollection(),
+    'pcie_emmc_storage_bridge':
+        pcie_emmc_storage_bridge_converter.GetConverterCollection(),
 }
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 
