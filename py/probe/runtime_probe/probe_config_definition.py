@@ -225,6 +225,18 @@ def _GetAllProbeStatementDefinitions():
                             'The probed kernel name of audio codec comp.')
   probe_statement_definitions['audio_codec'] = builder.Build()
 
+  # Create PCIe-eMMC storage bridge builder
+  builder = probe_config_types.ProbeStatementDefinitionBuilder(
+      'emmc_pcie_storage_bridge')
+  builder.AddProbeFunction('mmc_host',
+                           'The probe function for MMC host components.')
+  builder.AddHexOutputField('pci_vendor_id', 'PCIe vendor ID',
+                            num_value_digits=4)
+  builder.AddHexOutputField('pci_device_id', 'PCIe device ID',
+                            num_value_digits=4)
+  builder.AddHexOutputField('pci_class', 'PCIe class code', num_value_digits=6)
+  probe_statement_definitions['emmc_pcie_storage_bridge'] = builder.Build()
+
   return probe_statement_definitions
 
 

@@ -278,5 +278,65 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
     self.assertCountEqual(actual.output, expected_probe_statements)
 
 
+class PCIeeMMCStorageBridgeProbeStatementConverterTest(unittest.TestCase):
+
+  def setUp(self):
+    self._converter = (
+        ps_converters.BuildPCIeeMMCStorageBridgeStatementConverter())
+
+  def testGenerateDefinition(self):
+    actual = self._converter.GenerateDefinition()
+
+    expect = text_format.Parse(
+        '''
+        name: "emmc_pcie_storage_bridge.mmc_host"
+        description: "The probe function for MMC host components."
+        parameter_definitions {
+          name: "pci_vendor_id"
+          description: "PCIe vendor ID"
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "pci_device_id"
+          description: "PCIe device ID"
+          value_type: STRING
+        }
+        parameter_definitions {
+          name: "pci_class"
+          description: "PCIe class code"
+          value_type: STRING
+        }
+    ''', probe_info_analytics.ProbeFunctionDefinition())
+    self.assertEqual(actual, expect)
+
+  def testParseProbeParam_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('pci_vendor_id', '0xab12'),
+        _CreateStrProbeParam('pci_device_id', '0xcd34'),
+        _CreateStrProbeParam('pci_class', '0x010809'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'emmc_pcie_storage_bridge', 'comp_name', {
+                'eval': {
+                    'mmc_host': {
+                        'is_emmc_attached': True
+                    }
+                },
+                'expect': {
+                    'pci_vendor_id': [True, 'hex', '!eq 0xAB12'],
+                    'pci_device_id': [True, 'hex', '!eq 0xCD34'],
+                    'pci_class': [True, 'hex', '!eq 0x010809'],
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+
 if __name__ == '__main__':
   unittest.main()

@@ -757,6 +757,21 @@ def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
       sub_converters)
 
 
+def BuildPCIeeMMCStorageBridgeStatementConverter() -> _IProbeStatementConverter:
+  return _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+      'emmc_pcie_storage_bridge', 'mmc_host', [
+          _ProbeFunctionParam(
+              'pci_vendor_id', value_converter=_ParamValueConverter(
+                  'string', _RemoveHexPrefixAndCapitalize)),
+          _ProbeFunctionParam(
+              'pci_device_id', value_converter=_ParamValueConverter(
+                  'string', _RemoveHexPrefixAndCapitalize)),
+          _ProbeFunctionParam(
+              'pci_class', value_converter=_ParamValueConverter(
+                  'string', _RemoveHexPrefixAndCapitalize)),
+      ], probe_function_argument={'is_emmc_attached': True})
+
+
 _MMC_BASIC_PARAMS = (
     _ProbeFunctionParam(
         'mmc_manfid', value_converter=_ParamValueConverter(
@@ -966,4 +981,5 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
       _BuildCPUProbeStatementConverter(),
       BuildTouchscreenModuleConverter(),
       MMCWithBridgeProbeStatementConverter(),
+      BuildPCIeeMMCStorageBridgeStatementConverter(),
   ]
