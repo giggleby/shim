@@ -67,8 +67,8 @@ class StorageConverterCollectionTest(unittest.TestCase):
         'device': '0x5678',
     }
     probe_info = converter_test_utils.ProbeInfoFromMapping({
-        'pci_vendor': '0x1234',
-        'pci_device': '0x5678',
+        'pci_vendor_id': '0x1234',
+        'pci_device_id': '0x5678',
     })
 
     result = self._converter_collection.Match(comp_values, probe_info)
