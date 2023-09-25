@@ -37,5 +37,7 @@ ENV DATASTORE_HOST="http://localhost:8081"
 ENV DATASTORE_PROJECT_ID="chromeos-hwid-local-docker"
 ENV DEPLOYMENT_TYPE="integration_test"
 ENV START_SERVER_SCRIPT="${workdir}/start_server.sh"
+ENV CROS_REGIONS_DATABASE="${workdir}/hwid/resource/cros-regions.json"
+
 
 CMD bash "${START_SERVER_SCRIPT}" "${DEPLOYMENT_TYPE}"

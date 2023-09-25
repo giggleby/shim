@@ -994,6 +994,15 @@ message UpdateAudioCodecKernelNamesRequest {
 message UpdateAudioCodecKernelNamesResponse {
 }
 
+// the request to get all valid region codes in ChromeOS.
+message GetRegionListRequest {
+}
+
+// The response containing all valid region codes in ChromeOS.
+message GetRegionListResponse {
+  repeated string region_codes = 1;
+}
+
 service HwidService {
   rpc GetProjects(ProjectsRequest) returns (ProjectsResponse);
 
@@ -1096,4 +1105,8 @@ service HwidService {
   // Update allowlist / blocklist of kernel names of audio codec components.
   rpc UpdateAudioCodecKernelNames(UpdateAudioCodecKernelNamesRequest)
     returns (UpdateAudioCodecKernelNamesResponse);
+
+  // Get all valid region code in ChromeOS.
+  rpc GetRegionList(GetRegionListRequest)
+    returns (GetRegionListResponse);
 }

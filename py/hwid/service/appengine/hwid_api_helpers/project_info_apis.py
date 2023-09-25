@@ -11,6 +11,11 @@ from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configl
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+from cros.factory.test.l10n import regions
+
+
+GET_REGION_LIST_RESPONSE = hwid_api_messages_pb2.GetRegionListResponse(
+    region_codes=list(regions.REGIONS.keys()))
 
 
 def _NormalizeProjectString(string: str) -> Optional[str]:
@@ -107,3 +112,8 @@ class ProjectInfoShard(common_helper.HWIDServiceShardBase):
 
     return hwid_api_messages_pb2.ComponentsResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS, components=components_list)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def GetRegionList(self, unused_request):
+    return GET_REGION_LIST_RESPONSE

@@ -13,6 +13,7 @@ from cros.factory.hwid.service.appengine.hwid_api_helpers import project_info_ap
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
+from cros.factory.test.l10n import regions
 
 
 AVLInfoMsg = hwid_api_messages_pb2.AvlInfo
@@ -242,6 +243,11 @@ class ProtoRPCServiceTest(unittest.TestCase):
                 FieldMsg(name='key', value='value')
             ], status=SupportStatus.SUPPORTED),
         ])
+
+  def testGetRegionList_Success(self):
+    resp = self.service.GetRegionList(
+        hwid_api_messages_pb2.GetRegionListRequest())
+    self.assertCountEqual(resp.region_codes, regions.REGIONS.keys())
 
 
 if __name__ == '__main__':
