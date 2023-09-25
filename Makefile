@@ -528,9 +528,9 @@ else
 	  PYTHONDONTWRITEBYTECODE=true $(MAKE) $(target)${\n})
 endif
 
-coverage:
+coverage_report:
 	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
-	$(ENTER_CHROOT_PREFIX)$(MK_DIR)/coverage.sh
+	$(ENTER_CHROOT_PREFIX)bin/coverage_report
 
 test:
 	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))

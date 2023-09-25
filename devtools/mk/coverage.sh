@@ -14,13 +14,19 @@ main(){
   load_venv "${COVERAGE_VENV}" "${COVERAGE_REQUIREMENTS}" || exit 1
 
   test_files="$1"
-  report_files="$2"
+  includes="$2"
+  excludes="$3"
+  html="$4"
+
   mkdir -p .coverage_data
   bin/run_unittests ${test_files} --coverage
   coverage combine >/dev/null
 
-  bin/factory_env python3 py/tools/coverage_report.py \
-   --include "${report_files}"
+  coverage report --include "${includes}" --omit "${excludes}"
+  if [ -n "${html}" ]; then
+    coverage html --include "${includes}" --omit "${excludes}"
+  fi
+
   mk_success
 }
 

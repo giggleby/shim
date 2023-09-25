@@ -6,6 +6,8 @@ source = .
 
 data_file = .coverage_data/.coverage
 
+branch = True
+
 [report]
 
 sort = cover

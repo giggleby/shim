@@ -12,8 +12,12 @@ from cros.factory.tools import run_unittests
 
 def main():
   parser = argparse.ArgumentParser(description='Show the coverage report.')
-  parser.add_argument('--include', '-i', default='',
+  parser.add_argument('--include', nargs='*', default=[],
                       help='Only files matched the pattern will be reported.')
+  parser.add_argument('--nohtml', dest='html', action='store_false',
+                      help='Not create a coverage report in html files.')
+  parser.add_argument('test', nargs='*', help='Unittest filenames.')
+
   args = parser.parse_args()
 
   excluded = ['*_unittest.py', '*/__init__.py']
@@ -23,11 +27,10 @@ def main():
     else:
       excluded.append(e + '/*')
 
-  cmd = ['coverage', 'report', '--omit', ','.join(excluded)]
-  if args.include:
-    cmd += ['--include', args.include]
-
-  subprocess.check_call(cmd)
+  subprocess.check_call([
+      './devtools/mk/coverage.sh', ' '.join(args.test), ','.join(args.include),
+      ','.join(excluded), '0' if args.html else ''
+  ])
 
 
 if __name__ == '__main__':
