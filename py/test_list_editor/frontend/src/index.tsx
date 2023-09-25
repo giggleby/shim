@@ -5,7 +5,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { EditEmptyItemConfigPanel } from "./components/edit_empty_item_config_panel";
+import { EditEmptyPanel } from "./components/edit_empty_panel";
+import { EditItemConfigPanel } from "./components/edit_item_config_panel";
+import { EditMainPanel } from "./components/edit_main_panel";
 import "./index.css";
+import { Edit } from "./pages/edit";
 import { ErrorPage } from "./pages/error";
 import { Landing } from "./pages/landing";
 import { Upload } from "./pages/upload";
@@ -21,6 +26,31 @@ const router = createBrowserRouter([
     path: "/upload",
     element: <Upload />,
     errorElement: <ErrorPage />,
+  },
+  {
+    path: "/edit",
+    element: <Edit />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        index: true,
+        element: <EditEmptyPanel />,
+      },
+      {
+        path: ":testListId",
+        element: <EditMainPanel />,
+        children: [
+          {
+            index: true,
+            element: <EditEmptyItemConfigPanel />,
+          },
+          {
+            path: ":testItemId",
+            element: <EditItemConfigPanel />,
+          },
+        ],
+      },
+    ],
   },
 ]);
 
