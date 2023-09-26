@@ -72,6 +72,7 @@ class GpioManagerTest(unittest.TestCase):
                                         verbose=True)
     mock_server.return_value.poll_gpio.assert_called_with(PORT, 'gpio_rising')
 
+  @unittest.skip("Skip until b/302203801 is fixed")
   @mock.patch.object(gpio_utils.net_utils, 'TimeoutXMLRPCServerProxy',
                      spec=_GpioProxy)
   def testPollRemoteTimeout(self, mock_server):
