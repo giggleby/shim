@@ -122,12 +122,8 @@ class GenericStorageMMCProbeStatementGeneratorTest(unittest.TestCase):
             },
             'expect': {
                 'sectors': [True, 'int', '!eq 112233'],
-                'mmc_hwrev': [False, 'hex'],
                 'mmc_name': [True, 'str', '!eq ABCxyz'],
                 'mmc_manfid': [True, 'hex', '!eq 0x22'],
-                'mmc_oemid': [True, 'hex', '!eq 0x4455'],
-                'mmc_prv': [True, 'hex', '!eq 0x0A'],
-                'mmc_serial': [True, 'hex', '!eq 0x1234ABCD']
             }
         })
     ps_gen = _vp_generator.GetAllProbeStatementGenerators()['storage'][0]
@@ -140,11 +136,6 @@ class GenericStorageMMCProbeStatementGeneratorTest(unittest.TestCase):
     invalid_comp_values = dict(comp_values)
     del invalid_comp_values['manfid']
     self.assertRaises(MissingComponentValueError, ps_gen.TryGenerate, 'n1',
-                      invalid_comp_values)
-
-    # Should report not supported because `oemid` has incorrect bit length.
-    invalid_comp_values = dict(comp_values, oemid='0x44556677')
-    self.assertRaises(ProbeStatementConversionError, ps_gen.TryGenerate, 'n1',
                       invalid_comp_values)
 
     # Should report not supported because `name` should be a string of 6 bytes.

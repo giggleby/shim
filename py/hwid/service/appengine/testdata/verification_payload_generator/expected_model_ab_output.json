@@ -401,7 +401,7 @@
         "eval": {
           "generic_battery": {}
         },
-        "expect":{
+        "expect": {
           "chemistry": [
             false,
             "str"
@@ -673,10 +673,6 @@
           "generic_storage": {}
         },
         "expect": {
-          "mmc_hwrev": [
-            false,
-            "hex"
-          ],
           "mmc_manfid": [
             true,
             "hex",
@@ -686,21 +682,6 @@
             true,
             "str",
             "!eq ABCxyz"
-          ],
-          "mmc_oemid": [
-            true,
-            "hex",
-            "!eq 0x4455"
-          ],
-          "mmc_prv": [
-            true,
-            "hex",
-            "!eq 0x0A"
-          ],
-          "mmc_serial": [
-            true,
-            "hex",
-            "!eq 0x1234ABCD"
           ],
           "sectors": [
             true,
@@ -2900,11 +2881,6 @@
           "generic_storage": {}
         },
         "expect": {
-          "mmc_hwrev": [
-            true,
-            "hex",
-            "!eq 0x0"
-          ],
           "mmc_manfid": [
             true,
             "hex",
@@ -2914,20 +2890,6 @@
             true,
             "str",
             "!eq STORAG"
-          ],
-          "mmc_oemid": [
-            true,
-            "hex",
-            "!eq 0x0001"
-          ],
-          "mmc_prv": [
-            true,
-            "hex",
-            "!eq 0x01"
-          ],
-          "mmc_serial": [
-            false,
-            "hex"
           ],
           "sectors": [
             true,
@@ -2941,11 +2903,6 @@
           "generic_storage": {}
         },
         "expect": {
-          "mmc_hwrev": [
-            true,
-            "hex",
-            "!eq 0x0"
-          ],
           "mmc_manfid": [
             true,
             "hex",
@@ -2955,20 +2912,6 @@
             true,
             "str",
             "!eq STORAG"
-          ],
-          "mmc_oemid": [
-            true,
-            "hex",
-            "!eq 0x0001"
-          ],
-          "mmc_prv": [
-            true,
-            "hex",
-            "!eq 0x01"
-          ],
-          "mmc_serial": [
-            false,
-            "hex"
           ],
           "sectors": [
             true,
