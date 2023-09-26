@@ -45,6 +45,16 @@ from cros.factory.utils import json_utils
 _CollectionElementType = TypeVar('_CollectionElementType')
 
 
+def _ConvertRequestToMetadata(request):
+  # TODO(wyuang): deprecate outer metadata fields in the request message.
+  return hwid_api_messages_pb2.DbChangeRequestMetadata(
+      bug_number=request.bug_number,
+      description=(request.description if request.HasField("description") else
+                   None), original_requester=request.original_requester,
+      reviewer_emails=request.reviewer_emails, cc_emails=request.cc_emails,
+      auto_approved=request.auto_approved)
+
+
 class Collection(abc.ABC, Generic[_CollectionElementType],
                  Container[_CollectionElementType], Sized,
                  Iterable[_CollectionElementType]):
@@ -731,6 +741,8 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def CreateHwidDbEditableSectionChangeCl(self, request):
+    request_metadata = request.request_metadata or _ConvertRequestToMetadata(
+        request)
     project = _NormalizeProjectString(request.project)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     cache = self._session_cache_adapter.Get(request.validation_token)
@@ -766,11 +778,11 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
         textwrap.dedent(f"""\
             ({int(time.time())}) {project}: {commit_title}
 
-            Requested by: {request.original_requester}
+            Requested by: {request_metadata.original_requester}
             Warning: all posted comments will be sent back to the requester.
 
             %s
-            """) % request.description
+            """) % request_metadata.description
     ]
 
     if feature_matcher_build_result.commit_message:
@@ -780,15 +792,16 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
       commit_msg.append(
           f'DLM-VALIDATION-EXEMPTION={request.dlm_validation_exemption}')
 
-    commit_msg.append(f'BUG=b:{request.bug_number}')
+    commit_msg.append(f'BUG=b:{request_metadata.bug_number}')
     commit_msg = '\n'.join(commit_msg)
 
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
           name=project, hwid_db_contents=analysis.new_hwid_db_contents_external,
-          commit_msg=commit_msg, reviewers=request.reviewer_emails,
-          cc_list=request.cc_emails, bot_commit=request.auto_approved,
-          commit_queue=request.auto_approved,
+          commit_msg=commit_msg, reviewers=request_metadata.reviewer_emails,
+          cc_list=request_metadata.cc_emails,
+          bot_commit=request_metadata.auto_approved,
+          commit_queue=request_metadata.auto_approved,
           hwid_db_contents_internal=analysis.new_hwid_db_contents_internal,
           feature_matcher_source=(
               feature_matcher_build_result.feature_matcher_source))
@@ -817,6 +830,8 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def CreateHwidDbFirmwareInfoUpdateCl(self, request):
+    request_metadata = request.request_metadata or _ConvertRequestToMetadata(
+        request)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     bundle_record = request.bundle_record
     request_uuid = str(uuid.uuid4())
@@ -908,12 +923,12 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
       commit_msg = textwrap.dedent(f"""\
           ({int(time.time())}) {db.project}: HWID Firmware Info Update
 
-          Requested by: {request.original_requester}
+          Requested by: {request_metadata.original_requester}
           Warning: all posted comments will be sent back to the requester.
 
           %s
 
-          BUG=b:{request.bug_number}""") % request.description
+          BUG=b:{request_metadata.bug_number}""") % request_metadata.description
       all_commits.append((model, hwid_db_contents_external,
                           hwid_db_contents_internal, commit_msg))
 
@@ -924,9 +939,10 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
         try:
           cl_number = live_hwid_repo.CommitHWIDDB(
               name=model_name, hwid_db_contents=external_db,
-              commit_msg=commit_msg, reviewers=request.reviewer_emails,
-              cc_list=request.cc_emails, bot_commit=request.auto_approved,
-              commit_queue=request.auto_approved,
+              commit_msg=commit_msg, reviewers=request_metadata.reviewer_emails,
+              cc_list=request_metadata.cc_emails,
+              bot_commit=request_metadata.auto_approved,
+              commit_queue=request_metadata.auto_approved,
               hwid_db_contents_internal=internal_db)
         except hwid_repo.HWIDRepoError:
           logging.exception(
@@ -1242,10 +1258,12 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def CreateHwidDbInitCl(self, request):
+    request_metadata = request.request_metadata or _ConvertRequestToMetadata(
+        request)
     project = _NormalizeProjectString(request.project)
     board = _NormalizeProjectString(request.board)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
-    if not request.bug_number:
+    if not request_metadata.bug_number:
       raise common_helper.ConvertExceptionToProtoRPCException(
           ValueError('Bug number is required.'))
     try:
@@ -1275,17 +1293,19 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
     commit_msg = textwrap.dedent(f"""\
         ({int(time.time())}) {project}: Initialize HWID Config
 
-        Requested by: {request.original_requester}
+        Requested by: {request_metadata.original_requester}
         Warning: all posted comments will be sent back to the requester.
 
-        BUG=b:{request.bug_number}
+        BUG=b:{request_metadata.bug_number}
         """)
     new_metadata = hwid_repo.HWIDDBMetadata(project, board, 3, f'v3/{project}')
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
           name=project, hwid_db_contents=db_content, commit_msg=commit_msg,
-          reviewers=request.reviewer_emails, cc_list=request.cc_emails,
-          bot_commit=request.auto_approved, commit_queue=request.auto_approved,
+          reviewers=request_metadata.reviewer_emails,
+          cc_list=request_metadata.cc_emails,
+          bot_commit=request_metadata.auto_approved,
+          commit_queue=request_metadata.auto_approved,
           update_metadata=new_metadata)
     except hwid_repo.HWIDRepoError:
       logging.exception(
@@ -1320,6 +1340,8 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def SetFirmwareInfoSupportStatus(self, request):
+    request_metadata = request.request_metadata or _ConvertRequestToMetadata(
+        request)
     project = _NormalizeProjectString(request.project)
     live_hwid_repo, action = self._GetRepoAndAction(project)
     resp = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusResponse()
@@ -1374,18 +1396,20 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
     commit_msg = textwrap.dedent(f"""\
         ({int(time.time())}) {project}: HWID Firmware Support Status Update
 
-        Requested by: {request.original_requester}
+        Requested by: {request_metadata.original_requester}
         Warning: all posted comments will be sent back to the requester.
 
         %s
 
-        BUG=b:{request.bug_number}""") % request.description
+        BUG=b:{request_metadata.bug_number}""") % request_metadata.description
 
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
           name=project, hwid_db_contents=external_db, commit_msg=commit_msg,
-          reviewers=request.reviewer_emails, cc_list=request.cc_emails,
-          bot_commit=request.auto_approved, commit_queue=request.auto_approved,
+          reviewers=request_metadata.reviewer_emails,
+          cc_list=request_metadata.cc_emails,
+          bot_commit=request_metadata.auto_approved,
+          commit_queue=request_metadata.auto_approved,
           hwid_db_contents_internal=internal_db)
     except hwid_repo.HWIDRepoError:
       logging.exception(

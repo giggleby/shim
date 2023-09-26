@@ -63,6 +63,7 @@ _FirmwareRecord = _FactoryBundleRecord.FirmwareRecord
 _SessionCache = ss_helper_module.SessionCache
 _ApprovalStatus = change_unit_utils.ApprovalStatus
 _ActionHelperCls = v3_action_helper.HWIDV3SelfServiceActionHelper
+_DbChangeRequestMetadata = hwid_api_messages_pb2.DbChangeRequestMetadata
 
 HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -1635,7 +1636,8 @@ class SelfServiceShardTest(unittest.TestCase):
     expected_db_content = _ActionHelperCls.RemoveHeader(db_content)
 
     req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
-        project='proj', board='board', phase='EVT', bug_number=12345)
+        project='proj', board='board', phase='EVT',
+        request_metadata=_DbChangeRequestMetadata(bug_number=12345))
     resp = self.service.CreateHwidDbInitCl(req)
 
     self.assertEqual(resp.commit.cl_number, 123)
@@ -1645,7 +1647,8 @@ class SelfServiceShardTest(unittest.TestCase):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
 
     req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
-        project='proj', board='board', phase='EVT', bug_number=12345)
+        project='proj', board='board', phase='EVT',
+        request_metadata=_DbChangeRequestMetadata(bug_number=12345))
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
       self.service.CreateHwidDbInitCl(req)

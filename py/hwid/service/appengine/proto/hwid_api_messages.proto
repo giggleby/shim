@@ -60,6 +60,22 @@ message Label {
   string value = 3;
 }
 
+message DbChangeRequestMetadata {
+  // ID of related bug.
+  int64 bug_number = 1;
+  // Additional description to be commented on CL.
+  string description = 2;
+  // Original requester.
+  string original_requester = 3;
+  // Reviewer list for this CL.
+  repeated string reviewer_emails = 4;
+  // CC list for this CL.
+  repeated string cc_emails = 5;
+  // A bool indicating if this CL should be auto-approved.
+  bool auto_approved = 6;
+}
+
+
 // A request for all projects supported by the server.
 message ProjectsRequest {
   // List of BOM file versions to include.
@@ -424,17 +440,19 @@ message CreateHwidDbEditableSectionChangeClRequest {
   // justify that the contents have been validated.
   string validation_token = 3;
 
-  string original_requester = 5;
-  string description = 4;
-  int64 bug_number = 6;
-  repeated string reviewer_emails = 7;
-  repeated string cc_emails = 8;
+  string original_requester = 5 [deprecated = true];
+  string description = 4 [deprecated = true];
+  int64 bug_number = 6 [deprecated = true];
+  repeated string reviewer_emails = 7 [deprecated = true];
+  repeated string cc_emails = 8 [deprecated = true];
   // A bool indicating if this CL should be auto-approved.
-  bool auto_approved = 9;
+  bool auto_approved = 9 [deprecated = true];
   // The external resource required for creating HWID DB changes.
   HwidDbExternalResource db_external_resource = 10;
   // The exemption to skip DLM validation.
   string dlm_validation_exemption = 11;
+  // CL metadata
+  DbChangeRequestMetadata request_metadata = 12;
 }
 
 message CreateHwidDbEditableSectionChangeClResponse {
@@ -795,17 +813,19 @@ message CreateHwidDbFirmwareInfoUpdateClRequest {
   // Record generated during finalizing factory bundle.
   FactoryBundleRecord bundle_record = 1;
   // Original requester from Easy Bundle Creation.
-  string original_requester = 2;
+  string original_requester = 2 [deprecated = true];
   // Additional description to be commented on CL.
-  string description = 3;
+  string description = 3 [deprecated = true];
   // Reviewer list for this CL.
-  repeated string reviewer_emails = 4;
+  repeated string reviewer_emails = 4 [deprecated = true];
   // CC list for this CL.
-  repeated string cc_emails = 5;
+  repeated string cc_emails = 5 [deprecated = true];
   // A bool indicating if this CL should be auto-approved.
-  bool auto_approved = 6;
+  bool auto_approved = 6 [deprecated = true];
   // ID of related bug.
-  int64 bug_number = 7;
+  int64 bug_number = 7 [deprecated = true];
+  // CL metadata
+  DbChangeRequestMetadata request_metadata = 8;
 }
 
 // HWID DB Commit info
@@ -831,15 +851,17 @@ message CreateHwidDbInitClRequest {
   // Initial build phase.
   string phase = 3;
   // ID of related bug.
-  int64 bug_number = 4;
+  int64 bug_number = 4 [deprecated = true];
   // Original initialization requester.
-  string original_requester = 5;
+  string original_requester = 5 [deprecated = true];
   // Reviewer list for this CL.
-  repeated string reviewer_emails = 6;
+  repeated string reviewer_emails = 6 [deprecated = true];
   // CC list for this CL.
-  repeated string cc_emails = 7;
+  repeated string cc_emails = 7 [deprecated = true];
   // A bool indicating if this CL should be auto-approved.
-  bool auto_approved = 8;
+  bool auto_approved = 8 [deprecated = true];
+  // CL metadata
+  DbChangeRequestMetadata request_metadata = 9;
 }
 
 // The response of create initial HWID DB CL.
@@ -884,19 +906,21 @@ message SetFirmwareInfoSupportStatusRequest {
   // Project name.
   string project = 1;
   // ID of related bug.
-  int64 bug_number = 2;
+  int64 bug_number = 2 [deprecated = true];
   // Additional description to be commented on CL.
-  string description = 3;
+  string description = 3 [deprecated = true];
   // Original requester from Easy Bundle Creation.
-  string original_requester = 4;
+  string original_requester = 4 [deprecated = true];
   // Version string of firmware to be queried.
   string version_string = 5;
   // Reviewer list for this CL.
-  repeated string reviewer_emails = 6;
+  repeated string reviewer_emails = 6 [deprecated = true];
   // CC list for this CL.
-  repeated string cc_emails = 7;
+  repeated string cc_emails = 7 [deprecated = true];
   // A bool indicating if this CL should be auto-approved.
-  bool auto_approved = 8;
+  bool auto_approved = 8 [deprecated = true];
+  // CL metadata
+  DbChangeRequestMetadata request_metadata = 9;
 }
 
 // The response of setting firmware info support status.
