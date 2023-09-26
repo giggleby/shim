@@ -400,15 +400,16 @@ class DatabaseBuilder:
 
   @_EnsureInBuilderContext
   def AddRegions(self, new_regions, region_field_name='region_field'):
-    if self._database.GetComponentClasses(region_field_name) != set(['region']):
+    if self._database.GetComponentClasses(region_field_name) != set(
+        [common.REGION_CLS]):
       raise ValueError(
           f'"{region_field_name}" is not a valid region field name.')
 
     added_regions = set()
     for region_comp in self._database.GetEncodedField(
         region_field_name).values():
-      if region_comp['region']:
-        added_regions.add(region_comp['region'][0])
+      if region_comp[common.REGION_CLS]:
+        added_regions.add(region_comp[common.REGION_CLS][0])
 
     for new_region in new_regions:
       if new_region in added_regions:
@@ -416,8 +417,8 @@ class DatabaseBuilder:
                         new_region)
         continue
       added_regions.add(new_region)
-      self._database.AddEncodedFieldComponents(region_field_name,
-                                               {'region': [new_region]})
+      self._database.AddEncodedFieldComponents(
+          region_field_name, {common.REGION_CLS: [new_region]})
     self._UpdatePattern()
 
   def _AddSkuIds(self, sku_ids):
@@ -810,7 +811,7 @@ class DatabaseBuilder:
     essential_comps = common.FORM_FACTOR_COMPS.get(form_factor,
                                                    common.ESSENTIAL_COMPS)
     for comp_cls in essential_comps:
-      if comp_cls == 'region':
+      if comp_cls == common.REGION_CLS:
         # Skip checking the region because it's acceptable to have a null
         # region component.
         continue

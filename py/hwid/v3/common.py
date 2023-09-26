@@ -16,6 +16,7 @@ OLDEST_FRAMEWORK_VERSION = 0
 # This version number is used to distinguish non-compatible syntax changes
 # in HWID DB.
 FRAMEWORK_VERSION = 0
+REGION_CLS = 'region'
 
 
 class FirmwareComps(str, enum.Enum):
@@ -51,7 +52,7 @@ class FormFactor(str, enum.Enum):
 
 ESSENTIAL_COMPS = (
     'mainboard',
-    'region',
+    REGION_CLS,
     'dram',
     'cpu',
     'storage',

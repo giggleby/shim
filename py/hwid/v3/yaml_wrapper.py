@@ -178,26 +178,26 @@ class RegionField(dict):
       self._is_legacy_style = True
       fields_dict = dict(
           (i, {
-              'region': code
+              common.REGION_CLS: code
           })
           for (i, code) in enumerate(regions.LEGACY_REGIONS_LIST, 1)
           if code in regions.REGIONS)
       fields_dict.setdefault(_UNKNOWN_REGION_INDEX,
-                             {'region': _UNKNOWN_REGION_CODE})
+                             {common.REGION_CLS: _UNKNOWN_REGION_CODE})
     else:
       self._is_legacy_style = False
       # The numeric ids of valid regions start from 1.
       # crbug.com/624257: If no explicit regions defined, populate with only the
       # legacy list.
       fields_dict = dict((i, {
-          'region': n
+          common.REGION_CLS: n
       }) for i, n in enumerate(region_names, 1))
 
     # 0 is a reserved field and is set to {region: []}, so that previous HWIDs
     # which do not have region encoded will not return a bogus region component
     # when being decoded.
     fields_dict[0] = {
-        'region': []
+        common.REGION_CLS: []
     }
 
     super().__init__(fields_dict)
@@ -210,7 +210,7 @@ class RegionField(dict):
     """Returns the material that is used to initialize this instance."""
     if self.is_legacy_style:
       return None
-    return [self[idx]['region'] for idx in range(1, len(self))]
+    return [self[idx][common.REGION_CLS] for idx in range(1, len(self))]
 
 
 class _RegionFieldYAMLTagHandler(_HWIDV3YAMLTagHandler):

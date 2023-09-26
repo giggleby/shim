@@ -502,13 +502,13 @@ class Database(abc.ABC):
     return self._components.GetComponentNameByHash(comp_cls, comp_hash)
 
   def GetRegionComponents(self) -> Mapping[str, ComponentInfo]:
-    region_comps = self._components.GetComponents('region')
+    region_comps = self._components.GetComponents(common.REGION_CLS)
     ret = {}
     for region_field_name, is_legacy in self.region_field_legacy_info.items():
       if is_legacy:
         continue
       for region in self.GetEncodedField(region_field_name).values():
-        for region_name in region['region']:
+        for region_name in region[common.REGION_CLS]:
           ret[region_name] = region_comps[region_name]
     return ret
 
@@ -1265,7 +1265,7 @@ class EncodedFields:
       raise common.HWIDException(f'Encoded field {field_name!r} does not exist')
 
     if field_name == 'region_field':
-      if len(components) != 1 or list(components) != ['region']:
+      if len(components) != 1 or list(components) != [common.REGION_CLS]:
         raise common.HWIDException(
             'Region field should contain only region component.')
 
@@ -1300,7 +1300,7 @@ class EncodedFields:
     if field_name in self._fields:
       raise common.HWIDException(f'Encoded field {field_name!r} already exists')
 
-    if field_name == 'region_field' or 'region' in components:
+    if field_name == 'region_field' or common.REGION_CLS in components:
       raise common.HWIDException(
           'Region field should always exist in the HWID database, it is '
           'prohibited to add a new field called "region_field".')
@@ -1562,7 +1562,8 @@ class Components:
         yaml.safe_dump(components_expr, default_flow_style=False))
     self._SCHEMA.Validate(external_components_expr)
 
-    self._region_component_expr = copy.deepcopy(components_expr.get('region'))
+    self._region_component_expr = copy.deepcopy(
+        components_expr.get(common.REGION_CLS))
     self._components = yaml.Dict()
 
     self._can_encode = True
@@ -1606,7 +1607,7 @@ class Components:
         magic_placeholder_options.components
         if magic_placeholder_options else {})
     for comp_cls in self.component_classes:
-      if comp_cls == 'region':
+      if comp_cls == common.REGION_CLS:
         components_expr[comp_cls] = self._region_component_expr
         continue
       components_expr[comp_cls] = yaml.Dict()
@@ -1684,7 +1685,7 @@ class Components:
           Runtime Probe and Hardware Verifier have more information to handle
           miscellaneous probe issues.
     """
-    if comp_cls == 'region':
+    if comp_cls == common.REGION_CLS:
       raise common.HWIDException('Region component class is not modifiable.')
 
     self._AddComponent(comp_cls, comp_name, values, status, information)
@@ -1697,7 +1698,7 @@ class Components:
       comp_name: The component name.
       status: One of `common.ComponentStatus`.
     """
-    if comp_cls == 'region':
+    if comp_cls == common.REGION_CLS:
       raise common.HWIDException('Region component class is not modifiable.')
 
     self._SCHEMA.value_type.items['items'].value_type.optional_items[
@@ -1769,7 +1770,7 @@ class Components:
       probe_value_matched: A bool indicating whether the probe value of the
           component matches the values in AVL.
     """
-    if comp_cls == 'region':
+    if comp_cls == common.REGION_CLS:
       raise common.HWIDException('Region component class is not modifiable.')
 
     if comp_name not in self._components.get(comp_cls, {}):
