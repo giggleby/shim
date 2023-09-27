@@ -7,12 +7,12 @@ import abc
 import io
 import select
 import socket
-import time
 import unittest
 from unittest import mock
 
 from cros.factory.utils import gpio_utils
 from cros.factory.utils import net_utils
+from cros.factory.utils import type_utils
 
 
 PORT = 1234
@@ -72,16 +72,11 @@ class GpioManagerTest(unittest.TestCase):
                                         verbose=True)
     mock_server.return_value.poll_gpio.assert_called_with(PORT, 'gpio_rising')
 
-  @unittest.skip("Skip until b/302203801 is fixed")
-  @mock.patch.object(gpio_utils.net_utils, 'TimeoutXMLRPCServerProxy',
-                     spec=_GpioProxy)
-  def testPollRemoteTimeout(self, mock_server):
-
-    def FakePoll(*_):
-      time.sleep(TIMEOUT + 0.001)
+  @mock.patch.object(gpio_utils.sync_utils, 'Timeout', spec=_GpioProxy)
+  def testPollRemoteTimeout(self, mock_timeout):
+    mock_timeout.side_effect = type_utils.TimeoutError
 
     gpio_manager = gpio_utils.GpioManager(True, 'host', PORT, TIMEOUT)
-    mock_server.return_value.poll_gpio.side_effect = FakePoll
 
     self.assertFalse(gpio_manager.Poll(PORT, 'gpio_rising', TIMEOUT))
 
