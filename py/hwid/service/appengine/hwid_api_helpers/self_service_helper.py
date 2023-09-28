@@ -1632,6 +1632,82 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     return hwid_api_messages_pb2.UpdateAudioCodecKernelNamesResponse()
 
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateHwidRegionCl(self, request):
+    request_metadata = request.request_metadata
+    project = _NormalizeProjectString(request.project)
+    live_hwid_repo, action = self._GetRepoAndAction(project)
+    resp = hwid_api_messages_pb2.CreateHwidRegionClResponse()
+
+    db = action.GetDBV3()
+    region_comps = db.GetActiveRegionComponents()
+    new_regions = {
+        comp.name
+        for comp in request.region_comps
+        if comp.name not in region_comps
+    }
+    changed = False
+
+    try:
+      # Add region to encoded fields.
+      with v3_builder.DatabaseBuilder.FromExistingDB(db=db) as db_builder:
+        db_builder.AddRegions(new_regions)
+      db = db_builder.Build()
+
+      # Update region component
+      for comp in request.region_comps:
+        region = comp.name
+        status = common_helper.HWID_STRING_OF_SUPPORT_STATUS_CASE[comp.status]
+        if region in new_regions or status != region_comps[region].status:
+          db.SetComponentStatus(v3_common.REGION_CLS, region, status)
+          changed = True
+    except (KeyError, ValueError, v3_common.HWIDException) as ex:
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+    if not changed:
+      logging.info('No region is added/changed to DB: %s', project)
+      return resp
+
+    # Create commit
+    internal_db = action.PatchHeader(
+        db.DumpDataWithoutChecksum(internal=True,
+                                   suppress_support_status=False))
+    external_db = action.PatchHeader(
+        db.DumpDataWithoutChecksum(internal=False,
+                                   suppress_support_status=False))
+
+    commit_msg = textwrap.dedent(f"""\
+        ({int(time.time())}) {project}: HWID Region Update
+
+        Requested by: {request_metadata.original_requester}
+        Warning: all posted comments will be sent back to the requester.
+
+        %s
+
+        BUG=b:{request_metadata.bug_number}""") % request_metadata.description
+
+    try:
+      cl_number = live_hwid_repo.CommitHWIDDB(
+          name=project, hwid_db_contents=external_db, commit_msg=commit_msg,
+          reviewers=request_metadata.reviewer_emails,
+          cc_list=request_metadata.cc_emails,
+          bot_commit=request_metadata.auto_approved,
+          commit_queue=request_metadata.auto_approved,
+          hwid_db_contents_internal=internal_db)
+    except hwid_repo.HWIDRepoError:
+      logging.exception(
+          'Caught an unexpected exception while uploading a HWID CL.')
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
+    resp.commit.cl_number = cl_number
+    resp.commit.new_hwid_db_contents = (
+        v3_action_helper.HWIDV3SelfServiceActionHelper.RemoveHeader(external_db)
+    )
+
+    return resp
+
+
   def _GetRepoAndAction(self, project: str) -> hwid_v3_action.HWIDV3Action:
     live_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     try:

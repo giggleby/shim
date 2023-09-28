@@ -1,0 +1,23 @@
+checksum: DUMMY
+
+project: CHROMEBOOK
+
+encoding_patterns:
+  0: default
+
+image_id:
+  0: PROTO
+
+pattern:
+- image_ids:
+  - 0
+  encoding_scheme: base8192
+  fields: []
+
+encoded_fields:
+  region_field: !region_field [us]
+
+components:
+  region: !region_component
+
+rules: []

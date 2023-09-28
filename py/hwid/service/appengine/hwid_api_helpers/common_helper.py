@@ -28,6 +28,11 @@ SUPPORT_STATUS_CASE_OF_HWID_STRING = {
         hwid_api_messages_pb2.ComponentSupportStatus.Case.DUPLICATE,
 }
 
+HWID_STRING_OF_SUPPORT_STATUS_CASE = {
+    v: k
+    for k, v in SUPPORT_STATUS_CASE_OF_HWID_STRING.items()
+}
+
 
 def FastFailKnownBadHWID(hwid):
   if hwid in _KNOWN_BAD_HWIDS:

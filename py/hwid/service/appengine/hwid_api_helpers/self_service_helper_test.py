@@ -64,6 +64,7 @@ _SessionCache = ss_helper_module.SessionCache
 _ApprovalStatus = change_unit_utils.ApprovalStatus
 _ActionHelperCls = v3_action_helper.HWIDV3SelfServiceActionHelper
 _DbChangeRequestMetadata = hwid_api_messages_pb2.DbChangeRequestMetadata
+_ComponentMsg = hwid_api_messages_pb2.Component
 
 HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -86,6 +87,9 @@ _HWID_V3_CHANGE_UNIT_INTERNAL_BEFORE = os.path.join(
 _HWID_V3_CHANGE_UNIT_INTERNAL_AFTER = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     '../testdata/change-unit-with-internal-after.yaml')
+HWIDV3_REGION_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../testdata/v3-golden-region.yaml')
 
 
 def _ApplyUnifiedDiff(src: str, diff: str) -> str:
@@ -2792,6 +2796,102 @@ class SelfServiceShardTest(unittest.TestCase):
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
+
+  def testCreateHwidRegionCl_Succeed(self):
+    raw_db = file_utils.ReadFile(HWIDV3_REGION_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
+
+    req = hwid_api_messages_pb2.CreateHwidRegionClRequest(
+        project='proj', region_comps=[
+            _ComponentMsg(name='kr', status=_SupportStatusCase.SUPPORTED),
+            _ComponentMsg(name='jp', status=_SupportStatusCase.UNQUALIFIED),
+        ])
+    resp = self.service.CreateHwidRegionCl(req)
+    comps = action.GetComponents(['region'])
+
+    self.assertCountEqual(comps['region'], ['us', 'kr', 'jp'])
+    self.assertEqual(comps['region']['kr'].status, 'supported')
+    self.assertEqual(comps['region']['jp'].status, 'unqualified')
+    self.assertEqual(resp.commit.cl_number, 123)
+    self.assertEqual(resp.commit.new_hwid_db_contents,
+                     action.GetDBEditableSection())
+
+  def testCreateHwidRegionCl_ProjectNotFound(self):
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.GetHWIDDBMetadataByName.side_effect = KeyError
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.CreateHwidRegionClRequest(project='foo')
+      self.service.CreateHwidRegionCl(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testCreateHwidRegionCl_InvalidRequest(self):
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.GetHWIDDBMetadataByName.side_effect = ValueError
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.CreateHwidRegionClRequest(project='foo')
+      self.service.CreateHwidRegionCl(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
+
+  def testCreateHwidRegionCl_UnsupportedRegion_InternalError(self):
+    raw_db = file_utils.ReadFile(HWIDV3_REGION_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
+
+    req = hwid_api_messages_pb2.CreateHwidRegionClRequest(
+        project='proj', region_comps=[
+            _ComponentMsg(name='invalid_region',
+                          status=_SupportStatusCase.SUPPORTED),
+        ])
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self.service.CreateHwidRegionCl(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
+
+  def testCreateHwidRegionCl_CommitDBFailed_InternalError(self):
+    raw_db = file_utils.ReadFile(HWIDV3_REGION_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.side_effect = hwid_repo.HWIDRepoError
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
+
+    req = hwid_api_messages_pb2.CreateHwidRegionClRequest(
+        project='proj', region_comps=[
+            _ComponentMsg(name='jp', status=_SupportStatusCase.SUPPORTED),
+        ])
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self.service.CreateHwidRegionCl(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
+
+  def testCreateHwidRegionCl_NoChange(self):
+    raw_db = file_utils.ReadFile(HWIDV3_REGION_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.side_effect = hwid_repo.HWIDRepoError
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
+
+    req = hwid_api_messages_pb2.CreateHwidRegionClRequest(
+        project='proj', region_comps=[
+            _ComponentMsg(name='us', status=_SupportStatusCase.SUPPORTED),
+        ])
+    resp = self.service.CreateHwidRegionCl(req)
+
+    self.assertEqual(resp, hwid_api_messages_pb2.CreateHwidRegionClResponse())
 
 
 if __name__ == '__main__':
