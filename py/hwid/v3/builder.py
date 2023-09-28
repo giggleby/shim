@@ -394,7 +394,7 @@ class DatabaseBuilder:
     # Skip updating pattern to initial DB since it swill cause error due to
     # missing essential comps.
     if not self._database.is_initial:
-      self.FillEncodedFieldBit(field_name)
+      self._UpdatePattern()
 
     return comp_info
 
@@ -419,7 +419,10 @@ class DatabaseBuilder:
       added_regions.add(new_region)
       self._database.AddEncodedFieldComponents(
           region_field_name, {common.REGION_CLS: [new_region]})
-    self._UpdatePattern()
+    # Skip updating pattern to initial DB since it swill cause error due to
+    # missing essential comps.
+    if not self._database.is_initial:
+      self._UpdatePattern()
 
   def _AddSkuIds(self, sku_ids):
     field_name = 'sku_id_field'
@@ -992,16 +995,10 @@ class DatabaseBuilder:
         handled_encoded_fields.add(field_name)
 
     # Append other encoded fields.
-    curr_bit_lengths = self._database.GetEncodedFieldsBitLength()
     for field_name in self._database.encoded_fields:
       if field_name in handled_encoded_fields:
         continue
-      bit_length = self._GetMinBitLength(field_name)
-      if (field_name in curr_bit_lengths and
-          curr_bit_lengths[field_name] >= bit_length):
-        continue
-      self._database.AppendEncodedFieldBit(
-          field_name, bit_length - curr_bit_lengths.get(field_name, 0))
+      self.FillEncodedFieldBit(field_name, [self._database.GetPattern().idx])
 
   def GetComponents(
       self, comp_cls: str,

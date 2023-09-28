@@ -696,6 +696,18 @@ class DatabaseBuilderTest(unittest.TestCase):
     db = db_builder.Build()
     self.assertEqual(db.GetEncodedFieldsBitLength()['region_field'], 6)
 
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddRegions_InitialDB_DontUpdatePattern(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_INITIAL_DATABASE_PATH) as db_builder:
+      db_builder.AddRegions(['us'])
+
+    db = db_builder.Build()
+
+    self.assertFalse(db.GetEncodedFieldsBitLength())
+    self.assertCountEqual(['us'], db.GetActiveRegionComponents().keys())
+
   # TODO (b/212216855)
   @label_utils.Informational
   def testAddSkuIds(self):
