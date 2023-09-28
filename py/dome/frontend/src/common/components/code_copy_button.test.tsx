@@ -35,6 +35,7 @@ describe('CodeCopyButton', () => {
 
   test('click the CodeCopyButton', () => {
     jest.useFakeTimers();
+    jest.spyOn(global, 'setTimeout');
     expect(setTimeout).not.toHaveBeenCalled();
 
     fireEvent.click(node);
@@ -44,8 +45,6 @@ describe('CodeCopyButton', () => {
       jest.runAllTimers();
     });
     expect(setTimeout).toHaveBeenCalled();
-
-    jest.useRealTimers();
   });
 
   test('should call clipboard.writeText', () => {
