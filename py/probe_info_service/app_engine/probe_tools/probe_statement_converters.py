@@ -38,7 +38,9 @@ class _ParamValueConverter:
   """Converter between probe parameters and probe statement inputs.
 
   It offers a bidirectional converters to translate the probe parameter value
-  into the probe statement expect field input, and vice versa.
+  into the probe statement expect field input, and vice versa. The reverter
+  should accept more flexible inputs than the converter because the reverter
+  can be used to revert probe values and the converted probe parameters.
 
   Properties:
     value_type: Enum item of `_ProbeParameterValueType`.
@@ -74,11 +76,12 @@ class _ParamValueConverter:
         getattr(probe_parameter, self._probe_param_field_name))
 
   def RevertValue(self, param_name: str, probe_val: Any) -> _ProbeParameter:
-    """Reverts the probe statement's value to the probe parameter.
+    """Reverts the given `probe_val` to a probe parameter.
 
     Args:
       param_name: The parameter name of the output `_ProbeParameter`.
-      probe_val: The target probe statement's value to revert from.
+      probe_val: The target probe statement's value or the converted probe
+          parameter to revert from.
 
     Returns:
       A `_ProbeParameter` with name `param_name` and value `probe_val` in the
@@ -94,6 +97,31 @@ class _ParamValueConverter:
 
     setattr(probe_param, self._probe_param_field_name, probe_param_val)
     return probe_param
+
+  def NormalizeValue(self, probe_parameter: _ProbeParameter) -> _ProbeParameter:
+    """Normalize the probe parameter to the same format for comparison.
+
+    Normalize the given probe parameter by processing sequentially through the
+    converter and the reverter.
+
+    Args:
+      probe_parameter: The target `_ProbeParameter` to be normalized.
+
+    Returns:
+      A normalized `_ProbeParameter`.
+
+    Raises:
+      `ValueError` if the execution of converter or reverter fails.
+    """
+    try:
+      converted_value = self.ConvertValue(probe_parameter)
+      normalized_param = self.RevertValue(probe_parameter.name, converted_value)
+    except (_IncompatibleError, ValueError) as e:
+      raise ValueError(
+          f'Failed to normalize the probe prarameter {probe_parameter}: {e}'
+      ) from e
+
+    return normalized_param
 
   @classmethod
   def _DummyValueConverter(cls, value):
@@ -166,6 +194,28 @@ class _IProbeStatementParam(abc.ABC):
           `probe_values`.
     """
 
+  @abc.abstractmethod
+  def NormalizeProbeParams(
+      self, probe_parameters: Mapping[str, Sequence[_ProbeParameter]]
+  ) -> Sequence[_ProbeParameter]:
+    """Returns the normalized `probe_parameters`.
+
+    This function tries to collect and normalize the values of the parameters
+    defined in `self.probe_info_param_definitions` in `probe_parameters`. This
+    is used to preprocess the probe parameters before checking if the
+    parameters are identical in the context of the probe tool.
+
+    Args:
+      probe_parameters: A dictionary mapping probe parameter names to lists of
+          `_ProbeParameter` to be normalized.
+
+    Returns:
+      A list of normalized `_ProbeParameter`.
+
+    Raises:
+      `ValueError` if normalization of any of the probe parameters fails.
+    """
+
 
 class _SingleProbeStatementParam(_IProbeStatementParam):
   """Holds a one-to-one parameter for `_SingleProbeFuncConverter`.
@@ -228,16 +278,14 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
     return converted_values, suggestions
 
   def ConvertProbeValues(
-      self, probe_values: Mapping[str, str]
-  ) -> Sequence[probe_info_analytics.ProbeParameter]:
+      self, probe_values: Mapping[str, str]) -> Sequence[_ProbeParameter]:
     """See base class."""
     if self._is_informational:
       return []
     return self.ConvertProbeValuesWithInformational(probe_values)
 
   def ConvertProbeValuesWithInformational(
-      self, probe_values: Mapping[str, str]
-  ) -> Sequence[probe_info_analytics.ProbeParameter]:
+      self, probe_values: Mapping[str, str]) -> Sequence[_ProbeParameter]:
     if self._probe_statement_param_name not in probe_values:
       raise _IncompatibleError(
           f'Parameter "{self._probe_statement_param_name}" does not exist in '
@@ -247,6 +295,16 @@ class _SingleProbeStatementParam(_IProbeStatementParam):
     converted_probe_val = self._value_converter.RevertValue(
         self._param_name, probe_val)
     return [converted_probe_val]
+
+  def NormalizeProbeParams(
+      self, probe_parameters: Mapping[str, Sequence[_ProbeParameter]]
+  ) -> Sequence[_ProbeParameter]:
+    """See base class."""
+    normalized_params = [
+        self._value_converter.NormalizeValue(probe_parameter)
+        for probe_parameter in probe_parameters.get(self._param_name, [])
+    ]
+    return normalized_params
 
 
 class _ConcatProbeStatementParam(_IProbeStatementParam):
@@ -321,8 +379,7 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
     return concat_values, suggestions
 
   def ConvertProbeValues(
-      self, probe_values: Mapping[str, str]
-  ) -> Sequence[probe_info_analytics.ProbeParameter]:
+      self, probe_values: Mapping[str, str]) -> Sequence[_ProbeParameter]:
     """See base class."""
     if self._is_informational:
       return []
@@ -340,6 +397,15 @@ class _ConcatProbeStatementParam(_IProbeStatementParam):
       converted_probe_vals.extend(sub_converted_vals)
 
     return converted_probe_vals
+
+  def NormalizeProbeParams(
+      self, probe_parameters: Mapping[str, Sequence[_ProbeParameter]]
+  ) -> Sequence[_ProbeParameter]:
+    normalized_params = []
+    for probe_info_param in self._probe_info_params:
+      normalized_params.extend(
+          probe_info_param.NormalizeProbeParams(probe_parameters))
+    return normalized_params
 
 
 class _IProbeParamSpec(abc.ABC):
@@ -555,8 +621,8 @@ class _SingleProbeFuncConverter(_IBidirectionalProbeInfoConverter):
         _ProbeInfoParsedResult(result_type=_ProbeInfoParsedResult.PASSED), [ps])
 
   def ParseProbeParams(
-      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
-      allow_missing_params: bool, comp_name_for_probe_statement=None
+      self, probe_params: Sequence[_ProbeParameter], allow_missing_params: bool,
+      comp_name_for_probe_statement=None
   ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
     """See base class."""
     return self.ParseProbeParamInputs(
@@ -640,6 +706,21 @@ class _SingleProbeFuncConverter(_IBidirectionalProbeInfoConverter):
         pass
 
     return parsed_results
+
+  def GetNormalizedProbeParams(
+      self,
+      probe_params: Sequence[_ProbeParameter]) -> Sequence[_ProbeParameter]:
+    """See base class."""
+    probe_parameters = collections.defaultdict(list)
+    for probe_param in probe_params:
+      probe_parameters[probe_param.name].append(probe_param)
+
+    normalized_params = []
+    for probe_param in self._probe_params:
+      for param in probe_param.NormalizeProbeParams(probe_parameters):
+        normalized_params.append(param)
+
+    return normalized_params
 
 
 def _AggregrateProbeInfoParsedResults(
@@ -736,8 +817,8 @@ class _MultiProbeFuncConverter(_IBidirectionalProbeInfoConverter):
                 a.output for a in sub_probe_info_artifacts)))
 
   def ParseProbeParams(
-      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
-      allow_missing_params: bool, comp_name_for_probe_statement=None
+      self, probe_params: Sequence[_ProbeParameter], allow_missing_params: bool,
+      comp_name_for_probe_statement=None
   ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
     """See base class."""
     return self.ParseProbeParamInputs(
@@ -753,6 +834,17 @@ class _MultiProbeFuncConverter(_IBidirectionalProbeInfoConverter):
         for parsed_result in converter.ParseProbeResult(probe_result)
     ]
 
+  def GetNormalizedProbeParams(
+      self,
+      probe_params: Sequence[_ProbeParameter]) -> Sequence[_ProbeParameter]:
+    """See base class."""
+    normalized_params = []
+    for converter in self._sub_converters.values():
+      for param in converter.GetNormalizedProbeParams(probe_params):
+        normalized_params.append(param)
+
+    return normalized_params
+
 
 def _RemoveHexPrefixAndCapitalize(value: str) -> str:
   if not value.lower().startswith('0x'):
@@ -766,7 +858,15 @@ def _RemoveHexPrefixAndLowerize(value: str) -> str:
   return value[2:].lower()
 
 
-def _ResizeHexStr(length: int) -> Callable:
+def _AddHexPrefixIfNotExistAndLowerize(value: str) -> str:
+  lowerized_val = value.lower()
+  if not lowerized_val.startswith('0x'):
+    return '0x' + lowerized_val
+  return lowerized_val
+
+
+def _ResizeHexStr(length: int, lowerize=False, capitalize=False,
+                  prefix=True) -> Callable:
   """Creates a function to resize the input hex string.
 
   The returned function gets the last `length` characters of the input hex
@@ -776,17 +876,34 @@ def _ResizeHexStr(length: int) -> Callable:
 
   Args:
     length: The expected hex-string length after conversion.
+    lowerize: Lowerize the output string if the value is True.
+    capitalize: Capitalize the output string if the value is True.
+    prefix: If the value is True, add `0x` prefix to the output string if there
+        is no `0x` prefix. Otherwise, remove the prefix if there is one.
 
   Returns:
     The created function with a string as the input and a fixed size string as
     the output.
   """
 
+  if lowerize and capitalize:
+    raise ValueError('Only one of lowerize or capitalize can be set to True.')
+
   def _ResizeFunc(value: Any) -> str:
-    if not (isinstance(value, str) and value.lower().startswith('0x')):
-      raise ValueError('Expect hex string value to start with "0x" or "0X".')
     val_length = min(len(value) - 2, length)
-    return f'0x{value[-val_length:].zfill(length)}'
+    res = f'{value[-val_length:].zfill(length)}'.lower()
+
+    if prefix and not res.startswith('0x'):
+      res = '0x' + res
+    elif not prefix and res.startswith('0x'):
+      res = res[2:]
+
+    if lowerize:
+      return res.lower()
+    if capitalize:
+      return res.capitalize()
+
+    return res
 
   return _ResizeFunc
 
@@ -798,15 +915,23 @@ def _CapitalizeHexValueWithoutPrefix(value: str) -> str:
 
 
 def _MipiVIDReverter(value: Any) -> str:
-  if not (isinstance(value, str) and len(value) == 6):
-    raise ValueError('Expect string value with a length of 6')
+  if not (isinstance(value, str) and len(value) in [2, 6]):
+    raise ValueError('Expect string value with a length of 2 or 6')
+
+  if len(value) == 2:
+    return value
+
   return value[:2]
 
 
 def _MipiPIDReverter(value: Any) -> str:
-  if not (isinstance(value, str) and len(value) == 6):
-    raise ValueError('Expect string value with a length of 6')
-  return '0x' + value[2:]
+  if not (isinstance(value, str) and len(value) in [4, 6]):
+    raise ValueError('Expect string value with a length of 4 or 6')
+
+  if len(value) == 4:
+    return '0x' + value.lower()
+
+  return '0x' + value[2:].lower()
 
 
 def _StringToRegexpOrString(value):
@@ -832,11 +957,13 @@ def BuildTouchscreenModuleConverter() -> _IBidirectionalProbeInfoConverter:
               'touchscreen', 'input_device', probe_params=[
                   _ProbeFunctionParam(
                       'module_vendor_id', value_converter=_ParamValueConverter(
-                          'string', _CapitalizeHexValueWithoutPrefix),
+                          'string', _CapitalizeHexValueWithoutPrefix,
+                          _CapitalizeHexValueWithoutPrefix),
                       probe_statement_param_name='vendor'),
                   _ProbeFunctionParam(
                       'module_product_id', value_converter=_ParamValueConverter(
-                          'string', _CapitalizeHexValueWithoutPrefix),
+                          'string', _CapitalizeHexValueWithoutPrefix,
+                          _CapitalizeHexValueWithoutPrefix),
                       probe_statement_param_name='product'),
               ]),
       'edid_panel':
@@ -847,7 +974,8 @@ def BuildTouchscreenModuleConverter() -> _IBidirectionalProbeInfoConverter:
                   _ProbeFunctionParam(
                       'panel_edid_product_id',
                       value_converter=_ParamValueConverter(
-                          'string', _CapitalizeHexValueWithoutPrefix),
+                          'string', _CapitalizeHexValueWithoutPrefix,
+                          _CapitalizeHexValueWithoutPrefix),
                       probe_statement_param_name='product_id'),
               ]),
   }
@@ -860,12 +988,13 @@ def BuildTouchscreenModuleConverter() -> _IBidirectionalProbeInfoConverter:
 _MMC_BASIC_PARAMS = (
     _ProbeFunctionParam(
         'mmc_manfid', value_converter=_ParamValueConverter(
-            'string', _RemoveHexPrefixAndCapitalize, _ResizeHexStr(2))),
+            'string', _RemoveHexPrefixAndCapitalize,
+            _ResizeHexStr(2, lowerize=True))),
     _ProbeFunctionParam(
         'mmc_name', value_converter=_ParamValueConverter(
             'string', lambda hex_with_prefix: bytes.fromhex(hex_with_prefix[2:])
             .decode('ascii'), lambda str_val: '0x' + binascii.hexlify(
-                str_val.encode('ascii')).decode('ascii'))),
+                str_val.encode('ascii')).decode('ascii').lower())),
 )
 
 
@@ -883,7 +1012,8 @@ class MMCWithBridgeProbeStatementConverter(_IBidirectionalProbeInfoConverter):
     def _BuildPCIeParam(param_name, probe_statement_param_name):
       return _ProbeFunctionParam(
           param_name, value_converter=_ParamValueConverter(
-              'string', _RemoveHexPrefixAndCapitalize),
+              'string', _RemoveHexPrefixAndCapitalize,
+              _AddHexPrefixIfNotExistAndLowerize),
           probe_statement_param_name=probe_statement_param_name)
 
     emmc_converter = (
@@ -938,8 +1068,8 @@ class MMCWithBridgeProbeStatementConverter(_IBidirectionalProbeInfoConverter):
     return ret
 
   def ParseProbeParams(
-      self, probe_params: Sequence[probe_info_analytics.ProbeParameter],
-      allow_missing_params: bool, comp_name_for_probe_statement=None
+      self, probe_params: Sequence[_ProbeParameter], allow_missing_params: bool,
+      comp_name_for_probe_statement=None
   ) -> _ProbeInfoArtifact[Sequence[probe_config_types.ComponentProbeStatement]]:
     """See base class."""
     probe_param_inputs = _ToProbeParamInputs(probe_params)
@@ -977,6 +1107,27 @@ class MMCWithBridgeProbeStatementConverter(_IBidirectionalProbeInfoConverter):
       return self._emmc_and_host_converter.ParseProbeResult(probe_result)
 
     return self._nvme_converter.ParseProbeResult(probe_result)
+
+  def GetNormalizedProbeParams(
+      self,
+      probe_params: Sequence[_ProbeParameter]) -> Sequence[_ProbeParameter]:
+    """See base class."""
+    processed_param_names = set()
+    normalized_params = []
+    for converter in [
+        self._emmc_and_host_converter, self._invisible_emmc_and_nvme_converter
+    ]:
+      processed_by_this_converter = set()
+      for param in converter.GetNormalizedProbeParams(probe_params):
+        if param.name in processed_param_names:
+          continue
+
+        processed_by_this_converter.add(param.name)
+        normalized_params.append(param)
+
+      processed_param_names.update(processed_by_this_converter)
+
+    return normalized_params
 
 
 def GetAllConverters() -> Sequence[analyzers._IBidirectionalProbeInfoConverter]:
@@ -1020,19 +1171,23 @@ def GetAllConverters() -> Sequence[analyzers._IBidirectionalProbeInfoConverter]:
           'camera', 'usb_camera', probe_params=[
               _ProbeFunctionParam(
                   'usb_vendor_id', value_converter=_ParamValueConverter(
-                      'string', _CapitalizeHexValueWithoutPrefix)),
+                      'string', _CapitalizeHexValueWithoutPrefix,
+                      _CapitalizeHexValueWithoutPrefix)),
               _ProbeFunctionParam(
                   'usb_product_id', value_converter=_ParamValueConverter(
-                      'string', _CapitalizeHexValueWithoutPrefix)),
+                      'string', _CapitalizeHexValueWithoutPrefix,
+                      _CapitalizeHexValueWithoutPrefix)),
               _ProbeFunctionParam(
                   'usb_bcd_device', value_converter=_ParamValueConverter(
-                      'string', _CapitalizeHexValueWithoutPrefix)),
+                      'string', _CapitalizeHexValueWithoutPrefix,
+                      _CapitalizeHexValueWithoutPrefix)),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'display_panel', 'edid', probe_params=[
               _ProbeFunctionParam(
                   'product_id', value_converter=_ParamValueConverter(
-                      'string', _CapitalizeHexValueWithoutPrefix)),
+                      'string', _CapitalizeHexValueWithoutPrefix,
+                      _CapitalizeHexValueWithoutPrefix)),
               _ProbeFunctionParam('vendor'),
               _InformationalParam('width', 'The width of display panel.',
                                   _ParamValueConverter('int')),
@@ -1048,13 +1203,16 @@ def GetAllConverters() -> Sequence[analyzers._IBidirectionalProbeInfoConverter]:
           converter_name='emmc_pcie_storage_bridge.mmc_host', probe_params=[
               _ProbeFunctionParam(
                   'pci_vendor_id', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndCapitalize)),
+                      'string', _RemoveHexPrefixAndCapitalize,
+                      _AddHexPrefixIfNotExistAndLowerize)),
               _ProbeFunctionParam(
                   'pci_device_id', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndCapitalize)),
+                      'string', _RemoveHexPrefixAndCapitalize,
+                      _AddHexPrefixIfNotExistAndLowerize)),
               _ProbeFunctionParam(
                   'pci_class', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndCapitalize)),
+                      'string', _RemoveHexPrefixAndCapitalize,
+                      _AddHexPrefixIfNotExistAndLowerize)),
           ], probe_function_argument={'is_emmc_attached': True}),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'storage', 'mmc_storage', probe_params=[
@@ -1062,7 +1220,7 @@ def GetAllConverters() -> Sequence[analyzers._IBidirectionalProbeInfoConverter]:
               _ProbeFunctionParam(
                   'mmc_prv', value_converter=_ParamValueConverter(
                       'string', _RemoveHexPrefixAndCapitalize,
-                      _ResizeHexStr(2))),
+                      _ResizeHexStr(2, lowerize=True))),
               _InformationalParam('size_in_gb', 'The storage size in GB.',
                                   _ParamValueConverter('int')),
           ]),
@@ -1070,13 +1228,16 @@ def GetAllConverters() -> Sequence[analyzers._IBidirectionalProbeInfoConverter]:
           'storage', 'nvme_storage', probe_params=[
               _ProbeFunctionParam(
                   'pci_vendor', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndCapitalize)),
+                      'string', _RemoveHexPrefixAndCapitalize,
+                      _AddHexPrefixIfNotExistAndLowerize)),
               _ProbeFunctionParam(
                   'pci_device', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndCapitalize)),
+                      'string', _RemoveHexPrefixAndCapitalize,
+                      _AddHexPrefixIfNotExistAndLowerize)),
               _ProbeFunctionParam(
                   'pci_class', value_converter=_ParamValueConverter(
-                      'string', _RemoveHexPrefixAndCapitalize)),
+                      'string', _RemoveHexPrefixAndCapitalize,
+                      _AddHexPrefixIfNotExistAndLowerize)),
               _ProbeFunctionParam('nvme_model'),
               _InformationalParam('size_in_gb', 'The storage size in GB.',
                                   _ParamValueConverter('int')),

@@ -52,7 +52,7 @@ class AudioCodecConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
         _CreateStrProbeParam('name', 'abcd1234'),
     ]
@@ -74,6 +74,28 @@ class AudioCodecConverterTest(unittest.TestCase):
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
 
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('name', 'ABCD1234'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'audio_codec', 'comp_name', {
+                'eval': {
+                    'audio_codec': {}
+                },
+                'expect': {
+                    'name': [True, 'str', '!eq ABCD1234']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
         'audio_codec': [{
@@ -87,6 +109,19 @@ class AudioCodecConverterTest(unittest.TestCase):
                                        _CreateStrProbeParam('name', 'abcd1234'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('name', 'abcd1234'),
+        _CreateStrProbeParam('name', 'EFGH5678'),
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('name', 'abcd1234'),
+        _CreateStrProbeParam('name', 'EFGH5678'),
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class BatteryConverterTest(unittest.TestCase):
@@ -114,10 +149,10 @@ class BatteryConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
-        _CreateStrProbeParam('manufacturer', 'abcd'),
-        _CreateStrProbeParam('model_name', '1234'),
+        _CreateStrProbeParam('manufacturer', 'abcd1234'),
+        _CreateStrProbeParam('model_name', 'efgh5678'),
     ]
 
     actual = self._converter.ParseProbeParams(
@@ -131,8 +166,32 @@ class BatteryConverterTest(unittest.TestCase):
                     'generic_battery': {}
                 },
                 'expect': {
-                    'manufacturer': [True, 'str', '!eq abcd'],
-                    'model_name': [True, 'str', '!eq 1234']
+                    'manufacturer': [True, 'str', '!eq abcd1234'],
+                    'model_name': [True, 'str', '!eq efgh5678']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('manufacturer', 'ABCD1234'),
+        _CreateStrProbeParam('model_name', 'EFGH5678'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'battery', 'comp_name', {
+                'eval': {
+                    'generic_battery': {}
+                },
+                'expect': {
+                    'manufacturer': [True, 'str', '!eq ABCD1234'],
+                    'model_name': [True, 'str', '!eq EFGH5678']
                 }
             })
     ]
@@ -154,6 +213,24 @@ class BatteryConverterTest(unittest.TestCase):
             'battery', _CreateStrProbeParam('model_name', '1234'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('manufacturer', 'abc123'),
+        _CreateStrProbeParam('model_name', 'def456'),
+        _CreateStrProbeParam('manufacturer', 'ABC123'),
+        _CreateStrProbeParam('model_name', 'DEF456'),
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('manufacturer', 'abc123'),
+        _CreateStrProbeParam('model_name', 'def456'),
+        _CreateStrProbeParam('manufacturer', 'ABC123'),
+        _CreateStrProbeParam('model_name', 'DEF456'),
+    ]
+
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class MipiCameraConverterTest(unittest.TestCase):
@@ -191,12 +268,12 @@ class MipiCameraConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
-        _CreateStrProbeParam('module_vid', 'AB'),
-        _CreateStrProbeParam('module_pid', '0x0001'),
-        _CreateStrProbeParam('sensor_vid', 'CD'),
-        _CreateStrProbeParam('sensor_pid', '0x0002'),
+        _CreateStrProbeParam('module_vid', 'ab'),
+        _CreateStrProbeParam('module_pid', '0x000a'),
+        _CreateStrProbeParam('sensor_vid', 'cd'),
+        _CreateStrProbeParam('sensor_pid', '0x000b'),
     ]
 
     actual = self._converter.ParseProbeParams(
@@ -210,8 +287,34 @@ class MipiCameraConverterTest(unittest.TestCase):
                     'mipi_camera': {}
                 },
                 'expect': {
-                    'mipi_module_id': [True, 'str', '!eq AB0001'],
-                    'mipi_sensor_id': [True, 'str', '!eq CD0002'],
+                    'mipi_module_id': [True, 'str', '!eq ab000a'],
+                    'mipi_sensor_id': [True, 'str', '!eq cd000b'],
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('module_vid', 'AB'),
+        _CreateStrProbeParam('module_pid', '0x000A'),
+        _CreateStrProbeParam('sensor_vid', 'CD'),
+        _CreateStrProbeParam('sensor_pid', '0x000B'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'camera', 'comp_name', {
+                'eval': {
+                    'mipi_camera': {}
+                },
+                'expect': {
+                    'mipi_module_id': [True, 'str', '!eq AB000a'],
+                    'mipi_sensor_id': [True, 'str', '!eq CD000b'],
                 }
             })
     ]
@@ -239,6 +342,31 @@ class MipiCameraConverterTest(unittest.TestCase):
             'camera', _CreateStrProbeParam('sensor_pid', '0x0002'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('module_vid', 'AB'),
+        _CreateStrProbeParam('module_pid', '0xaa11'),
+        _CreateStrProbeParam('module_vid', 'ab'),
+        _CreateStrProbeParam('module_pid', '0xBB22'),
+        _CreateStrProbeParam('sensor_vid', 'CD'),
+        _CreateStrProbeParam('sensor_pid', '0xcc33'),
+        _CreateStrProbeParam('sensor_vid', 'cd'),
+        _CreateStrProbeParam('sensor_pid', '0xDD44'),
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('module_vid', 'AB'),
+        _CreateStrProbeParam('module_pid', '0xaa11'),
+        _CreateStrProbeParam('module_vid', 'ab'),
+        _CreateStrProbeParam('module_pid', '0xbb22'),
+        _CreateStrProbeParam('sensor_vid', 'CD'),
+        _CreateStrProbeParam('sensor_pid', '0xcc33'),
+        _CreateStrProbeParam('sensor_vid', 'cd'),
+        _CreateStrProbeParam('sensor_pid', '0xdd44'),
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class UsbCameraConverterTest(unittest.TestCase):
@@ -271,11 +399,11 @@ class UsbCameraConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
-        _CreateStrProbeParam('usb_vendor_id', '0001'),
-        _CreateStrProbeParam('usb_product_id', '0002'),
-        _CreateStrProbeParam('usb_bcd_device', '0003'),
+        _CreateStrProbeParam('usb_vendor_id', '000a'),
+        _CreateStrProbeParam('usb_product_id', '000b'),
+        _CreateStrProbeParam('usb_bcd_device', '000c'),
     ]
 
     actual = self._converter.ParseProbeParams(
@@ -289,9 +417,35 @@ class UsbCameraConverterTest(unittest.TestCase):
                     'usb_camera': {}
                 },
                 'expect': {
-                    'usb_vendor_id': [True, 'hex', '!eq 0x0001'],
-                    'usb_product_id': [True, 'hex', '!eq 0x0002'],
-                    'usb_bcd_device': [True, 'hex', '!eq 0x0003']
+                    'usb_vendor_id': [True, 'hex', '!eq 0x000A'],
+                    'usb_product_id': [True, 'hex', '!eq 0x000B'],
+                    'usb_bcd_device': [True, 'hex', '!eq 0x000C']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('usb_vendor_id', '000A'),
+        _CreateStrProbeParam('usb_product_id', '000B'),
+        _CreateStrProbeParam('usb_bcd_device', '000C'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'camera', 'comp_name', {
+                'eval': {
+                    'usb_camera': {}
+                },
+                'expect': {
+                    'usb_vendor_id': [True, 'hex', '!eq 0x000A'],
+                    'usb_product_id': [True, 'hex', '!eq 0x000B'],
+                    'usb_bcd_device': [True, 'hex', '!eq 0x000C']
                 }
             })
     ]
@@ -316,6 +470,27 @@ class UsbCameraConverterTest(unittest.TestCase):
             'camera', _CreateStrProbeParam('usb_bcd_device', '0003'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('usb_vendor_id', '00aa'),
+        _CreateStrProbeParam('usb_vendor_id', '11BB'),
+        _CreateStrProbeParam('usb_product_id', '22cc'),
+        _CreateStrProbeParam('usb_product_id', '33DD'),
+        _CreateStrProbeParam('usb_bcd_device', '44ee'),
+        _CreateStrProbeParam('usb_bcd_device', '55FF'),
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('usb_vendor_id', '00AA'),
+        _CreateStrProbeParam('usb_vendor_id', '11BB'),
+        _CreateStrProbeParam('usb_product_id', '22CC'),
+        _CreateStrProbeParam('usb_product_id', '33DD'),
+        _CreateStrProbeParam('usb_bcd_device', '44EE'),
+        _CreateStrProbeParam('usb_bcd_device', '55FF'),
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class DisplayPanelConverterTest(unittest.TestCase):
@@ -353,9 +528,35 @@ class DisplayPanelConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
-        _CreateStrProbeParam('product_id', '0001'),
+        _CreateStrProbeParam('product_id', '000a'),
+        _CreateStrProbeParam('vendor', 'ABC'),  # vendor must be upper case.
+        _CreateIntProbeParam('width', 100),
+        _CreateIntProbeParam('height', 200),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'display_panel', 'comp_name', {
+                'eval': {
+                    'edid': {}
+                },
+                'expect': {
+                    'product_id': [True, 'hex', '!eq 0x000A'],
+                    'vendor': [True, 'str', '!eq ABC']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('product_id', '000A'),
         _CreateStrProbeParam('vendor', 'ABC'),
         _CreateIntProbeParam('width', 100),
         _CreateIntProbeParam('height', 200),
@@ -372,7 +573,7 @@ class DisplayPanelConverterTest(unittest.TestCase):
                     'edid': {}
                 },
                 'expect': {
-                    'product_id': [True, 'hex', '!eq 0x0001'],
+                    'product_id': [True, 'hex', '!eq 0x000A'],
                     'vendor': [True, 'str', '!eq ABC']
                 }
             })
@@ -382,7 +583,7 @@ class DisplayPanelConverterTest(unittest.TestCase):
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
         'display_panel': [{
-            'product_id': '0001',
+            'product_id': '000a',
             'vendor': 'ABC'
         }]
     }
@@ -390,11 +591,30 @@ class DisplayPanelConverterTest(unittest.TestCase):
     actual = self._converter.ParseProbeResult(probe_result)
     expected_probe_parameters = [
         analyzers.ParsedProbeParameter(
-            'display_panel', _CreateStrProbeParam('product_id', '0001')),
+            'display_panel', _CreateStrProbeParam('product_id', '000A')),
         analyzers.ParsedProbeParameter('display_panel',
                                        _CreateStrProbeParam('vendor', 'ABC'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('product_id', '000a'),
+        _CreateStrProbeParam('product_id', '000B'),
+        _CreateStrProbeParam('vendor', 'ABC'),
+        _CreateIntProbeParam('width', 100),
+        _CreateIntProbeParam('height', 200),
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('product_id', '000A'),
+        _CreateStrProbeParam('product_id', '000B'),
+        _CreateStrProbeParam('vendor', 'ABC'),
+        _CreateIntProbeParam('width', 100),
+        _CreateIntProbeParam('height', 200),
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class MemoryConverterTest(unittest.TestCase):
@@ -417,7 +637,27 @@ class MemoryConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [_CreateStrProbeParam('part', 'abcd1234')]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'dram', 'comp_name', {
+                'eval': {
+                    'memory': {}
+                },
+                'expect': {
+                    'part': [True, 'str', '!eq abcd1234']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
     probe_params = [_CreateStrProbeParam('part', 'ABCD1234')]
 
     actual = self._converter.ParseProbeParams(
@@ -450,6 +690,19 @@ class MemoryConverterTest(unittest.TestCase):
                                        _CreateStrProbeParam('part', 'ABCD1234'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('part', 'ABC123'),
+        _CreateStrProbeParam('part', 'def456')
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('part', 'ABC123'),
+        _CreateStrProbeParam('part', 'def456')
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class MmcStorageConverterTest(unittest.TestCase):
@@ -487,11 +740,11 @@ class MmcStorageConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
-        _CreateStrProbeParam('mmc_manfid', '0x12'),
+        _CreateStrProbeParam('mmc_manfid', '0x1a'),
         _CreateStrProbeParam('mmc_name', '0x61626364'),
-        _CreateStrProbeParam('mmc_prv', '0x34'),
+        _CreateStrProbeParam('mmc_prv', '0x2b'),
         _CreateIntProbeParam('size_in_gb', 64),
     ]
 
@@ -506,9 +759,36 @@ class MmcStorageConverterTest(unittest.TestCase):
                     'mmc_storage': {}
                 },
                 'expect': {
-                    'mmc_manfid': [True, 'hex', '!eq 0x12'],
+                    'mmc_manfid': [True, 'hex', '!eq 0x1A'],
                     'mmc_name': [True, 'str', '!eq abcd'],
-                    'mmc_prv': [True, 'hex', '!eq 0x34']
+                    'mmc_prv': [True, 'hex', '!eq 0x2B']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1A'),
+        _CreateStrProbeParam('mmc_name', '0x61626364'),
+        _CreateStrProbeParam('mmc_prv', '0x2B'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name', {
+                'eval': {
+                    'mmc_storage': {}
+                },
+                'expect': {
+                    'mmc_manfid': [True, 'hex', '!eq 0x1A'],
+                    'mmc_name': [True, 'str', '!eq abcd'],
+                    'mmc_prv': [True, 'hex', '!eq 0x2B']
                 }
             })
     ]
@@ -533,6 +813,27 @@ class MmcStorageConverterTest(unittest.TestCase):
                                        _CreateStrProbeParam('mmc_prv', '0x34'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1a'),
+        _CreateStrProbeParam('mmc_manfid', '0x2B'),
+        _CreateStrProbeParam('mmc_name', '0x61626364'),
+        _CreateStrProbeParam('mmc_prv', '0x3c'),
+        _CreateStrProbeParam('mmc_prv', '0x4D'),
+        _CreateIntProbeParam('size_in_gb', 64)
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1a'),
+        _CreateStrProbeParam('mmc_manfid', '0x2b'),
+        _CreateStrProbeParam('mmc_name', '0x61626364'),
+        _CreateStrProbeParam('mmc_prv', '0x3c'),
+        _CreateStrProbeParam('mmc_prv', '0x4d'),
+        _CreateIntProbeParam('size_in_gb', 64)
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class NvmeStorageConverterTest(unittest.TestCase):
@@ -575,11 +876,40 @@ class NvmeStorageConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
-        _CreateStrProbeParam('pci_vendor', '0x0001'),
-        _CreateStrProbeParam('pci_device', '0x0002'),
-        _CreateStrProbeParam('pci_class', '0x123456'),
+        _CreateStrProbeParam('pci_vendor', '0x000a'),
+        _CreateStrProbeParam('pci_device', '0x000b'),
+        _CreateStrProbeParam('pci_class', '0x123abc'),
+        _CreateStrProbeParam('nvme_model', 'abcde'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name', {
+                'eval': {
+                    'nvme_storage': {}
+                },
+                'expect': {
+                    'pci_vendor': [True, 'hex', '!eq 0x000A'],
+                    'pci_device': [True, 'hex', '!eq 0x000B'],
+                    'pci_class': [True, 'hex', '!eq 0x123ABC'],
+                    'nvme_model': [True, 'str', '!eq abcde']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('pci_vendor', '0x000A'),
+        _CreateStrProbeParam('pci_device', '0x000B'),
+        _CreateStrProbeParam('pci_class', '0x123ABC'),
         _CreateStrProbeParam('nvme_model', 'ABCDE'),
         _CreateIntProbeParam('size_in_gb', 64),
     ]
@@ -595,9 +925,9 @@ class NvmeStorageConverterTest(unittest.TestCase):
                     'nvme_storage': {}
                 },
                 'expect': {
-                    'pci_vendor': [True, 'hex', '!eq 0x0001'],
-                    'pci_device': [True, 'hex', '!eq 0x0002'],
-                    'pci_class': [True, 'hex', '!eq 0x123456'],
+                    'pci_vendor': [True, 'hex', '!eq 0x000A'],
+                    'pci_device': [True, 'hex', '!eq 0x000B'],
+                    'pci_class': [True, 'hex', '!eq 0x123ABC'],
                     'nvme_model': [True, 'str', '!eq ABCDE']
                 }
             })
@@ -626,6 +956,33 @@ class NvmeStorageConverterTest(unittest.TestCase):
             'storage', _CreateStrProbeParam('nvme_model', 'ABCDE'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('pci_vendor', '0x000a'),
+        _CreateStrProbeParam('pci_vendor', '0x000B'),
+        _CreateStrProbeParam('pci_device', '0x000c'),
+        _CreateStrProbeParam('pci_device', '0x000D'),
+        _CreateStrProbeParam('pci_class', '0x123abc'),
+        _CreateStrProbeParam('pci_class', '0x456DEF'),
+        _CreateStrProbeParam('nvme_model', 'abc'),
+        _CreateStrProbeParam('nvme_model', 'DEF'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('pci_vendor', '0x000a'),
+        _CreateStrProbeParam('pci_vendor', '0x000b'),
+        _CreateStrProbeParam('pci_device', '0x000c'),
+        _CreateStrProbeParam('pci_device', '0x000d'),
+        _CreateStrProbeParam('pci_class', '0x123abc'),
+        _CreateStrProbeParam('pci_class', '0x456def'),
+        _CreateStrProbeParam('nvme_model', 'abc'),
+        _CreateStrProbeParam('nvme_model', 'DEF'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class UfsStorageConverterTest(unittest.TestCase):
@@ -658,7 +1015,7 @@ class UfsStorageConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
         _CreateStrProbeParam('ufs_vendor', 'abcd'),
         _CreateStrProbeParam('ufs_model', 'wxyz'),
@@ -683,6 +1040,31 @@ class UfsStorageConverterTest(unittest.TestCase):
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
 
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('ufs_vendor', 'ABCD'),
+        _CreateStrProbeParam('ufs_model', 'WXYZ'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name', {
+                'eval': {
+                    'ufs_storage': {}
+                },
+                'expect': {
+                    'ufs_vendor': [True, 'str', '!eq ABCD'],
+                    'ufs_model': [True, 'str', '!eq WXYZ']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
   def testParseProbeResult_CanGenerateProbeParameter(self):
     probe_result = {
         'storage': [{
@@ -699,6 +1081,25 @@ class UfsStorageConverterTest(unittest.TestCase):
             'storage', _CreateStrProbeParam('ufs_model', 'wxyz'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('ufs_vendor', 'abc'),
+        _CreateStrProbeParam('ufs_vendor', 'DEF'),
+        _CreateStrProbeParam('ufs_model', 'ghi'),
+        _CreateStrProbeParam('ufs_model', 'JKL'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('ufs_vendor', 'abc'),
+        _CreateStrProbeParam('ufs_vendor', 'DEF'),
+        _CreateStrProbeParam('ufs_model', 'ghi'),
+        _CreateStrProbeParam('ufs_model', 'JKL'),
+        _CreateIntProbeParam('size_in_gb', 64),
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class CpuConverterTest(unittest.TestCase):
@@ -721,7 +1122,27 @@ class CpuConverterTest(unittest.TestCase):
         }''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [_CreateStrProbeParam('identifier', 'abcd1234')]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'cpu', 'comp_name', {
+                'eval': {
+                    'generic_cpu': {}
+                },
+                'expect': {
+                    'identifier': [True, 'str', '!eq abcd1234']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
     probe_params = [_CreateStrProbeParam('identifier', 'ABCD1234')]
 
     actual = self._converter.ParseProbeParams(
@@ -754,6 +1175,19 @@ class CpuConverterTest(unittest.TestCase):
             'cpu', _CreateStrProbeParam('identifier', 'ABCD1234'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('identifier', 'abc123'),
+        _CreateStrProbeParam('identifier', 'DEF456')
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('identifier', 'abc123'),
+        _CreateStrProbeParam('identifier', 'DEF456')
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class TouchscreenModuleConverterTest(unittest.TestCase):
@@ -861,12 +1295,13 @@ class TouchscreenModuleConverterTest(unittest.TestCase):
         general_error_msg='Unknown probe parameters: the_unknown_param.')
     self.assertEqual(actual.probe_info_parsed_result, expected_parsed_result)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
-        _CreateStrProbeParam('module_vendor_id', 'AB12'),
-        _CreateStrProbeParam('module_product_id', 'CD34'),
+        _CreateStrProbeParam('module_vendor_id', 'ab12'),
+        _CreateStrProbeParam('module_product_id', 'cd34'),
+        # vendor must be upper case.
         _CreateStrProbeParam('panel_edid_vendor_code', 'ABC'),
-        _CreateStrProbeParam('panel_edid_product_id', '1234'),
+        _CreateStrProbeParam('panel_edid_product_id', 'ef56'),
     ]
 
     actual = self._converter.ParseProbeParams(
@@ -891,7 +1326,43 @@ class TouchscreenModuleConverterTest(unittest.TestCase):
                 },
                 'expect': {
                     'vendor': [True, 'str', '!eq ABC'],
-                    'product_id': [True, 'hex', '!eq 0x1234']
+                    'product_id': [True, 'hex', '!eq 0xEF56']
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('module_vendor_id', 'AB12'),
+        _CreateStrProbeParam('module_product_id', 'CD34'),
+        _CreateStrProbeParam('panel_edid_vendor_code', 'ABC'),
+        _CreateStrProbeParam('panel_edid_product_id', 'EF56'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'touchscreen', 'comp_name-touchscreen_controller', {
+                'eval': {
+                    'input_device': {}
+                },
+                'expect': {
+                    'vendor': [True, 'hex', '!eq 0xAB12'],
+                    'product': [True, 'hex', '!eq 0xCD34']
+                }
+            }),
+        probe_config_types.ComponentProbeStatement(
+            'display_panel', 'comp_name-edid_panel', {
+                'eval': {
+                    'edid': {}
+                },
+                'expect': {
+                    'vendor': [True, 'str', '!eq ABC'],
+                    'product_id': [True, 'hex', '!eq 0xEF56']
                 }
             })
     ]
@@ -923,6 +1394,29 @@ class TouchscreenModuleConverterTest(unittest.TestCase):
             _CreateStrProbeParam('panel_edid_product_id', '1234'))
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
+
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('module_vendor_id', 'aa11'),
+        _CreateStrProbeParam('module_vendor_id', 'BB22'),
+        _CreateStrProbeParam('module_product_id', 'cc33'),
+        _CreateStrProbeParam('module_product_id', 'DD44'),
+        _CreateStrProbeParam('panel_edid_vendor_code', 'ABC'),
+        _CreateStrProbeParam('panel_edid_product_id', 'ee55'),
+        _CreateStrProbeParam('panel_edid_product_id', 'FF66')
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('module_vendor_id', 'AA11'),
+        _CreateStrProbeParam('module_vendor_id', 'BB22'),
+        _CreateStrProbeParam('module_product_id', 'CC33'),
+        _CreateStrProbeParam('module_product_id', 'DD44'),
+        _CreateStrProbeParam('panel_edid_vendor_code', 'ABC'),
+        _CreateStrProbeParam('panel_edid_product_id', 'EE55'),
+        _CreateStrProbeParam('panel_edid_product_id', 'FF66')
+    ]
+    self.assertCountEqual(actual, expected_probe_params)
 
 
 class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
@@ -973,13 +1467,13 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
         }}''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateMMCAndMMCHostProbeStatements(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateMMCAndMMCHostPS(self):
     probe_params = [
         _CreateStrProbeParam('mmc_manfid', '0x1a'),
         _CreateStrProbeParam('mmc_name', '0x656565656565'),
         _CreateStrProbeParam('bridge_pcie_vendor', '0xab12'),
         _CreateStrProbeParam('bridge_pcie_device', '0xcd34'),
-        _CreateStrProbeParam('bridge_pcie_class', '0x010809'),
+        _CreateStrProbeParam('bridge_pcie_class', '0xef5678'),
         _CreateStrProbeParam('nvme_model', ''),
     ]
 
@@ -1007,19 +1501,59 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
                 'expect': {
                     'pci_vendor_id': [True, 'hex', '!eq 0xAB12'],
                     'pci_device_id': [True, 'hex', '!eq 0xCD34'],
-                    'pci_class': [True, 'hex', '!eq 0x010809'],
+                    'pci_class': [True, 'hex', '!eq 0xEF5678'],
                 }
             })
     ]
     self.assertCountEqual(actual.output, expected_probe_statements)
 
-  def testParseProbeParam_CanGenerateNVMeProbeStatement(self):
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateMMCAndMMCHostPS(self):
+    probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1A'),
+        _CreateStrProbeParam('mmc_name', '0x656565656565'),
+        _CreateStrProbeParam('bridge_pcie_vendor', '0xAB12'),
+        _CreateStrProbeParam('bridge_pcie_device', '0xCD34'),
+        _CreateStrProbeParam('bridge_pcie_class', '0xEF5678'),
+        _CreateStrProbeParam('nvme_model', ''),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name-storage', {
+                'eval': {
+                    'mmc_storage': {}
+                },
+                'expect': {
+                    'mmc_manfid': [True, 'hex', '!eq 0x1A'],
+                    'mmc_name': [True, 'str', '!eq eeeeee']
+                }
+            }),
+        probe_config_types.ComponentProbeStatement(
+            'mmc_host', 'comp_name-bridge', {
+                'eval': {
+                    'mmc_host': {
+                        'is_emmc_attached': True,
+                    }
+                },
+                'expect': {
+                    'pci_vendor_id': [True, 'hex', '!eq 0xAB12'],
+                    'pci_device_id': [True, 'hex', '!eq 0xCD34'],
+                    'pci_class': [True, 'hex', '!eq 0xEF5678'],
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateNVMePS(self):
     probe_params = [
         _CreateStrProbeParam('mmc_manfid', '0x1a'),
         _CreateStrProbeParam('mmc_name', '0x656565656565'),
         _CreateStrProbeParam('bridge_pcie_vendor', '0xab12'),
         _CreateStrProbeParam('bridge_pcie_device', '0xcd34'),
-        _CreateStrProbeParam('bridge_pcie_class', '0x010809'),
+        _CreateStrProbeParam('bridge_pcie_class', '0xef5678'),
         _CreateStrProbeParam('nvme_model', 'the_model_with_eeeeee'),
     ]
 
@@ -1037,7 +1571,37 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
                     'nvme_model': [True, 'str', '!eq the_model_with_eeeeee'],
                     'pci_vendor': [True, 'hex', '!eq 0xAB12'],
                     'pci_device': [True, 'hex', '!eq 0xCD34'],
-                    'pci_class': [True, 'hex', '!eq 0x010809'],
+                    'pci_class': [True, 'hex', '!eq 0xEF5678'],
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateNVMePS(self):
+    probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1A'),
+        _CreateStrProbeParam('mmc_name', '0x656565656565'),
+        _CreateStrProbeParam('bridge_pcie_vendor', '0xAB12'),
+        _CreateStrProbeParam('bridge_pcie_device', '0xCD34'),
+        _CreateStrProbeParam('bridge_pcie_class', '0xEF5678'),
+        _CreateStrProbeParam('nvme_model', 'the_model_with_eeeeee'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'storage', 'comp_name-assembly', {
+                'eval': {
+                    'nvme_storage': {}
+                },
+                'expect': {
+                    'nvme_model': [True, 'str', '!eq the_model_with_eeeeee'],
+                    'pci_vendor': [True, 'hex', '!eq 0xAB12'],
+                    'pci_device': [True, 'hex', '!eq 0xCD34'],
+                    'pci_class': [True, 'hex', '!eq 0xEF5678'],
                 }
             })
     ]
@@ -1095,6 +1659,38 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
 
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1a'),
+        _CreateStrProbeParam('mmc_manfid', '0x2B'),
+        _CreateStrProbeParam('mmc_name', '0x656565656565'),
+        _CreateStrProbeParam('bridge_pcie_vendor', '0xaa11'),
+        _CreateStrProbeParam('bridge_pcie_vendor', '0xBB22'),
+        _CreateStrProbeParam('bridge_pcie_device', '0xcc33'),
+        _CreateStrProbeParam('bridge_pcie_device', '0xDD44'),
+        _CreateStrProbeParam('bridge_pcie_class', '0xee5555'),
+        _CreateStrProbeParam('bridge_pcie_class', '0xFF6666'),
+        _CreateStrProbeParam('nvme_model', 'the_model_with_eeeeee'),
+        _CreateStrProbeParam('nvme_model', 'THE_MODEL_WITH_FFFFFF'),
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('mmc_manfid', '0x1a'),
+        _CreateStrProbeParam('mmc_manfid', '0x2b'),
+        _CreateStrProbeParam('mmc_name', '0x656565656565'),
+        _CreateStrProbeParam('bridge_pcie_vendor', '0xaa11'),
+        _CreateStrProbeParam('bridge_pcie_vendor', '0xbb22'),
+        _CreateStrProbeParam('bridge_pcie_device', '0xcc33'),
+        _CreateStrProbeParam('bridge_pcie_device', '0xdd44'),
+        _CreateStrProbeParam('bridge_pcie_class', '0xee5555'),
+        _CreateStrProbeParam('bridge_pcie_class', '0xff6666'),
+        _CreateStrProbeParam('nvme_model', 'the_model_with_eeeeee'),
+        _CreateStrProbeParam('nvme_model', 'THE_MODEL_WITH_FFFFFF'),
+    ]
+
+    self.assertCountEqual(actual, expected_probe_params)
+
 
 class PCIeeMMCStorageBridgeProbeStatementConverterTest(unittest.TestCase):
 
@@ -1126,10 +1722,38 @@ class PCIeeMMCStorageBridgeProbeStatementConverterTest(unittest.TestCase):
     ''', probe_info_analytics.ProbeFunctionDefinition())
     self.assertEqual(actual, expect)
 
-  def testParseProbeParam_CanGenerateProbeStatement(self):
+  def testParseProbeParam_WithLowerCaseParams_CanGenerateProbeStatement(self):
     probe_params = [
         _CreateStrProbeParam('pci_vendor_id', '0xab12'),
         _CreateStrProbeParam('pci_device_id', '0xcd34'),
+        _CreateStrProbeParam('pci_class', '0x010809'),
+    ]
+
+    actual = self._converter.ParseProbeParams(
+        probe_params, allow_missing_params=False,
+        comp_name_for_probe_statement='comp_name')
+
+    expected_probe_statements = [
+        probe_config_types.ComponentProbeStatement(
+            'mmc_host', 'comp_name', {
+                'eval': {
+                    'mmc_host': {
+                        'is_emmc_attached': True
+                    }
+                },
+                'expect': {
+                    'pci_vendor_id': [True, 'hex', '!eq 0xAB12'],
+                    'pci_device_id': [True, 'hex', '!eq 0xCD34'],
+                    'pci_class': [True, 'hex', '!eq 0x010809'],
+                }
+            })
+    ]
+    self.assertCountEqual(actual.output, expected_probe_statements)
+
+  def testParseProbeParam_WithUpperCaseParams_CanGenerateProbeStatement(self):
+    probe_params = [
+        _CreateStrProbeParam('pci_vendor_id', '0xAB12'),
+        _CreateStrProbeParam('pci_device_id', '0xCD34'),
         _CreateStrProbeParam('pci_class', '0x010809'),
     ]
 
@@ -1174,6 +1798,25 @@ class PCIeeMMCStorageBridgeProbeStatementConverterTest(unittest.TestCase):
     ]
     self.assertCountEqual(actual, expected_probe_parameters)
 
+  def testGetNormalizedProbeParams_CanGetParamsWithCorrectFormat(self):
+    probe_params = [
+        _CreateStrProbeParam('pci_vendor_id', '0xaa11'),
+        _CreateStrProbeParam('pci_vendor_id', '0xBB22'),
+        _CreateStrProbeParam('pci_device_id', '0xcc33'),
+        _CreateStrProbeParam('pci_device_id', '0xDD44'),
+        _CreateStrProbeParam('pci_class', '0x010809')
+    ]
+
+    actual = self._converter.GetNormalizedProbeParams(probe_params)
+    expected_probe_params = [
+        _CreateStrProbeParam('pci_vendor_id', '0xaa11'),
+        _CreateStrProbeParam('pci_vendor_id', '0xbb22'),
+        _CreateStrProbeParam('pci_device_id', '0xcc33'),
+        _CreateStrProbeParam('pci_device_id', '0xdd44'),
+        _CreateStrProbeParam('pci_class', '0x010809')
+    ]
+
+    self.assertCountEqual(actual, expected_probe_params)
 
 if __name__ == '__main__':
   unittest.main()

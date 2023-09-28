@@ -93,6 +93,28 @@ class IBidirectionalProbeInfoConverter(IProbeInfoConverter):
       their corresponding component categories.
     """
 
+  @abc.abstractmethod
+  def GetNormalizedProbeParams(
+      self, probe_params: Sequence[probe_info_analytics.ProbeParameter]
+  ) -> Sequence[probe_info_analytics.ProbeParameter]:
+    """Returns the normalized `probe_params`.
+
+    This method returns the normalized `probe_params` without modifying the
+    input `probe_params`. This is used to preprocess the probe parameters
+    before checking if the parameters are identical in the context of the probe
+    tool.
+
+    Args:
+      probe_params: A list of `ProbeParameter` to be normalized.
+
+    Returns:
+      A list of normalized `ProbeParameter`.
+
+    Raises:
+      `ValueError` if the normalization fails.
+    """
+
+
 _RESOURCE_PATH = os.path.join(
     os.path.realpath(os.path.dirname(__file__)), 'resources')
 

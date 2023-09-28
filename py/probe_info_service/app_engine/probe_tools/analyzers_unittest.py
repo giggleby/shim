@@ -115,6 +115,11 @@ class _FakeMultiProbeInfoConverter(analyzers.IBidirectionalProbeInfoConverter):
 
     return parsed_results
 
+  def GetNormalizedProbeParams(
+      self,
+      probe_params: Sequence[_ProbeParameter]) -> Sequence[_ProbeParameter]:
+    return probe_params
+
 
 class ProbeInfoAnalyzerTest(unittest.TestCase):
   # Most test cases are still live in `../probe_tool_utils_unittest.py`.
