@@ -395,6 +395,25 @@ class CompChangeTest(ChangeUnitTestBase):
       self.assertRaises(_ApplyChangeUnitException, update_comp.Patch,
                         self._builder)
 
+  def testPatchCompChange_BlockUpdateRegion(self):
+    comp_info = database.ComponentInfo({'key': 'value'}, 'supported')
+    update_comp = _CompChange(
+        _BuildHWIDComponentAnalysisResultWithDefaults(
+            comp_cls='region', comp_name='us', seq_no=2, comp_info=comp_info,
+            diff_prev=_DiffStatus(
+                unchanged=False, name_changed=False,
+                support_status_changed=False, values_changed=True,
+                prev_comp_name='us', prev_support_status='supported',
+                probe_value_alignment_status_changed=False,
+                prev_probe_value_alignment_status=(
+                    _PVAlignmentStatus.NO_PROBE_INFO), converter_changed=False,
+                marked_untracked_changed=False)), comp_info.values,
+        comp_info.information, comp_info.comp_hash)
+
+    with self._builder:
+      self.assertRaises(_ApplyChangeUnitException, update_comp.Patch,
+                        self._builder)
+
 
 class AddEncodingCombinationTest(ChangeUnitTestBase):
 

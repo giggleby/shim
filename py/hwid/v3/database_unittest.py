@@ -259,11 +259,11 @@ class DatabaseTest(unittest.TestCase):
     with self.assertRaises(common.HWIDException):
       db.GetComponentClasses('field1', image_id=2)
 
-  def testGetRegionComponents_Succeed(self):
+  def testGetActiveRegionComponents_Succeed(self):
     db = database.WritableDatabase.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_region.yaml'),
         verify_checksum=False)
-    self.assertCountEqual(db.GetRegionComponents(), ['us', 'jp', 'gb'])
+    self.assertCountEqual(db.GetActiveRegionComponents(), ['us', 'jp', 'gb'])
 
 
 class ImageIdTest(unittest.TestCase):
@@ -643,6 +643,16 @@ class ComponentsTest(unittest.TestCase):
             }
         })
 
+  def testSetComponentStatus_UpdateRegionComponentExpr(self):
+    c = database.Components({'region': yaml.RegionComponent()})
+
+    c.SetComponentStatus('region', 'us', 'unqualified')
+    c.SetComponentStatus('region', 'jp', 'supported')
+
+    self.assertEqual(
+        c.Export(True, None),
+        yaml.safe_load('region: !region_component\n  unqualified:\n  - us\n'))
+
   def testGettingMethods(self):
     c = database.Components({
         'cls1': {
@@ -972,6 +982,12 @@ class ComponentsTest(unittest.TestCase):
     self.assertRaises(KeyError, c.GetComponentNameByHash, 'cls1',
                       old_comp1_hash)
     self.assertEqual('comp1', c.GetComponentNameByHash('cls1', new_comp1_hash))
+
+  def testUpdateComponent_UpdateRegionComponentExpr(self):
+    c = database.Components({'region': yaml.RegionComponent()})
+
+    with self.assertRaises(common.HWIDException):
+      c.UpdateComponent('region', 'us', 'us', None, 'unqualified')
 
 
 class EncodedFieldsTest(unittest.TestCase):

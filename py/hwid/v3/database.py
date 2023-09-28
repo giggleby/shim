@@ -501,7 +501,7 @@ class Database(abc.ABC):
   def GetComponentNameByHash(self, comp_cls: str, comp_hash: str) -> str:
     return self._components.GetComponentNameByHash(comp_cls, comp_hash)
 
-  def GetRegionComponents(self) -> Mapping[str, ComponentInfo]:
+  def GetActiveRegionComponents(self) -> Mapping[str, ComponentInfo]:
     region_comps = self._components.GetComponents(common.REGION_CLS)
     ret = {}
     for region_field_name, is_legacy in self.region_field_legacy_info.items():
@@ -1699,7 +1699,7 @@ class Components:
       status: One of `common.ComponentStatus`.
     """
     if comp_cls == common.REGION_CLS:
-      raise common.HWIDException('Region component class is not modifiable.')
+      self._region_component_expr.UpdateStatus(comp_name, status)
 
     self._SCHEMA.value_type.items['items'].value_type.optional_items[
         'status'].Validate(status)
@@ -1812,6 +1812,8 @@ class Components:
       bundle_uuids: Optional list, indicate the uuid of which factory bundle
           extract this component.
     """
+    if comp_cls == common.REGION_CLS:
+      raise common.HWIDException('Region component class is not modifiable.')
     self._SCHEMA.value_type.items['items'].value_type.items['values'].Validate(
         values)
     self._SCHEMA.value_type.items['items'].value_type.optional_items[

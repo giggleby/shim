@@ -95,7 +95,7 @@ class HWIDV3Action(hwid_action.HWIDAction):
     with_classes = with_classes or db.GetComponentClasses()
     for comp_cls in with_classes:
       if comp_cls == common.REGION_CLS:
-        comps[comp_cls] = db.GetRegionComponents()
+        comps[comp_cls] = db.GetActiveRegionComponents()
       else:
         comps[comp_cls] = db.GetComponents(comp_cls)
     return comps

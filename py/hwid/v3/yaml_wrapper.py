@@ -10,6 +10,7 @@ from the origin yaml module.
 import collections
 import functools
 import itertools
+from typing import DefaultDict, Set
 
 from yaml import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from yaml import __with_libyaml__
@@ -243,10 +244,11 @@ class _RegionFieldYAMLTagHandler(_HWIDV3YAMLTagHandler):
     return dumper.represent_scalar(cls.YAML_TAG, _YAML_DUMMY_STRING)
 
 
-class _RegionComponent(dict):
+class RegionComponent(dict):
   """A class for holding the region component data in a HWID database.
 
-  The instance of this class is expected to be frozen after constructing.
+  The component list is expected to be frozen after constructing. Only component
+  status is mutable.
   """
 
   def __init__(self, status_lists=None):
@@ -272,16 +274,32 @@ class _RegionComponent(dict):
     }
 
     # Apply customized status lists.
+    self.status_lists: DefaultDict[str, Set[str]] = collections.defaultdict(set)
     if status_lists is not None:
-      for status in common.ComponentStatus:
-        for region in status_lists.get(status, []):
+      for status, region_list in status_lists.items():
+        self.status_lists[status] = set(region_list)
+        for region in region_list:
           components_dict['items'][region]['status'] = status
 
     super().__init__(components_dict)
-    self.status_lists = status_lists
+
+  def UpdateStatus(self, region: str, status: common.ComponentStatus):
+    if region not in regions.REGIONS:
+      raise KeyError(f'Cannot update unsupported regions: {region}')
+
+    prev_status = self['items'][region].get('status')
+    if prev_status is not None:
+      del self['items'][region]['status']
+      self.status_lists[prev_status].remove(region)
+      if not self.status_lists[prev_status]:
+        del self.status_lists[prev_status]
+
+    if status != common.ComponentStatus.supported:
+      self['items'][region]['status'] = status
+      self.status_lists[status].add(region)
 
   def __eq__(self, rhs):
-    return (isinstance(rhs, _RegionComponent) and super().__eq__(rhs) and
+    return (isinstance(rhs, RegionComponent) and super().__eq__(rhs) and
             self.status_lists == rhs.status_lists)
 
   def __ne__(self, rhs):
@@ -291,7 +309,7 @@ class _RegionComponent(dict):
 class _RegionComponentYAMLTagHandler(_HWIDV3YAMLTagHandler):
   """Metaclass for registering the !region_component YAML tag."""
   YAML_TAG = '!region_component'
-  TARGET_CLASS = _RegionComponent
+  TARGET_CLASS = RegionComponent
 
   _STATUS_LISTS_SCHEMA = schema.FixedDict(
       'status lists', optional_items={
@@ -315,9 +333,13 @@ class _RegionComponentYAMLTagHandler(_HWIDV3YAMLTagHandler):
 
   @classmethod
   def YAMLRepresenter(cls, dumper, data):
-    if data.status_lists is None:
+    if not data.status_lists:
       return dumper.represent_scalar(cls.YAML_TAG, _YAML_DUMMY_STRING)
-    return dumper.represent_mapping(cls.YAML_TAG, data.status_lists)
+    return dumper.represent_mapping(
+        cls.YAML_TAG, {
+            str(status): list(region_list)
+            for status, region_list in data.status_lists.items()
+        })
 
   @classmethod
   def _VerifyStatusLists(cls, status_lists):

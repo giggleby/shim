@@ -86,6 +86,11 @@ class ParseRegionFieldUnittest(unittest.TestCase):
     self.assertDictEqual({'region': 'unknown'}, decoded['foo'][255])
 
 
+def _Load2(doc):
+  return yaml.safe_load(
+      yaml.safe_dump(yaml.safe_load(doc), default_flow_style=False))
+
+
 class ParseRegionComponentUnittest(unittest.TestCase):
 
   def setUp(self):
@@ -174,17 +179,41 @@ class ParseRegionComponentUnittest(unittest.TestCase):
         '  deprecated: [us, gb]\n')
 
   def testDumpRegionComponent(self):
-    load2 = lambda doc: yaml.safe_load(
-        yaml.safe_dump(yaml.safe_load(doc), default_flow_style=False))
     doc = 'region: !region_component\n'
-    self.assertEqual(yaml.safe_load(doc), load2(doc))
+    self.assertEqual(yaml.safe_load(doc), _Load2(doc))
     doc = 'region: !region_component {}\n'
-    self.assertEqual(yaml.safe_load(doc), load2(doc))
+    self.assertEqual(yaml.safe_load(doc), _Load2(doc))
 
     doc = 'region: !region_component\n  unqualified: [zz]\n'
-    self.assertEqual(yaml.safe_load(doc), load2(doc))
+    self.assertEqual(yaml.safe_load(doc), _Load2(doc))
     doc = 'region: !region_component\n  unqualified: [zz]\n  unsupported: [aa]'
-    self.assertEqual(yaml.safe_load(doc), load2(doc))
+    self.assertEqual(yaml.safe_load(doc), _Load2(doc))
+
+  def testUpdateRegionComponentStatus_Succeed(self):
+    comp = _Load2('region: !region_component\n')
+    comp['region'].UpdateStatus('aa', 'unqualified')
+    self.assertDictEqual(
+        comp,
+        _Load2(
+            textwrap.dedent('''\
+                            region: !region_component
+                              unqualified: [aa]
+                            ''')))
+
+  def testUpdateRegionComponentStatus_UpdateSupported(self):
+    comp = _Load2(
+        textwrap.dedent('''\
+                        region: !region_component
+                          unqualified: [aa]
+                        '''))
+    comp['region'].UpdateStatus('aa', 'supported')
+    self.assertDictEqual(comp, _Load2('region: !region_component\n'))
+
+  def testUpdateRegionComponentStatus_UpdateUnsupported(self):
+    comp = _Load2('region: !region_component\n')
+    with self.assertRaises(KeyError):
+      comp['region'].UpdateStatus('zz', 'unqualified')
+
 
 
 class StandardizeUnittest(unittest.TestCase):
