@@ -3,18 +3,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from typing import Optional
 import unittest
 
 from google.protobuf import text_format
 
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.probe_info_service.app_engine import probe_info_analytics
+from cros.factory.probe_info_service.app_engine.probe_tools import analyzers
 from cros.factory.probe_info_service.app_engine.probe_tools import probe_statement_converters as ps_converters
 
 
 def _CreateStrProbeParam(name: str,
                          value: str) -> probe_info_analytics.ProbeParameter:
   return probe_info_analytics.ProbeParameter(name=name, string_value=value)
+
+
+def _GetConverter(name: str) -> Optional[analyzers.IProbeStatementConverter]:
+  for converter in ps_converters.GetAllConverters():
+    if name == converter.GetName():
+      return converter
+
+  return None
 
 
 class TouchscreenModuleConverterTest(unittest.TestCase):
@@ -281,8 +291,7 @@ class MMCWithBridgeProbeStatementConverterTest(unittest.TestCase):
 class PCIeeMMCStorageBridgeProbeStatementConverterTest(unittest.TestCase):
 
   def setUp(self):
-    self._converter = (
-        ps_converters.BuildPCIeeMMCStorageBridgeStatementConverter())
+    self._converter = _GetConverter('emmc_pcie_storage_bridge.mmc_host')
 
   def testGenerateDefinition(self):
     actual = self._converter.GenerateDefinition()
@@ -322,7 +331,7 @@ class PCIeeMMCStorageBridgeProbeStatementConverterTest(unittest.TestCase):
 
     expected_probe_statements = [
         probe_config_types.ComponentProbeStatement(
-            'emmc_pcie_storage_bridge', 'comp_name', {
+            'mmc_host', 'comp_name', {
                 'eval': {
                     'mmc_host': {
                         'is_emmc_attached': True

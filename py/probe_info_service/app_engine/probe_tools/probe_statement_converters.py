@@ -392,7 +392,7 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
   }
 
   def __init__(self, ps_generator: probe_config_types.ProbeStatementDefinition,
-               probe_function_name: str,
+               probe_function_name: str, converter_name: Optional[str] = None,
                probe_params: Optional[Sequence[_IProbeParamSpec]] = None,
                probe_function_argument: Optional[Mapping[str, Any]] = None):
     self._ps_generator = ps_generator
@@ -411,17 +411,19 @@ class _SingleProbeFuncConverter(_IProbeStatementConverter):
         spec.BuildProbeStatementParam(output_fields) for spec in probe_params
     ]
 
-    self._name = (
+    self._name = converter_name or (
         f'{self._ps_generator.category_name}.{self._probe_func_def.name}')
 
   @classmethod
   def FromDefaultRuntimeProbeStatementGenerator(
       cls, runtime_probe_category_name: str, runtime_probe_func_name: str,
+      converter_name: Optional[str] = None,
       probe_params: Optional[Sequence[_IProbeParamSpec]] = None,
       probe_function_argument: Optional[Mapping[str, Any]] = None):
     ps_generator = probe_config_definition.GetProbeStatementDefinition(
         runtime_probe_category_name)
-    return cls(ps_generator, runtime_probe_func_name, probe_params=probe_params,
+    return cls(ps_generator, runtime_probe_func_name,
+               converter_name=converter_name, probe_params=probe_params,
                probe_function_argument=probe_function_argument)
 
   @property
@@ -729,7 +731,7 @@ def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
   sub_converters = {
       'touchscreen_controller':
           _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-              'touchscreen', 'input_device', [
+              'touchscreen', 'input_device', probe_params=[
                   _ProbeFunctionParam(
                       'module_vendor_id', value_converter=_ParamValueConverter(
                           'string', _CapitalizeHexValueWithoutPrefix),
@@ -741,7 +743,7 @@ def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
               ]),
       'edid_panel':
           _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-              'display_panel', 'edid', [
+              'display_panel', 'edid', probe_params=[
                   _ProbeFunctionParam('panel_edid_vendor_code',
                                       probe_statement_param_name='vendor'),
                   _ProbeFunctionParam(
@@ -755,21 +757,6 @@ def BuildTouchscreenModuleConverter() -> _IProbeStatementConverter:
       'touchscreen_module.generic_input_device_and_edid',
       'Probe statement converter for touchscreen modules with eDP displays.',
       sub_converters)
-
-
-def BuildPCIeeMMCStorageBridgeStatementConverter() -> _IProbeStatementConverter:
-  return _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-      'emmc_pcie_storage_bridge', 'mmc_host', [
-          _ProbeFunctionParam(
-              'pci_vendor_id', value_converter=_ParamValueConverter(
-                  'string', _RemoveHexPrefixAndCapitalize)),
-          _ProbeFunctionParam(
-              'pci_device_id', value_converter=_ParamValueConverter(
-                  'string', _RemoveHexPrefixAndCapitalize)),
-          _ProbeFunctionParam(
-              'pci_class', value_converter=_ParamValueConverter(
-                  'string', _RemoveHexPrefixAndCapitalize)),
-      ], probe_function_argument={'is_emmc_attached': True})
 
 
 _MMC_BASIC_PARAMS = (
@@ -803,17 +790,17 @@ class MMCWithBridgeProbeStatementConverter(_IProbeStatementConverter):
 
     emmc_converter = (
         _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-            'storage', 'mmc_storage', _MMC_BASIC_PARAMS))
+            'storage', 'mmc_storage', probe_params=_MMC_BASIC_PARAMS))
     mmc_host_converter = (
         _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-            'mmc_host', 'mmc_host', [
+            'mmc_host', 'mmc_host', probe_params=[
                 _BuildPCIeParam('bridge_pcie_vendor', 'pci_vendor_id'),
                 _BuildPCIeParam('bridge_pcie_device', 'pci_device_id'),
                 _BuildPCIeParam('bridge_pcie_class', 'pci_class'),
             ], probe_function_argument={'is_emmc_attached': True}))
     nvme_converter = (
         _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-            'storage', 'nvme_storage', [
+            'storage', 'nvme_storage', probe_params=[
                 _BuildPCIeParam('bridge_pcie_vendor', 'pci_vendor'),
                 _BuildPCIeParam('bridge_pcie_device', 'pci_device'),
                 _BuildPCIeParam('bridge_pcie_class', 'pci_class'),
@@ -886,16 +873,16 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
   # TODO(yhong): Separate the data piece out the code logic.
   return [
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'audio_codec', 'audio_codec', [
+          'audio_codec', 'audio_codec', probe_params=[
               _ProbeFunctionParam('name'),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'battery', 'generic_battery', [
+          'battery', 'generic_battery', probe_params=[
               _ProbeFunctionParam('manufacturer'),
               _ProbeFunctionParam('model_name'),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'camera', 'mipi_camera', [
+          'camera', 'mipi_camera', probe_params=[
               _ConcatParam('mipi_module_id', [
                   _SingleProbeStatementParam(
                       'module_vid', 'The camera module vendor ID.',
@@ -920,7 +907,7 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
               ])
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'camera', 'usb_camera', [
+          'camera', 'usb_camera', probe_params=[
               _ProbeFunctionParam(
                   'usb_vendor_id', value_converter=_ParamValueConverter(
                       'string', _CapitalizeHexValueWithoutPrefix)),
@@ -932,7 +919,7 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
                       'string', _CapitalizeHexValueWithoutPrefix)),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'display_panel', 'edid', [
+          'display_panel', 'edid', probe_params=[
               _ProbeFunctionParam(
                   'product_id', value_converter=_ParamValueConverter(
                       'string', _CapitalizeHexValueWithoutPrefix)),
@@ -943,11 +930,24 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
                                   _ParamValueConverter('int')),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'dram', 'memory', [
+          'dram', 'memory', probe_params=[
               _ProbeFunctionParam('part'),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'storage', 'mmc_storage', [
+          'mmc_host', 'mmc_host',
+          converter_name='emmc_pcie_storage_bridge.mmc_host', probe_params=[
+              _ProbeFunctionParam(
+                  'pci_vendor_id', value_converter=_ParamValueConverter(
+                      'string', _RemoveHexPrefixAndCapitalize)),
+              _ProbeFunctionParam(
+                  'pci_device_id', value_converter=_ParamValueConverter(
+                      'string', _RemoveHexPrefixAndCapitalize)),
+              _ProbeFunctionParam(
+                  'pci_class', value_converter=_ParamValueConverter(
+                      'string', _RemoveHexPrefixAndCapitalize)),
+          ], probe_function_argument={'is_emmc_attached': True}),
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+          'storage', 'mmc_storage', probe_params=[
               *_MMC_BASIC_PARAMS,
               _ProbeFunctionParam(
                   'mmc_prv', value_converter=_ParamValueConverter(
@@ -957,7 +957,7 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
                                   _ParamValueConverter('int')),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'storage', 'nvme_storage', [
+          'storage', 'nvme_storage', probe_params=[
               _ProbeFunctionParam(
                   'pci_vendor', value_converter=_ParamValueConverter(
                       'string', _RemoveHexPrefixAndCapitalize)),
@@ -972,7 +972,7 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
                                   _ParamValueConverter('int')),
           ]),
       _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
-          'storage', 'ufs_storage', [
+          'storage', 'ufs_storage', probe_params=[
               _ProbeFunctionParam('ufs_vendor'),
               _ProbeFunctionParam('ufs_model'),
               _InformationalParam('size_in_gb', 'The storage size in GB.',
@@ -981,5 +981,4 @@ def GetAllConverters() -> Sequence[analyzers.IProbeStatementConverter]:
       _BuildCPUProbeStatementConverter(),
       BuildTouchscreenModuleConverter(),
       MMCWithBridgeProbeStatementConverter(),
-      BuildPCIeeMMCStorageBridgeStatementConverter(),
   ]
