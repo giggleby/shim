@@ -84,7 +84,7 @@
     "dev": "webpack-serve ./webpack.config.js",
     "lint": "tslint -t verbose -p ./",
     "test": "jest --testEnvironment=jest-environment-jsdom",
-    "test:coverage": "jest --testEnvironment=jest-environment-jsdom --coverage"
+    "test:coverage": "jest --testEnvironment=jest-environment-jsdom --collectCoverageFrom=src/** --coverage"
   },
   "author": "Mao Huang <littlecvr@google.com>"
 }
