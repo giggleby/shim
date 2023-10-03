@@ -279,9 +279,17 @@ def GetAllProbeStatementGenerators():
       # eMMC
       _ProbeStatementGenerator(
           'storage', 'generic_storage', storage_shared_fields + [
+              _FieldRecord(['hwrev', 'mmc_hwrev'], 'mmc_hwrev',
+                           HexToHexValueConverter(1), is_optional=True),
               _FieldRecord(['name', 'mmc_name'], 'mmc_name', str_converter),
               _FieldRecord(['manfid', 'mmc_manfid'], 'mmc_manfid',
                            HexToHexValueConverter(2)),
+              _FieldRecord(['oemid', 'mmc_oemid'], 'mmc_oemid',
+                           HexToHexValueConverter(4)),
+              _FieldRecord(['prv', 'mmc_prv'], 'mmc_prv',
+                           HexToHexValueConverter(2), is_optional=True),
+              _FieldRecord(['serial', 'mmc_serial'], 'mmc_serial',
+                           HexToHexValueConverter(8), is_optional=True),
           ]),
       # NVMe
       _ProbeStatementGenerator(
