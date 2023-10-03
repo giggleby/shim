@@ -536,12 +536,12 @@ class GenerateVerificationPayloadTest(unittest.TestCase):
     self.assertEqual(
         json_utils.LoadStr(files['runtime_probe/model_g/probe_config.json']),
         expected_outputs['runtime_probe/model_g/probe_config.json'])
-    hw_verificaiontion_spec = hardware_verifier_pb2.HwVerificationSpec()
+    hw_verification_spec = hardware_verifier_pb2.HwVerificationSpec()
     text_format.Parse(files['hw_verification_spec.prototxt'],
-                      hw_verificaiontion_spec)
+                      hw_verification_spec)
     self.assertEqual(
         json_utils.DumpStr(
-            json_format.MessageToDict(hw_verificaiontion_spec), sort_keys=True),
+            json_format.MessageToDict(hw_verification_spec), sort_keys=True),
         json_utils.DumpStr(expected_outputs['hw_verification_spec.prototxt'],
                            sort_keys=True))
 

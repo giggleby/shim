@@ -503,9 +503,13 @@ class VerificationPayloadGenerationResult(NamedTuple):
   primary_identifiers: DefaultDict[str, Dict]
 
 
-ComponentVerificationPayloadPiece = collections.namedtuple(
-    'ComponentVerificationPayloadPiece',
-    ['is_duplicate', 'error_msg', 'probe_statement', 'component_info'])
+class ComponentVerificationPayloadPiece(NamedTuple):
+  is_duplicate: bool
+  error_msg: Optional[str]
+  probe_statement: Optional[probe_config_types.ComponentProbeStatement]
+  component_info: Optional[hardware_verifier_pb2.ComponentInfo]
+  support_status: str
+
 
 _STATUS_MAP = {
     hwid_common.ComponentStatus.supported: hardware_verifier_pb2.QUALIFIED,
@@ -514,10 +518,11 @@ _STATUS_MAP = {
     hwid_common.ComponentStatus.unsupported: hardware_verifier_pb2.REJECTED,
 }
 
-_QUAL_STATUS_PREFERENCE = {
-    hardware_verifier_pb2.QUALIFIED: 0,
-    hardware_verifier_pb2.UNQUALIFIED: 1,
-    hardware_verifier_pb2.REJECTED: 2,
+_SUPPORT_STATUS_PREFERENCE = {
+    hwid_common.ComponentStatus.supported: 0,
+    hwid_common.ComponentStatus.deprecated: 1,
+    hwid_common.ComponentStatus.unqualified: 2,
+    hwid_common.ComponentStatus.unsupported: 3,
 }
 
 _ProbeRequestSupportCategory = runtime_probe_pb2.ProbeRequest.SupportCategory
@@ -560,7 +565,8 @@ def GenerateProbeStatement(ps_gens, comp_name, comp_info):
         qualification_status=_STATUS_MAP[comp_info.status])
 
   return ComponentVerificationPayloadPiece(is_duplicate, error_msg,
-                                           probe_statement, component_info)
+                                           probe_statement, component_info,
+                                           comp_info.status)
 
 
 def GetAllComponentVerificationPayloadPieces(
@@ -694,9 +700,8 @@ def GenerateVerificationPayload(dbs):
   """
 
   def _ComponentSortKey(comp_vp_piece):
-    return (_QUAL_STATUS_PREFERENCE.get(
-        comp_vp_piece.component_info.qualification_status,
-        3), comp_vp_piece.probe_statement.component_name)
+    return (_SUPPORT_STATUS_PREFERENCE.get(comp_vp_piece.support_status, 4),
+            comp_vp_piece.probe_statement.component_name)
 
   def _StripModelPrefix(comp_name, model):
     """Strip the known model prefix in comp name."""
@@ -822,14 +827,13 @@ def GenerateVerificationPayload(dbs):
 
       The battery with larger key returned by this function is going to be
       skipped, in the order:
-      1. Qualification status.
+      1. Support status.
       2. Component name (skip the lexicographically larger one).
       """
       component = batteries[comp_name]
-      status = _STATUS_MAP.get(component.status)
-      qual = _QUAL_STATUS_PREFERENCE.get(status, 3)
+      status = _SUPPORT_STATUS_PREFERENCE.get(component.status)
 
-      return (qual, comp_name)
+      return (status, comp_name)
 
     for comp_name_1, comp_name_2 in itertools.combinations(batteries, 2):
       if comp_name_1 in skip_comp_names or comp_name_2 in skip_comp_names:

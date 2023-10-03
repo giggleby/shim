@@ -97,6 +97,11 @@
       },
       {
         "componentCategory": "storage",
+        "componentUuid": "model_a_storage_4_supported",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "storage",
         "componentUuid": "model_e_storage1",
         "qualificationStatus": "QUALIFIED"
       },
@@ -401,7 +406,7 @@
         "eval": {
           "generic_battery": {}
         },
-        "expect":{
+        "expect": {
           "chemistry": [
             false,
             "str"
@@ -429,22 +434,6 @@
             false,
             "str"
           ],
-          "usb_bcd_device": [
-            false,
-            "hex"
-          ],
-          "usb_product_id": [
-            false,
-            "hex"
-          ],
-          "usb_removable": [
-            false,
-            "str"
-          ],
-          "usb_vendor_id": [
-            false,
-            "hex"
-          ],
           "mipi_module_id": [
             false,
             "str"
@@ -458,6 +447,22 @@
             "str"
           ],
           "mipi_vendor": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_removable": [
+            false,
+            "str"
+          ],
+          "usb_vendor_id": [
             false,
             "hex"
           ]
@@ -701,6 +706,47 @@
             true,
             "hex",
             "!eq 0x1234ABCD"
+          ],
+          "sectors": [
+            true,
+            "int",
+            "!eq 1000000"
+          ]
+        }
+      },
+      "model_a_storage_4_supported": {
+        "eval": {
+          "generic_storage": {}
+        },
+        "expect": {
+          "mmc_hwrev": [
+            false,
+            "hex"
+          ],
+          "mmc_manfid": [
+            true,
+            "hex",
+            "!eq 0x11"
+          ],
+          "mmc_name": [
+            true,
+            "str",
+            "!eq AAAAAA"
+          ],
+          "mmc_oemid": [
+            true,
+            "hex",
+            "!eq 0x2233"
+          ],
+          "mmc_prv": [
+            true,
+            "hex",
+            "!eq 0x04"
+          ],
+          "mmc_serial": [
+            true,
+            "hex",
+            "!eq 0x5689ABCD"
           ],
           "sectors": [
             true,
@@ -1237,22 +1283,6 @@
             false,
             "str"
           ],
-          "usb_bcd_device": [
-            false,
-            "hex"
-          ],
-          "usb_product_id": [
-            false,
-            "hex"
-          ],
-          "usb_removable": [
-            false,
-            "str"
-          ],
-          "usb_vendor_id": [
-            false,
-            "hex"
-          ],
           "mipi_module_id": [
             false,
             "str"
@@ -1266,6 +1296,22 @@
             "str"
           ],
           "mipi_vendor": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_removable": [
+            false,
+            "str"
+          ],
+          "usb_vendor_id": [
             false,
             "hex"
           ]
@@ -1658,22 +1704,6 @@
             false,
             "str"
           ],
-          "usb_bcd_device": [
-            false,
-            "hex"
-          ],
-          "usb_product_id": [
-            false,
-            "hex"
-          ],
-          "usb_removable": [
-            false,
-            "str"
-          ],
-          "usb_vendor_id": [
-            false,
-            "hex"
-          ],
           "mipi_module_id": [
             false,
             "str"
@@ -1687,6 +1717,22 @@
             "str"
           ],
           "mipi_vendor": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_removable": [
+            false,
+            "str"
+          ],
+          "usb_vendor_id": [
             false,
             "hex"
           ]
@@ -2135,22 +2181,6 @@
             false,
             "str"
           ],
-          "usb_bcd_device": [
-            false,
-            "hex"
-          ],
-          "usb_product_id": [
-            false,
-            "hex"
-          ],
-          "usb_removable": [
-            false,
-            "str"
-          ],
-          "usb_vendor_id": [
-            false,
-            "hex"
-          ],
           "mipi_module_id": [
             false,
             "str"
@@ -2164,6 +2194,22 @@
             "str"
           ],
           "mipi_vendor": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_removable": [
+            false,
+            "str"
+          ],
+          "usb_vendor_id": [
             false,
             "hex"
           ]
@@ -2612,22 +2658,6 @@
             false,
             "str"
           ],
-          "usb_bcd_device": [
-            false,
-            "hex"
-          ],
-          "usb_product_id": [
-            false,
-            "hex"
-          ],
-          "usb_removable": [
-            false,
-            "str"
-          ],
-          "usb_vendor_id": [
-            false,
-            "hex"
-          ],
           "mipi_module_id": [
             false,
             "str"
@@ -2641,6 +2671,22 @@
             "str"
           ],
           "mipi_vendor": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_removable": [
+            false,
+            "str"
+          ],
+          "usb_vendor_id": [
             false,
             "hex"
           ]

@@ -72,6 +72,28 @@ components:
         status: duplicate
         values:
           a_special_field: a_special_value
+      storage_3_deprecated:
+        status: deprecated
+        values:
+          type: MMC
+          name: AAAAAA
+          manfid: '0x000011'
+          oemid: '0x2233'
+          prv: '0x000004'
+          serial: '0x5689abcd'
+          sectors: '1000000'
+          note: this should not be selected
+      storage_4_supported:
+        status: supported
+        values:
+          type: MMC
+          name: AAAAAA
+          manfid: '0x000011'
+          oemid: '0x2233'
+          prv: '0x000004'
+          serial: '0x5689abcd'
+          sectors: '1000000'
+          note: this should be selected instead
   touchpad:
     items:
       touchpad_0:
