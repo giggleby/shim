@@ -1753,18 +1753,18 @@ class SelfServiceShardTest(unittest.TestCase):
     self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
                      action.GetDBEditableSection())
 
-  def testCreateHwidDbFirmwareInfoUpdateCl_ProjectNotFound(self):
-    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+  def testCreateHwidDbFirmwareInfoUpdateCl_ProjectNotFound_Noop(self):
+    live_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_repo.GetHWIDDBMetadataByName.side_effect = (
+        hwid_repo.InvalidProjectError)
 
     firmware_record = _FirmwareRecord(model='notproj')
     bundle_record = _FactoryBundleRecord(firmware_records=[firmware_record])
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=bundle_record)
-    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
+    resp = self.service.CreateHwidDbFirmwareInfoUpdateCl(req)
 
-    self.assertEqual(ex.exception.code,
-                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+    self.assertEqual(len(resp.commits), 0)
 
   def testCreateHwidDbFirmwareInfoUpdateCl_InvalidSigner(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')

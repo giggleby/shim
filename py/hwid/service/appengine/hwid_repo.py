@@ -63,6 +63,10 @@ class HWIDRepoError(Exception):
   """Root exception class for reporting unexpected error in HWID repo."""
 
 
+class InvalidProjectError(ValueError, HWIDRepoError):
+  """Raised when a project is invalid in HWID repo"""
+
+
 class V3DBContents(NamedTuple):
   """Holds the HWID DB file contents of a v3 project."""
   internal_db: str
@@ -149,7 +153,7 @@ class HWIDRepoView(abc.ABC):
     try:
       return self.hwid_db_metadata_of_name[name]
     except KeyError:
-      raise ValueError(f'Invalid HWID DB name: {name}.') from None
+      raise InvalidProjectError(f'Invalid HWID DB name: {name}.') from None
 
   def LoadV2HWIDDBByName(self, name: str) -> str:
     """Returns the HWID DB contents by the v2 project name.
@@ -279,7 +283,7 @@ class HWIDRepo(HWIDRepoView):
     try:
       path = self.hwid_db_metadata_of_name[name].path
     except KeyError:
-      raise ValueError(f'invalid HWID DB name: {name}') from None
+      raise InvalidProjectError(f'invalid HWID DB name: {name}') from None
     hwid_db_contents = _RemoveChecksum(hwid_db_contents)
     new_files.append(
         (path, git_util.NORMAL_FILE_MODE, hwid_db_contents.encode('utf-8')))

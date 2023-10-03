@@ -841,6 +841,9 @@ class SelfServiceShard(common_helper.HWIDServiceShardBase):
       try:
         self._UpdateHWIDDBDataIfNeed(live_hwid_repo, model)
         action = self._hwid_action_manager.GetHWIDAction(model)
+      except hwid_repo.InvalidProjectError:
+        logging.warning('%s not found in HWID database.', model)
+        continue
       except (KeyError, ValueError, RuntimeError,
               hwid_repo.HWIDRepoError) as ex:
         raise common_helper.ConvertExceptionToProtoRPCException(ex) from None

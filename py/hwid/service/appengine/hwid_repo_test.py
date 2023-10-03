@@ -150,7 +150,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
         'SBOARD': b'sboard data',
     })
 
-    with self.assertRaises(ValueError):
+    with self.assertRaises(hwid_repo.InvalidProjectError):
       self._hwid_repo.LoadV3HWIDDBByName('NO_SUCH_BOARD')
 
   def testLoadV3HWIDDBByName_ValidNameButDbNotFound(self):
@@ -162,7 +162,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
   def testCommitHWIDDB_InvalidHWIDDBName(self):
     self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
 
-    with self.assertRaises(ValueError):
+    with self.assertRaises(hwid_repo.InvalidProjectError):
       self._hwid_repo.CommitHWIDDB('no_such_board', 'unused_test_str',
                                    'unused_test_str', [], [], False)
 
@@ -314,7 +314,7 @@ class GerritToTHWIDRepoTest(HWIDRepoBaseTest):
     self._mocked_get_commit_id.return_value = 'unused_commit_id'
     self._mocked_get_file_content.return_value = self._RAW_METADATA
 
-    with self.assertRaises(ValueError):
+    with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo_manager.GetGerritToTHWIDRepo().GetHWIDDBMetadataByName(
           'PROJ2')
 
