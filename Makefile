@@ -520,7 +520,7 @@ presubmit-po:
 	@$(MK_DIR)/presubmit_po.py po
 
 presubmit-mypy:
-	@$(MAKE) mypy MYPY_FILES="$(filter %.py,$(PRESUBMIT_FILES))" 2>/dev/null
+	@$(MAKE) mypy 2>/dev/null
 
 presubmit-test:
 	@$(MK_DIR)/$@.py $(PRESUBMIT_FILES)
