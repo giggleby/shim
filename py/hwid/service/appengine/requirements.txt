@@ -2,7 +2,7 @@
 dulwich==0.20.3
 
 # 3-Clause BSD License
-flask==2.0.3
+flask==2.3.3
 
 # License: Apache License 2.0
 googleapis_common_protos==1.60.0
