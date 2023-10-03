@@ -9,6 +9,7 @@ import logging
 import os
 import pwd
 import sys
+from typing import List
 
 
 # derived from src/aosp/external/minijail/minijail0_cli.c
@@ -35,15 +36,21 @@ ALLOWLIST = ['/usr/sbin/sslh-fork']
 JAILED_DIR = '/run/jailed'
 
 
-def minijail():
-  opts, args = getopt.getopt(sys.argv[1:], OPT_STRING, LONG_OPTIONS)
+def minijail(argv: List[str]):
+  try:
+    list_opts, args = getopt.getopt(argv[1:], OPT_STRING, LONG_OPTIONS)
+  except getopt.GetoptError:
+    # Some unrecognized arguments are used so we put the process back to jail.
+    list_opts, args = [], []
 
   if not args or args[0] not in ALLOWLIST:
-    original = os.path.join(JAILED_DIR, os.path.basename(sys.argv[0]))
-    args = [original] + sys.argv[1:]
+    original = os.path.join(JAILED_DIR, os.path.basename(argv[0]))
+    args = [original] + argv[1:]
     os.execvp(args[0], args)
+    # Unit test reaches this line if we mock os.execvp.
+    return
 
-  opts = dict(opts)
+  opts = dict(list_opts)
   user = opts.get('-u')
   group = opts.get('-g')
   gid = 0
@@ -62,13 +69,17 @@ def minijail():
   os.execvp(args[0], args)
 
 
-if __name__ == '__main__':
+def Main(argv: List[str]):
   logging.basicConfig(
       filename='/var/log/minijail0.log', level=logging.INFO,
       format='[%(levelname)s] %(asctime)s.%(msecs)03d %(message)s',
       datefmt='%Y-%m-%d %H:%M:%S')
   try:
-    minijail()
+    minijail(argv)
   except Exception:
-    logging.exception('argument: %r', sys.argv)
+    logging.exception('argument: %r', argv)
     sys.exit(1)
+
+
+if __name__ == '__main__':
+  Main(sys.argv)

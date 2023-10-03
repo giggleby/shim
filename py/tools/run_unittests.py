@@ -38,6 +38,7 @@ FACTORY_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..'))
 # Directories to search unit test files starting from factory repository root.
 DIRECTORIES_TO_SEARCH = [
+    'init',
     'py',
     'po',
     'go',
