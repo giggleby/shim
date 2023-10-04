@@ -98,22 +98,45 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
 
 class GenericStorageMMCProbeStatementGeneratorTest(unittest.TestCase):
 
-  def testTryGenerate(self):
-    comp_values = {
+  def setUp(self):
+    super().setUp()
+    self.comp_values = {
         'sectors': '112233',
         'name': 'ABCxyz',
         'manfid': '0x00022',
         'oemid': '0x4455',
         'prv': '0xa',
-        'serial': '0x1234abcd'
+        'serial': '0x1234abcd',
     }
+    self.ps_gen = _vp_generator.GetAllProbeStatementGenerators()['storage'][0]
+
+  def testTryGenerate_Success(self):
+    expected = probe_config_types.ComponentProbeStatement(
+        'storage', 'name1', {
+            'eval': {
+                'generic_storage': {}
+            },
+            'expect': {
+                'sectors': [True, 'int', '!eq 112233'],
+                'mmc_hwrev': [False, 'hex'],
+                'mmc_name': [True, 'str', '!eq ABCxyz'],
+                'mmc_manfid': [True, 'hex', '!eq 0x22'],
+                'mmc_oemid': [True, 'hex', '!eq 0x4455'],
+                'mmc_prv': [True, 'hex', '!eq 0x0A'],
+                'mmc_serial': [True, 'hex', '!eq 0x1234ABCD'],
+            }
+        })
+    ps = self.ps_gen.TryGenerate('name1', self.comp_values)
+    self.assertEqual(ps, expected)
+
+  def testTryGenerate_AlternativeFieldNames(self):
     comp_values_new = {
         'sectors': '112233',
         'mmc_name': 'ABCxyz',
         'mmc_manfid': '0x00022',
         'mmc_oemid': '0x4455',
         'mmc_prv': '0xa',
-        'mmc_serial': '0x1234abcd'
+        'mmc_serial': '0x1234abcd',
     }
     expected = probe_config_types.ComponentProbeStatement(
         'storage', 'name1', {
@@ -127,40 +150,76 @@ class GenericStorageMMCProbeStatementGeneratorTest(unittest.TestCase):
                 'mmc_manfid': [True, 'hex', '!eq 0x22'],
                 'mmc_oemid': [True, 'hex', '!eq 0x4455'],
                 'mmc_prv': [True, 'hex', '!eq 0x0A'],
-                'mmc_serial': [True, 'hex', '!eq 0x1234ABCD']
+                'mmc_serial': [True, 'hex', '!eq 0x1234ABCD'],
             }
         })
-    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['storage'][0]
-    ps = ps_gen.TryGenerate('name1', comp_values)
-    self.assertEqual(ps, expected)
-    ps = ps_gen.TryGenerate('name1', comp_values_new)
+    ps = self.ps_gen.TryGenerate('name1', comp_values_new)
     self.assertEqual(ps, expected)
 
+  def testTryGenerate_RaiseOnMissingField(self):
     # Should report not supported if some fields are missing.
-    invalid_comp_values = dict(comp_values)
+    invalid_comp_values = dict(self.comp_values)
     del invalid_comp_values['manfid']
-    self.assertRaises(MissingComponentValueError, ps_gen.TryGenerate, 'n1',
+    self.assertRaises(MissingComponentValueError, self.ps_gen.TryGenerate, 'n1',
                       invalid_comp_values)
 
+  def testTryGenerate_RaiseOnHexDigitConversionError(self):
     # Should report not supported because `oemid` has incorrect bit length.
-    invalid_comp_values = dict(comp_values, oemid='0x44556677')
-    self.assertRaises(ProbeStatementConversionError, ps_gen.TryGenerate, 'n1',
-                      invalid_comp_values)
+    invalid_comp_values = dict(self.comp_values, oemid='0x44556677')
+    self.assertRaises(ProbeStatementConversionError, self.ps_gen.TryGenerate,
+                      'n1', invalid_comp_values)
 
+  def testTryGenerate_RaiseOnStrConversionError(self):
     # Should report not supported because `name` should be a string of 6 bytes.
-    invalid_comp_values = dict(comp_values, name='A')
-    self.assertRaises(ProbeStatementConversionError, ps_gen.TryGenerate, 'n1',
-                      invalid_comp_values)
+    invalid_comp_values = dict(self.comp_values, name='A')
+    self.assertRaises(ProbeStatementConversionError, self.ps_gen.TryGenerate,
+                      'n1', invalid_comp_values)
 
+  def testTryGenerate_RaiseOnIntConversionError(self):
     # Should report not supported because `sectors` should be an integer.
-    invalid_comp_values = dict(comp_values, sectors='?')
-    self.assertRaises(ProbeStatementConversionError, ps_gen.TryGenerate, 'n1',
-                      invalid_comp_values)
+    invalid_comp_values = dict(self.comp_values, sectors='?')
+    self.assertRaises(ProbeStatementConversionError, self.ps_gen.TryGenerate,
+                      'n1', invalid_comp_values)
 
+  def testTryGenerate_RaiseOnHexFormatConversionError(self):
     # Should report not supported because `manfid` is not a valid hex number.
-    invalid_comp_values = dict(comp_values, manfid='0x00ZZZZ')
-    self.assertRaises(ProbeStatementConversionError, ps_gen.TryGenerate, 'n1',
-                      invalid_comp_values)
+    invalid_comp_values = dict(self.comp_values, manfid='0x00ZZZZ')
+    self.assertRaises(ProbeStatementConversionError, self.ps_gen.TryGenerate,
+                      'n1', invalid_comp_values)
+
+  def testTryGenerate_RaiseOnHexConversionErrorForOptionalField(self):
+    # Should report not supported because the optional field `hwrev` has
+    # incorrect bit length.
+    invalid_comp_values = dict(self.comp_values, hwrev='0x1234')
+    self.assertRaises(ProbeStatementConversionError, self.ps_gen.TryGenerate,
+                      'n1', invalid_comp_values)
+
+  def testTryGenerate_RaiseOnEmptyRequiredFieldValue(self):
+    # Should raise if required field value is empty.
+    invalid_comp_values = dict(self.comp_values, name='')
+    self.assertRaises(ProbeStatementConversionError, self.ps_gen.TryGenerate,
+                      'n1', invalid_comp_values)
+
+  def testTryGenerate_SuccessOnEmptyOptionalFieldValue(self):
+    # Should fallback to optional if field value is empty.
+    valid_comp_values = dict(self.comp_values, hwrev='')
+    expected = probe_config_types.ComponentProbeStatement(
+        'storage', 'n1', {
+            'eval': {
+                'generic_storage': {}
+            },
+            'expect': {
+                'sectors': [True, 'int', '!eq 112233'],
+                'mmc_hwrev': [False, 'hex'],
+                'mmc_name': [True, 'str', '!eq ABCxyz'],
+                'mmc_manfid': [True, 'hex', '!eq 0x22'],
+                'mmc_oemid': [True, 'hex', '!eq 0x4455'],
+                'mmc_prv': [True, 'hex', '!eq 0x0A'],
+                'mmc_serial': [True, 'hex', '!eq 0x1234ABCD'],
+            }
+        })
+    ps = self.ps_gen.TryGenerate('n1', valid_comp_values)
+    self.assertEqual(ps, expected)
 
 
 class GenericStorageNVMeProbeStatementGeneratorTest(unittest.TestCase):

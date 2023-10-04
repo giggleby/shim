@@ -165,6 +165,8 @@ class _FieldRecord:
     valid_hwid_field_names = [
         name for name in self.hwid_field_names if name in comp_values
     ]
+    if not valid_hwid_field_names and self.is_optional:
+      return None
 
     for hwid_field_name in valid_hwid_field_names:
       comp_value = comp_values[hwid_field_name]
@@ -174,7 +176,10 @@ class _FieldRecord:
         return None
 
     err = None
+    all_empty = True
     for hwid_field_name in valid_hwid_field_names:
+      if comp_values[hwid_field_name]:
+        all_empty = False
       for value_converter in self.value_converters:
         try:
           expected_field.append(value_converter(comp_values[hwid_field_name]))
@@ -184,12 +189,12 @@ class _FieldRecord:
             err = e
 
     if not expected_field:
-      if self.is_optional:
-        return None
       if not valid_hwid_field_names:
         raise MissingComponentValueError(
             'Missing component value field(s) for field '
             f'{self.probe_statement_field_name!r} : {self.hwid_field_names!r}.')
+      if all_empty and self.is_optional:
+        return None
       raise ProbeStatementConversionError(
           'Unable to convert the value of field '
           f'{self.probe_statement_field_name!r} : {err!r}.')
