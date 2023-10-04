@@ -199,6 +199,7 @@ import textwrap
 import time
 import uuid
 
+from cros.factory.device.chromeos import camera
 from cros.factory.device import device_utils
 from cros.factory.test import i18n
 from cros.factory.test.i18n import _
@@ -381,6 +382,9 @@ class CameraTest(test_case.TestCase):
           default=0.5)
   ]
 
+  def GetCamera(self) -> camera.ChromeOSCamera:
+    return self.dut.camera
+
   def _Timeout(self):
     if self.mode == TestModes.timeout:
       # If it keeps capturing images until timeout, the test passes.
@@ -478,7 +482,7 @@ class CameraTest(test_case.TestCase):
         self.ReadSingleFrame()
         self.Sleep(0.5)
 
-  def DrawRectangle(self, cv_image, rect_pos, rect_shape, color, fill):
+  def _DrawRectangle(self, cv_image, rect_pos, rect_shape, color, fill):
     """Draw rectangles on UI.
 
     Args:
@@ -528,8 +532,8 @@ class CameraTest(test_case.TestCase):
 
     draw_rect_js = 'cameraTest.clearOverlay();'
     for x, y, w, h in detected_objs:
-      draw_rect_js += self.DrawRectangle(cv_image, (x, y), (w, h),
-                                         ('white', 255), False)
+      draw_rect_js += self._DrawRectangle(cv_image, (x, y), (w, h),
+                                          ('white', 255), False)
 
     if self.e2e_mode:
       self.RunJSBlocking(draw_rect_js)
@@ -557,9 +561,9 @@ class CameraTest(test_case.TestCase):
             # It will be slow if we call the js function for each grid.
             # Instead, we run the js functions all at once at the end of the
             # loop.
-            draw_rect_js += self.DrawRectangle(cv_image, (x_pos, y_pos),
-                                               (grid_width, grid_height),
-                                               ('red', (0, 0, 255)), True)
+            draw_rect_js += self._DrawRectangle(cv_image, (x_pos, y_pos),
+                                                (grid_width, grid_height),
+                                                ('red', (0, 0, 255)), True)
       if self.e2e_mode:
         self.RunJSBlocking(draw_rect_js)
     return not is_too_dark
@@ -779,10 +783,10 @@ class CameraTest(test_case.TestCase):
     elif (self.args.camera_facing is None and
           self.args.camera_usb_vid_pid is not None and
           len(self.args.camera_usb_vid_pid) == 2):
-      self.camera_device = self.dut.camera.GetCameraDeviceByUsbVidPid(
+      self.camera_device = self.GetCamera().GetCameraDeviceByUsbVidPid(
           self.args.camera_usb_vid_pid[0], self.args.camera_usb_vid_pid[1])
     else:
-      self.camera_device = self.dut.camera.GetCameraDevice(
+      self.camera_device = self.GetCamera().GetCameraDevice(
           self.args.camera_facing)
 
   def runTest(self):
