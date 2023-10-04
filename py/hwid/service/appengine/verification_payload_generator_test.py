@@ -121,9 +121,9 @@ class GenericStorageMMCProbeStatementGeneratorTest(unittest.TestCase):
                 'mmc_hwrev': [False, 'hex'],
                 'mmc_name': [True, 'str', '!eq ABCxyz'],
                 'mmc_manfid': [True, 'hex', '!eq 0x22'],
-                'mmc_oemid': [True, 'hex', '!eq 0x4455'],
-                'mmc_prv': [True, 'hex', '!eq 0x0A'],
-                'mmc_serial': [True, 'hex', '!eq 0x1234ABCD'],
+                'mmc_oemid': [False, 'hex'],
+                'mmc_prv': [False, 'hex'],
+                'mmc_serial': [False, 'hex'],
             }
         })
     ps = self.ps_gen.TryGenerate('name1', self.comp_values)
@@ -148,9 +148,9 @@ class GenericStorageMMCProbeStatementGeneratorTest(unittest.TestCase):
                 'mmc_hwrev': [False, 'hex'],
                 'mmc_name': [True, 'str', '!eq ABCxyz'],
                 'mmc_manfid': [True, 'hex', '!eq 0x22'],
-                'mmc_oemid': [True, 'hex', '!eq 0x4455'],
-                'mmc_prv': [True, 'hex', '!eq 0x0A'],
-                'mmc_serial': [True, 'hex', '!eq 0x1234ABCD'],
+                'mmc_oemid': [False, 'hex'],
+                'mmc_prv': [False, 'hex'],
+                'mmc_serial': [False, 'hex'],
             }
         })
     ps = self.ps_gen.TryGenerate('name1', comp_values_new)
@@ -213,9 +213,9 @@ class GenericStorageMMCProbeStatementGeneratorTest(unittest.TestCase):
                 'mmc_hwrev': [False, 'hex'],
                 'mmc_name': [True, 'str', '!eq ABCxyz'],
                 'mmc_manfid': [True, 'hex', '!eq 0x22'],
-                'mmc_oemid': [True, 'hex', '!eq 0x4455'],
-                'mmc_prv': [True, 'hex', '!eq 0x0A'],
-                'mmc_serial': [True, 'hex', '!eq 0x1234ABCD'],
+                'mmc_oemid': [False, 'hex'],
+                'mmc_prv': [False, 'hex'],
+                'mmc_serial': [False, 'hex'],
             }
         })
     ps = self.ps_gen.TryGenerate('n1', valid_comp_values)
@@ -379,7 +379,7 @@ class MemoryProbeStatementGeneratorTest(unittest.TestCase):
                 'expect': {
                     'part': [True, 'str', '!eq ABC123DEF-A1_0'],
                     'size': [True, 'int', '!eq 4096'],
-                    'slot': [True, 'int', '!eq 0']
+                    'slot': [False, 'int'],
                 }
             }))
 

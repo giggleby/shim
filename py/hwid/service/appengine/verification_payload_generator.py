@@ -135,18 +135,27 @@ class _FieldRecord:
     is_optional: Whether this record is optional.
     skip_values: Set of values to skip generating the expected value for this
         field.
+    expect_probe_value: Whether to use the probe value for match.
   """
 
   def __init__(
-      self, hwid_field_names: Union[str,
-                                    List[str]], probe_statement_field_name: str,
+      self,
+      hwid_field_names: Union[str, List[str]],
+      probe_statement_field_name: str,
       value_converters: Union[IValueConverter, List[IValueConverter]],
-      is_optional: bool = False, skip_values: Optional[Set[str]] = None):
+      is_optional: bool = False,
+      skip_values: Optional[Set[str]] = None,
+      expect_probe_value: bool = True,
+  ):
     self.hwid_field_names = type_utils.MakeList(hwid_field_names)
     self.probe_statement_field_name = probe_statement_field_name
     self.value_converters = type_utils.MakeList(value_converters)
     self.is_optional = is_optional
     self.skip_values = skip_values or set()
+    self.expect_probe_value = expect_probe_value
+    if not expect_probe_value and not is_optional:
+      raise ValueError(f'Probe values {hwid_field_names} not used in expect '
+                       'fields must be optional')
 
   def GenerateExpectedFields(self, comp_values: dict) -> Optional[str]:
     """Generates the expected field from a given component.
@@ -203,6 +212,10 @@ class _FieldRecord:
         raise ProbeStatementConversionError(
             'Found multiple valid component value fields for field '
             f'{self.probe_statement_field_name!r}.')
+
+    if not self.expect_probe_value:
+      return None
+
     return expected_field[0]
 
 
@@ -285,16 +298,20 @@ def GetAllProbeStatementGenerators():
       _ProbeStatementGenerator(
           'storage', 'generic_storage', storage_shared_fields + [
               _FieldRecord(['hwrev', 'mmc_hwrev'], 'mmc_hwrev',
-                           HexToHexValueConverter(1), is_optional=True),
+                           HexToHexValueConverter(1), is_optional=True,
+                           expect_probe_value=False),
               _FieldRecord(['name', 'mmc_name'], 'mmc_name', str_converter),
               _FieldRecord(['manfid', 'mmc_manfid'], 'mmc_manfid',
                            HexToHexValueConverter(2)),
               _FieldRecord(['oemid', 'mmc_oemid'], 'mmc_oemid',
-                           HexToHexValueConverter(4)),
+                           HexToHexValueConverter(4), is_optional=True,
+                           expect_probe_value=False),
               _FieldRecord(['prv', 'mmc_prv'], 'mmc_prv',
-                           HexToHexValueConverter(2), is_optional=True),
+                           HexToHexValueConverter(2), is_optional=True,
+                           expect_probe_value=False),
               _FieldRecord(['serial', 'mmc_serial'], 'mmc_serial',
-                           HexToHexValueConverter(8), is_optional=True),
+                           HexToHexValueConverter(8), is_optional=True,
+                           expect_probe_value=False),
           ]),
       # NVMe
       _ProbeStatementGenerator(
@@ -376,7 +393,8 @@ def GetAllProbeStatementGenerators():
   dram_fields = [
       _SameNameFieldRecord('part', str_converter),
       _SameNameFieldRecord('size', int_converter),
-      _SameNameFieldRecord('slot', int_converter, is_optional=True),
+      _SameNameFieldRecord('slot', int_converter, is_optional=True,
+                           expect_probe_value=False),
   ]
   all_probe_statement_generators['dram'] = [
       _ProbeStatementGenerator('dram', 'memory', dram_fields),
