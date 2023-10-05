@@ -1,5 +1,5 @@
 # 3-Clause BSD License
-flask==2.1.2
+flask==2.3.3
 
 # License: Apache License 2.0
 google-auth==2.8.0
