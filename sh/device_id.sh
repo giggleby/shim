@@ -47,7 +47,11 @@ id_storage() {
   udevadm trigger --subsystem-match block
   udevadm settle
 
-  udevadm info --query symlink "${device}" | md5sum | cut -d ' ' -f 1
+  # Leverage ID_SERIAL and ID_NAME as input context
+  # to generate md5sum as device id.
+  udevadm info --query=property "${device}" | \
+    grep 'ID_\(SERIAL\|NAME\)=' | \
+    sort | md5sum | cut -d ' ' -f 1
 }
 
 # Collect all ethernet type network interfaces and compute a hash.
