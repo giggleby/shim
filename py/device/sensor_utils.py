@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import logging
 import os
 import re
@@ -28,19 +29,32 @@ class SensorError(device_types.DeviceException):
     super().__init__(SensorError.TEMPLATE % messages)
 
 
-def FindDevice(dut, path_pattern, **attr_filter):
+class SensorState(str, enum.Enum):
+  ON = '1'
+  OFF = '0'
+
+  def __str__(self):
+    return self.name
+
+
+def FindDevice(dut, path_pattern, allow_multiple=False, **attr_filter):
   """Find device under given path.
 
   Args:
     path_pattern: The path to search, can contain wildcards.
     attr_filter: A filter to filter out unwanted devices. If the value of the
       attribute is None then only check if the path exists.
+    allow_multiple: bool. If True, the function will return a list of devices
+      that match the given criteria. Otherwise, the function will raise an
+      exception if there is more than one matching device.
 
   Returns:
-    Path of the matched device.
+    String of the path of the matched device.
+    List of the matched devices if allow_multiple is `True`.
 
   Raises:
-    DeviceException if not exactly one device found.
+    DeviceException if no device found.
+    DeviceException if more than one device found and allow_multiple is `False`.
   """
   devices = []
   for path in dut.Glob(path_pattern):
@@ -63,10 +77,11 @@ def FindDevice(dut, path_pattern, **attr_filter):
   if not devices:
     raise device_types.DeviceException(
         f'Device with constraint {attr_filter!r} not found')
+  if allow_multiple:
+    return devices
   if len(devices) > 1:
     raise device_types.DeviceException(
         f'Multiple devices found with constraint {attr_filter!r}')
-
   return devices[0]
 
 

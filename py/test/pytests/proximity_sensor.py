@@ -67,6 +67,20 @@ show in the test list::
     }
   }
 
+To test the multiple sensor devices with the same device_name, add a test items
+in the test list::
+
+  {
+    "pytest_name": "proximity_sensor",
+    "disable_services": [
+      "powerd"
+    ],
+    "args": {
+      "device_name": "sx9324",
+      "device_count": 2
+    }
+  }
+
 """
 
 import ctypes
@@ -92,9 +106,9 @@ _DEFAULT_CALIBRATE_PATH = 'events/in_proximity0_thresh_either_en'
 _DEFAULT_SENSOR_VALUE_PATH = 'in_proximity0_raw'
 
 
-class ProximityEventType(str, enum.Enum):
-  close = 'close'
-  far = 'far'
+class ProximityEventType(int, enum.Enum):
+  close = 0
+  far = 1
 
   def __str__(self):
     return self.name
@@ -103,24 +117,24 @@ class ProximityEventType(str, enum.Enum):
 class ProximitySensor(test_case.TestCase):
   related_components = (test_case.TestCategory.SAR_SENSOR, )
   ARGS = [
-      Arg('device_name', str,
+      Arg(
+          'device_name', str,
           'If present, the device name specifying which sensor to test. Auto'
           'detect the device if not present', default=None),
-      Arg('calibrate_path', str,
-          ('The path to enable testing.  '
-           'Must be relative to the iio device path.'),
+      Arg('device_count', int, 'How many devices with device_name to test',
+          default=1),
+      Arg('calibrate_path', str, ('The path to enable testing.  '
+                                  'Must be relative to the iio device path.'),
           default=_DEFAULT_CALIBRATE_PATH),
       Arg('enable_sensor_sleep_secs', (int, float),
-          'The seconds of sleep after enabling sensor.',
-          default=1),
+          'The seconds of sleep after enabling sensor.', default=1),
       Arg('sensor_value_path', str,
           ('The path of the sensor value to show on the UI.  Must be relative '
            'to the iio device path.  If it is None then show nothing.'),
           default=_DEFAULT_SENSOR_VALUE_PATH),
       Arg('sensor_initial_max', int,
           ('The test will start after the sensor value lower than this value.  '
-           'If it is None then do not wait.'),
-          default=50),
+           'If it is None then do not wait.'), default=50),
       i18n_arg_utils.I18nArg(
           'close_instruction',
           'Message for the action to trigger the ``close`` event.',
@@ -129,9 +143,7 @@ class ProximitySensor(test_case.TestCase):
           'far_instruction',
           'Message for the action to trigger the ``far`` event.',
           default=_('Please un-cover the sensor')),
-      Arg('timeout', int,
-          'Timeout of the test.',
-          default=15)
+      Arg('timeout', int, 'Timeout of the test.', default=15)
   ]
 
   _POLLING_TIME_INTERVAL = 0.1
@@ -141,35 +153,81 @@ class ProximitySensor(test_case.TestCase):
     # TODO(cyueh): Find a way to support open, close, read fd on remote DUT.
     if not self._dut.link.IsLocal():
       raise ValueError('The test does not work on remote DUT.')
+    self.assertTrue(self.args.sensor_initial_max is None or
+                    self.args.sensor_value_path)
     self._event_fd = None
-
+    self.stop_countdown_event = None
     attr_filter = {
         self.args.calibrate_path: None,
         'name': self.args.device_name
     }
     if self.args.sensor_value_path:
       attr_filter.update({self.args.sensor_value_path: None})
-    self._iio_device_path = sensor_utils.FindDevice(
-        self._dut, sensor_utils.IIO_DEVICES_PATTERN, **attr_filter)
-    logging.info('The iio device path: %s', self._iio_device_path)
-    self._sensor_value_path = self._dut.path.join(
-        self._iio_device_path,
+    self._iio_device_path_list = sensor_utils.FindDevice(
+        self._dut, sensor_utils.IIO_DEVICES_PATTERN, allow_multiple=True,
+        **attr_filter)
+
+    if len(self._iio_device_path_list) != self.args.device_count:
+      raise ValueError('Found unexpected device number. Found: '
+                       f'{self._iio_device_path_list}')
+
+  def runTest(self):
+    errors = {}
+    for device_path in self._iio_device_path_list:
+      logging.info('Testing iio device with path: %s', device_path)
+      # If the sensor is enabled by default then we don't want to disable it
+      # after the test.
+      initial_state = self._GetSensorState(device_path)
+      self.addCleanup(self._SensorSwitcher, initial_state, device_path)
+      try:
+        self._RunSubTest(device_path)
+      except Exception as e:
+        errors[device_path] = e
+      finally:
+        self._SubTestCleanup(device_path)
+    if errors:
+      self.FailTask(errors)
+
+  def _RunSubTest(self, device_path):
+    # TODO(jimmysun) Migrate: how we read value, calibrate, enable sensor and
+    # how we judge a close or fat event. b/297977526.
+    self.stop_countdown_event = self.ui.StartFailingCountdownTimer(
+        self.args.timeout)
+    # We must enable the sensor before os.open. Otherwise the sensor may create
+    # ghost event.
+    self._SensorSwitcher(sensor_utils.SensorState.ON, device_path)
+    # Before the test, make sure the sensor is un-covered
+    sensor_value_path = self._dut.path.join(
+        device_path,
         self.args.sensor_value_path) if self.args.sensor_value_path else None
-    self.assertTrue(self.args.sensor_initial_max is None or
-                    self._sensor_value_path)
+    if self.args.sensor_initial_max is not None:
+      self.ui.SetHTML(self.args.far_instruction,
+                      id='proximity-sensor-instruction')
+      self.ui.SetHTML(_('Setting the sensor'), id='proximity-sensor-value')
+      self.CalibrateSensor(sensor_value_path)
 
-  def _WriteCalibrate(self, value):
-    """Enable or disable the sensor.
+    self._event_fd = self._GetEventFd(device_path)
 
-    Returns:
-      True if we need to disable the sensor after the test.
-    """
+    test_flow = [(ProximityEventType.close, self.args.close_instruction),
+                 (ProximityEventType.far, self.args.far_instruction)]
+    for expect_event_type, instruction in test_flow:
+      self.ui.SetHTML(instruction, id='proximity-sensor-instruction')
+
+      buf = self._ReadEventBuffer(sensor_value_path)
+
+      got_event_type = ProximityEventType(buf[6])
+      if got_event_type != expect_event_type:
+        self.FailTask(f'Expect to get a {expect_event_type!r} event, but got a '
+                      f'{got_event_type!r} event.')
+      logging.info('Pass %s.', expect_event_type)
+
+  def _SensorSwitcher(self, mode, device_path):
+    """Enable or disable the sensor."""
     # echo value > calibrate
+    if mode == self._GetSensorState(device_path):
+      return
+    path = self._dut.path.join(device_path, self.args.calibrate_path)
     try:
-      path = self._dut.path.join(self._iio_device_path,
-                                 self.args.calibrate_path)
-      if value == '1' and self._dut.ReadFile(path).strip() == '1':
-        return False
       try:
         # self.ui is not available after StartFailingCountdownTimer timeout
         self.ui.SetHTML(self.args.far_instruction,
@@ -177,81 +235,42 @@ class ProximitySensor(test_case.TestCase):
         self.ui.SetHTML(_('Setting the sensor'), id='proximity-sensor-value')
       except Exception:
         pass
-      self._dut.WriteFile(path, value)
+      self._dut.WriteFile(path, mode.value)
       self.Sleep(self.args.enable_sensor_sleep_secs)
-      return True
     except Exception:
-      logging.exception('_WriteCalibrate %s fails', value)
-    return False
+      logging.exception('Failed to turn sensor %s', mode)
 
-  def _GetSensorValue(self, log=True):
+  def _GetSensorState(self, device_path):
+    path = self._dut.path.join(device_path, self.args.calibrate_path)
+    return sensor_utils.SensorState(self._dut.ReadFile(path).strip())
+
+  def _GetSensorValue(self, sensor_value_path, log=True):
     """Get and log sensor value.
+
+    Args:
+      sensor_value_path: The path to the sensor value file.
+      log: Whether to log the sensor value.
 
     Returns:
       The sensor value.
     """
-    output = self._dut.ReadFile(self._sensor_value_path).strip()
+    output = self._dut.ReadFile(sensor_value_path).strip()
     if log:
       self.ui.SetHTML(output, id='proximity-sensor-value')
       logging.info('sensor value: %s', output)
     return int(output)
 
-  def runTest(self):
-    self.ui.StartFailingCountdownTimer(self.args.timeout)
-    # We must enable the sensor before open the device. Otherwise the sensor may
-    # create ghost event. Also if the sensor is enabled by default then we don't
-    # want to disable it after the test.
-    disable_after_test = self._WriteCalibrate('1')
-    try:
-      # Before the test, make sure the sensor is un-covered
-      if self.args.sensor_initial_max is not None:
-        self.ui.SetHTML(self.args.far_instruction,
-                        id='proximity-sensor-instruction')
-        self.ui.SetHTML(_('Setting the sensor'), id='proximity-sensor-value')
-        while True:
-          values = [self._GetSensorValue(False) for unused_index in range(32)]
-          if max(values) < self.args.sensor_initial_max:
-            break
-          logging.info('sensor initial values with min %s and max %s',
-                       min(values), max(values))
-          self.Sleep(self._POLLING_TIME_INTERVAL)
-
-      self._event_fd = self._GetEventFd()
-
-      event_type_map = {
-          1: ProximityEventType.far,
-          2: ProximityEventType.close
-      }
-
-      test_flow = [(ProximityEventType.close, self.args.close_instruction),
-                   (ProximityEventType.far, self.args.far_instruction)]
-      for expect_event_type, instruction in test_flow:
-        self.ui.SetHTML(instruction, id='proximity-sensor-instruction')
-
-        buf = self._ReadEventBuffer()
-
-        if buf[6] not in event_type_map:
-          self.FailTask(f'Invalid event buffer: {buf!r}')
-        got_event_type = event_type_map[buf[6]]
-        if got_event_type != expect_event_type:
-          self.FailTask(
-              f'Expect to get a {expect_event_type!r} event, but got a '
-              f'{got_event_type!r} event.')
-        logging.info('Pass %s.', expect_event_type)
-    finally:
-      if disable_after_test:
-        self._WriteCalibrate('0')
-
-  def tearDown(self):
+  def _SubTestCleanup(self, device_path):
+    self.stop_countdown_event.set()
+    self._SensorSwitcher(sensor_utils.SensorState.OFF, device_path)
     if self._event_fd is not None:
       try:
         os.close(self._event_fd)
       except Exception as e:
         logging.warning('Failed to close the event fd: %r', e)
 
-  def _GetEventFd(self):
-    path = self._dut.path.join('/dev',
-                               self._dut.path.basename(self._iio_device_path))
+  def _GetEventFd(self, device_path):
+    path = self._dut.path.join('/dev', self._dut.path.basename(device_path))
     fd = os.open(path, 0)
     self.assertTrue(fd >= 0, f"Can't open the device, error = {int(fd)}")
 
@@ -269,8 +288,11 @@ class ProximitySensor(test_case.TestCase):
 
     return event_fd
 
-  def _ReadEventBuffer(self):
+  def _ReadEventBuffer(self, sensor_value_path):
     """Poll the event fd until one event occurs.
+
+    Args:
+      sensor_value_path: The path to the sensor value file.
 
     Returns:
       The event buffer.
@@ -283,8 +305,8 @@ class ProximitySensor(test_case.TestCase):
         self.FailTask(f'Unable to read from the event fd: {e!r}.')
 
       if not fds:
-        if self._sensor_value_path:
-          self._GetSensorValue()
+        if sensor_value_path:
+          self._GetSensorValue(sensor_value_path)
         # make sure the user can manually stop the test
         self.Sleep(self._POLLING_TIME_INTERVAL)
         continue
@@ -294,3 +316,15 @@ class ProximitySensor(test_case.TestCase):
       if len(buf) != PROXIMITY_EVENT_BUF_SIZE:
         self.FailTask(f'The event buffer has the wrong size: {len(buf)!r}.')
       return buf
+
+  def CalibrateSensor(self, sensor_value_path):
+    while True:
+      values = [
+          self._GetSensorValue(sensor_value_path, False)
+          for unused_index in range(32)
+      ]
+      if max(values) < self.args.sensor_initial_max:
+        break
+      logging.info('sensor initial values with min %s and max %s', min(values),
+                   max(values))
+      self.Sleep(self._POLLING_TIME_INTERVAL)
