@@ -141,7 +141,9 @@ class CountDownTest(test_case.TestCase):
       Arg('cpu_min_expected_freq', int,
           'Minimum CPU frequency expected. (unit: MHz)', default=None),
       Arg('cpu_max_expected_freq', int,
-          'Maximum CPU frequency expected. (unit: MHz)', default=None)
+          'Maximum CPU frequency expected. (unit: MHz)', default=None),
+      Arg('show_warn_on_display', bool,
+          'To show warnings on display during the test', default=True),
   ]
 
   def FormatSeconds(self, secs):
@@ -301,7 +303,7 @@ class CountDownTest(test_case.TestCase):
     if warnings:
       event_log.Log('warnings', elapsed_secs=self._elapsed_secs,
                     in_grace_period=in_grace_period, warnings=warnings)
-      if not in_grace_period:
+      if not in_grace_period and self.args.show_warn_on_display:
         for w in warnings:
           session.console.warn(w)
 
