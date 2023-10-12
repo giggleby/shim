@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import Mapping
+from typing import Mapping, Tuple
 import unittest
 
 from cros.factory.hwid.service.appengine.data.converter import converter
@@ -31,15 +31,16 @@ _ProbeInfoFromMapping = converter_test_utils.ProbeInfoFromMapping
 
 
 def _HWIDDBExternalResourceFromProbeInfos(
-    probe_info_mapping: Mapping[int, stubby_pb2.ProbeInfo]
+    probe_info_mapping: Mapping[Tuple[int, int], stubby_pb2.ProbeInfo]
 ) -> hwid_api_messages_pb2.HwidDbExternalResource:
   return hwid_api_messages_pb2.HwidDbExternalResource(component_probe_infos=[
       stubby_pb2.ComponentProbeInfo(
           component_identity=stubby_pb2.ComponentIdentity(
               readable_label=f'label_{cid}_{i}',
               component_id=cid,
+              qual_id=qid,
           ), probe_info=probe_info)
-      for i, (cid, probe_info) in enumerate(probe_info_mapping.items())
+      for i, ((cid, qid), probe_info) in enumerate(probe_info_mapping.items())
   ])
 
 
@@ -648,7 +649,7 @@ class ConverterManagerTest(unittest.TestCase):
       }, 'unsupported')
     db_with_components_only = builder.Build().DumpDataWithoutChecksum()
     avl_resource = _HWIDDBExternalResourceFromProbeInfos({
-        cid:
+        (cid, 0):
             _ProbeInfoFromMapping({
                 'avl_attr_name1': 'value1',
                 'avl_attr_name2': 'value2',
@@ -675,6 +676,64 @@ class ConverterManagerTest(unittest.TestCase):
                 'converted_key2': 'value-not-2'
             }),
         avl_linked_db.GetComponents(comp_cls)[comp_name2].values)
+
+  def testLinkAVL_LookupProbeInfoByCIDQID(self):
+    # Arrange.
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('converted_key2'),
+        })
+    converter_collection = converter.ConverterCollection('comp_cls')
+    converter_collection.AddConverter(test_converter)
+    converter_manager = converter_utils.ConverterManager(
+        {'comp_cls': converter_collection})
+
+    with v3_builder.DatabaseBuilder.FromEmpty('CHROMEBOOK', 'PROTO') as builder:
+      builder.AddComponent('comp_cls', 'comp_cls_123_1', {
+          'converted_key1': 'value1',
+          'converted_key2': 'value2',
+      }, 'supported')
+      builder.AddComponent('comp_cls', 'comp_cls_123_2', {
+          'converted_key1': 'value1',
+          'converted_key2': 'another-value2',
+      }, 'unsupported')
+    db_with_components_only = builder.Build().DumpDataWithoutChecksum()
+    avl_resource = _HWIDDBExternalResourceFromProbeInfos({
+        (123, 1):
+            _ProbeInfoFromMapping({
+                'avl_attr_name1': 'value1',
+                'avl_attr_name2': 'value2',
+            }),
+        (123, 2):
+            _ProbeInfoFromMapping({
+                'avl_attr_name1': 'value1',
+                'avl_attr_name2': 'another-value2',
+            }),
+    })
+
+    # Act.
+    avl_linked_db_content = converter_manager.LinkAVL(db_with_components_only,
+                                                      avl_resource)
+
+    # Assert.
+    avl_linked_db = database.Database.LoadData(avl_linked_db_content)
+    self.assertEqual(
+        v3_rule.AVLProbeValue(
+            identifier='converter1', probe_value_matched=True, values={
+                'converted_key1': 'value1',
+                'converted_key2': 'value2'
+            }),
+        avl_linked_db.GetComponents('comp_cls')['comp_cls_123_1'].values)
+    self.assertEqual(
+        v3_rule.AVLProbeValue(
+            identifier='converter1', probe_value_matched=True, values={
+                'converted_key1': 'value1',
+                'converted_key2': 'another-value2'
+            }),
+        avl_linked_db.GetComponents('comp_cls')['comp_cls_123_2'].values)
 
 
 if __name__ == '__main__':

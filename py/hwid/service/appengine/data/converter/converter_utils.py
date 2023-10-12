@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import Mapping, Optional
+from typing import Mapping, NamedTuple, Optional
 
 from cros.factory.hwid.service.appengine.data.converter import audio_codec_converter
 from cros.factory.hwid.service.appengine.data.converter import battery_converter
@@ -50,12 +50,40 @@ _DEFAULT_CONVERTER_COLLECTION_MAP = {
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 
 
+class _AVLKey(NamedTuple):
+  cid: int
+  qid: int
+
+
+class _GetAVLKeyAcceptor(
+    name_pattern_adapter.NameInfoAcceptor[Optional[_AVLKey]]):
+  """An acceptor to provide CID info."""
+
+  def AcceptRegularComp(self, cid: int,
+                        qid: Optional[int]) -> Optional[_AVLKey]:
+    """See base class."""
+    return _AVLKey(cid, 0 if qid is None else qid)
+
+  def AcceptSubcomp(self, cid: int) -> Optional[_AVLKey]:
+    """See base class."""
+    return _AVLKey(cid, 0)
+
+  def AcceptUntracked(self) -> Optional[_AVLKey]:
+    """See base class."""
+    return None
+
+  def AcceptLegacy(self, raw_comp_name: str) -> Optional[_AVLKey]:  # pylint: disable=useless-return
+    """See base class."""
+    del raw_comp_name
+    return None
+
+
 class ConverterManager:
 
   def __init__(self, collection_map: Mapping[str,
                                              converter.ConverterCollection]):
     self._collection_map = collection_map
-    self._get_cid_acceptor = name_pattern_adapter.GetCIDAcceptor()
+    self._get_avl_key_acceptor = _GetAVLKeyAcceptor()
 
   @classmethod
   def FromDefault(cls):
@@ -73,8 +101,9 @@ class ConverterManager:
 
     probe_info_map = {}
     for comp_probe_info in avl_resource.component_probe_infos:
-      comp_id = comp_probe_info.component_identity.component_id
-      probe_info_map[comp_id] = comp_probe_info.probe_info
+      comp_identity = comp_probe_info.component_identity
+      avl_key = _AVLKey(comp_identity.component_id, comp_identity.qual_id)
+      probe_info_map[avl_key] = comp_probe_info.probe_info
 
     with builder.DatabaseBuilder.FromDBData(hwid_db_content) as db_builder:
       for comp_cls in db_builder.GetComponentClasses():
@@ -84,11 +113,11 @@ class ConverterManager:
         name_pattern = adapter.GetNamePattern(comp_cls)
         for comp_name, comp_info in db_builder.GetComponents(comp_cls).items():
           name_info = name_pattern.Matches(comp_name)
-          cid = name_info.Provide(self._get_cid_acceptor)
-          if cid is None:
+          avl_key = name_info.Provide(self._get_avl_key_acceptor)
+          if avl_key is None:
             continue
-          probe_info = probe_info_map.get(cid)
-          if not probe_info:
+          probe_info = probe_info_map.get(avl_key)
+          if probe_info is None:
             continue
           match_result = converter_collection.Match(comp_info.values,
                                                     probe_info)
