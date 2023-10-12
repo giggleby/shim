@@ -2098,6 +2098,33 @@ class ChromeOSFactoryBundle:
     """Show the content of a RMA image."""
     gpt = GPT.LoadFromFile(image)
 
+    kernel_part = gpt.GetPartition(PART_CROS_KERNEL_A)
+    if not kernel_part.IsChromeOSKernel():
+      raise RuntimeError(f'Not an RMA image (no ChromeOS kernel): {image}')
+
+    # futility vbutil_kernel --verify <file> [--signpubkey <pubk>]
+    # We can search for 'Signature: *valid' if pubk is assigned.
+    # In the current implementation we skipped the public key and directly look
+    # at the kernel data key.
+    with kernel_part.Map() as kernel:
+      # The key hash can be found in src/platform/vboot_reference/tests/devkeys/
+      # by command: vbutil_key --unpack recovery_kernel_data_key.vbpubk
+      dev_recovery_kernel_data_key = 'e78ce746a037837155388a1096212ded04fb86eb'
+      # TODO(hungte): Rewrite the vblock parsing to pure Python implementation.
+      result = SudoOutput(['futility', 'vbutil_kernel', '--verify', kernel],
+                          check=False)
+      if result.find('Data key sha1sum:') < 0:
+        print(f'Unable to verify the RMA shim signature in: ${kernel_part}.')
+      else:
+        if result.find(dev_recovery_kernel_data_key) >= 0:
+          key_name = 'DEV'
+        else:
+          # Technically this is 'non-DEV' but that's too confusing so let's call
+          # it 'production' for now.
+          key_name = 'PRODUCTION'
+        print(f'The image was signed by {key_name} keys.')
+    print()
+
     stateful_part = gpt.GetPartition(PART_CROS_STATEFUL)
     with stateful_part.Mount() as stateful:
       DIR_CROS_PAYLOADS = CrosPayloadUtils.GetCrosPayloadsDir()
