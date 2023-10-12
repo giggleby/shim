@@ -70,7 +70,7 @@ _USB_CAMERA_CONVERTERS: Sequence[converter.FieldNameConverter] = [
                     'bcdDevice',
                     converter.MakeBothNormalizedFillWidthHexValueFactory(
                         fill_width=4, source_has_prefix=False,
-                        target_has_prefix=False)),
+                        target_has_prefix=False), qual_specific=True),
             _USBCameraAVLAttrs.PRODUCT_ID:
                 _ConvertedValueSpec(
                     'idProduct',
@@ -91,7 +91,7 @@ _USB_CAMERA_CONVERTERS: Sequence[converter.FieldNameConverter] = [
                     'usb_bcd_device',
                     converter.MakeBothNormalizedFillWidthHexValueFactory(
                         fill_width=4, source_has_prefix=False,
-                        target_has_prefix=False)),
+                        target_has_prefix=False), qual_specific=True),
             _USBCameraAVLAttrs.PRODUCT_ID:
                 _ConvertedValueSpec(
                     'usb_product_id',

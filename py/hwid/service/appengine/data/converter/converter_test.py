@@ -291,6 +291,49 @@ class ConverterTest(unittest.TestCase):
 
     self.assertEqual(converter.ProbeValueMatchStatus.VALUE_IS_NONE, match_case)
 
+  def testFieldNameConverterSkipQualSpecificOnNonQualProbeInfo(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4',
+                                             qual_specific=True),
+        })
+    probe_info = _ProbeInfoFromMapping({
+        'avl_attr_name1': 'value1',
+        'avl_attr_name3': 'skipped_value',
+    })
+
+    match_case = test_converter.Match(
+        {
+            'converted_key1': 'value1',
+            'converted_key3': 'unused_value3',
+        }, probe_info, is_qual_probe_info=False)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.ALL_MATCHED, match_case)
+
+  def testFieldNameConverterAllQualSpecificProbeInfo(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1',
+                                             qual_specific=True),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('converted_key2',
+                                             qual_specific=True),
+        })
+    probe_info = _ProbeInfoFromMapping({
+        'not_avl_attr_name1': 'dummy-value1',
+        'not_avl_attr_name3': 'dummy-value3',
+    })
+
+    match_case = test_converter.Match({
+        'not_converted_key1': 'value1',
+    }, probe_info, is_qual_probe_info=False)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.ALL_MATCHED, match_case)
+
 
 class ConverterCollectionTest(unittest.TestCase):
 
@@ -540,6 +583,34 @@ class ConverterCollectionTest(unittest.TestCase):
     self.assertEqual(
         converter.CollectionMatchResult(_PVAlignmentStatus.NOT_ALIGNED,
                                         converter2.identifier), match_result)
+
+  def testMatchProbeValues_SkipQualSpecificOnNonQualProbeInfo(self):
+    converter1 = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('converted_key2',
+                                             qual_specific=True),
+        })
+    converter2 = converter.FieldNameConverter.FromFieldMap(
+        'converter2', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('another_converted_key1'),
+            TestAVLAttrs.AVL_ATTR3:
+                converter.ConvertedValueSpec('another_converted_key3'),
+        })
+    self.collection.AddConverter(converter1)
+    self.collection.AddConverter(converter2)
+
+    match_result = self.collection.Match({
+        'converted_key1': 'value1',
+    }, _ProbeInfoFromMapping({
+        'avl_attr_name1': 'value1',
+    }), is_qual_probe_info=False)
+    self.assertEqual(
+        converter.CollectionMatchResult(_PVAlignmentStatus.ALIGNED,
+                                        converter1.identifier), match_result)
 
 
 class FixedWidthHexValueTypeTest(unittest.TestCase):

@@ -141,7 +141,8 @@ _STORAGE_CONVERTERS: Sequence[converter.Converter] = [
                 _ConvertedValueSpec(
                     'prv',
                     converter.MakeBothNormalizedFillWidthHexValueFactory(
-                        fill_width=2, source_has_prefix=True)),
+                        fill_width=2, source_has_prefix=True),
+                    qual_specific=True),
             StorageAVLAttrs.SIZE_IN_GB:
                 _ConvertedValueSpec('size', _StorageByteSizeValueType),
         }),
@@ -161,7 +162,8 @@ _STORAGE_CONVERTERS: Sequence[converter.Converter] = [
                 _ConvertedValueSpec(
                     'prv',
                     converter.MakeBothNormalizedFillWidthHexValueFactory(
-                        fill_width=2, source_has_prefix=True)),
+                        fill_width=2, source_has_prefix=True),
+                    qual_specific=True),
             StorageAVLAttrs.SIZE_IN_GB:
                 _ConvertedValueSpec('sectors', _StorageSectorSizeValueType),
         }),
@@ -181,7 +183,8 @@ _STORAGE_CONVERTERS: Sequence[converter.Converter] = [
                 _ConvertedValueSpec(
                     'mmc_prv',
                     converter.MakeBothNormalizedFillWidthHexValueFactory(
-                        fill_width=2, source_has_prefix=True)),
+                        fill_width=2, source_has_prefix=True),
+                    qual_specific=True),
             StorageAVLAttrs.SIZE_IN_GB:
                 _ConvertedValueSpec('size', _StorageByteSizeValueType),
         }),
@@ -201,7 +204,8 @@ _STORAGE_CONVERTERS: Sequence[converter.Converter] = [
                 _ConvertedValueSpec(
                     'mmc_prv',
                     converter.MakeBothNormalizedFillWidthHexValueFactory(
-                        fill_width=2, source_has_prefix=True)),
+                        fill_width=2, source_has_prefix=True),
+                    qual_specific=True),
             StorageAVLAttrs.SIZE_IN_GB:
                 _ConvertedValueSpec('sectors', _StorageSectorSizeValueType),
         }),

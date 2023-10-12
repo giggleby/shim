@@ -115,6 +115,24 @@ class StorageConverterCollectionTest(unittest.TestCase):
     self.assertEqual(result.converter_identifier,
                      'pcie_emmc_storage_assembly_as_nvme')
 
+  def testMatchMMCStorageWithoutQID(self):
+    comp_values = {
+        'name': 'AAABBB',
+        'manfid': '0x000015',
+        'prv': '0x2',
+        'sectors': '244277248',  # 128GB
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'mmc_name': '0x414141424242',
+        'mmc_manfid': '0x15',
+        'size_in_gb': 128
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info,
+                                              is_qual_probe_info=False)
+
+    self.assertEqual(result.alignment_status, _PVAlignmentStatus.ALIGNED)
+
 
 if __name__ == '__main__':
   unittest.main()

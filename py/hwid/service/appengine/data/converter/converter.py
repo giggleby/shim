@@ -46,8 +46,12 @@ class Converter:
   def identifier(self):
     return self._identifier
 
-  def Match(self, comp_values: Optional[Mapping[str, Any]],
-            probe_info: stubby_pb2.ProbeInfo) -> ProbeValueMatchStatus:
+  def Match(
+      self,
+      comp_values: Optional[Mapping[str, Any]],
+      probe_info: stubby_pb2.ProbeInfo,
+      is_qual_probe_info: bool = True,
+  ) -> ProbeValueMatchStatus:
     """Tries to match a probe info to HWID comp values with this converter."""
     raise NotImplementedError
 
@@ -59,6 +63,7 @@ class Converter:
 class ConvertedValueSpec(NamedTuple):
   name: str
   value_factory: Optional[converter_types.ConvertedValueTypeFactory] = None
+  qual_specific: Optional[bool] = False
 
 
 def _ConvertValueWithDefaultTypeFactory(
@@ -211,7 +216,9 @@ class FieldNameConverter(Converter):
 
   def _Convert(
       self,
-      probe_info: stubby_pb2.ProbeInfo) -> Optional[_ConvertedValueTypeMapping]:
+      probe_info: stubby_pb2.ProbeInfo,
+      is_qual_probe_info: bool,
+  ) -> Optional[_ConvertedValueTypeMapping]:
     """Converts a probe info to an optional mapping for matching."""
     translated: _ConvertedValueTypeMapping = {}
     probe_info_values = collections.defaultdict(list)
@@ -223,6 +230,8 @@ class FieldNameConverter(Converter):
         probe_info_values[param.name].append(param.int_value)
 
     for name, translated_value_spec in self._field_name_map.items():
+      if translated_value_spec.qual_specific and not is_qual_probe_info:
+        continue
       values = probe_info_values.get(name)
       if values is None:
         return None
@@ -240,10 +249,14 @@ class FieldNameConverter(Converter):
       translated[translated_value_spec.name] = translated_values
     return translated
 
-  def Match(self, comp_values: Optional[Mapping[str, Any]],
-            probe_info: stubby_pb2.ProbeInfo) -> ProbeValueMatchStatus:
-    converted = self._Convert(probe_info)
-    if not converted:
+  def Match(
+      self,
+      comp_values: Optional[Mapping[str, Any]],
+      probe_info: stubby_pb2.ProbeInfo,
+      is_qual_probe_info: bool = True,
+  ) -> ProbeValueMatchStatus:
+    converted = self._Convert(probe_info, is_qual_probe_info)
+    if converted is None:
       return ProbeValueMatchStatus.INCONVERTIBLE
     if not comp_values:
       return ProbeValueMatchStatus.VALUE_IS_NONE
@@ -288,12 +301,16 @@ class ConverterCollection:
   def GetConverter(self, identifier: str) -> Optional[Converter]:
     return self._converters.get(identifier)
 
-  def Match(self, comp_values: Optional[Mapping[str, Any]],
-            probe_info: stubby_pb2.ProbeInfo) -> CollectionMatchResult:
+  def Match(
+      self,
+      comp_values: Optional[Mapping[str, Any]],
+      probe_info: stubby_pb2.ProbeInfo,
+      is_qual_probe_info: bool = True,
+  ) -> CollectionMatchResult:
     best_match_status, best_match_identifier = (
         ProbeValueMatchStatus.INCONVERTIBLE, None)
     for converter in self._converters.values():
-      match_case = converter.Match(comp_values, probe_info)
+      match_case = converter.Match(comp_values, probe_info, is_qual_probe_info)
       if match_case == ProbeValueMatchStatus.ALL_MATCHED:
         best_match_status, best_match_identifier = (match_case,
                                                     converter.identifier)

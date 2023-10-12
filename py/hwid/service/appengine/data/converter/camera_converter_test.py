@@ -99,6 +99,22 @@ class CameraConverterCollectionTest(unittest.TestCase):
 
     self.assertEqual(result.alignment_status, _PVAlignmentStatus.NOT_ALIGNED)
 
+  def testUsbMatchWithoutBCD(self):
+    comp_values = {
+        'usb_bcd_device': '00a1',
+        'usb_product_id': '12ab',
+        'usb_vendor_id': '34cd',
+    }
+    probe_info = converter_test_utils.ProbeInfoFromMapping({
+        'usb_product_id': '12AB',
+        'usb_vendor_id': '34CD',
+    })
+
+    result = self._converter_collection.Match(comp_values, probe_info,
+                                              is_qual_probe_info=False)
+
+    self.assertEqual(result.alignment_status, _PVAlignmentStatus.ALIGNED)
+
 
 if __name__ == '__main__':
   unittest.main()

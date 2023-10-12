@@ -119,8 +119,8 @@ class ConverterManager:
           probe_info = probe_info_map.get(avl_key)
           if probe_info is None:
             continue
-          match_result = converter_collection.Match(comp_info.values,
-                                                    probe_info)
+          match_result = converter_collection.Match(
+              comp_info.values, probe_info, bool(avl_key.qid))
           db_builder.SetLinkAVLProbeValue(
               comp_cls, comp_name, match_result.converter_identifier,
               match_result.alignment_status == _PVAlignmentStatus.ALIGNED)
