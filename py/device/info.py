@@ -483,7 +483,7 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def gsc_sn_bits(self):
     return self._device.CheckOutput(
-        ['/usr/share/cros/cr50-read-rma-sn-bits.sh']).strip()
+        ['/usr/share/cros/hwsec-utils/cr50_read_rma_sn_bits']).strip()
 
   @InfoProperty
   def gsc_factory_config(self):

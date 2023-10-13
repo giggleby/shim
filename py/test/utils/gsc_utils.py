@@ -241,7 +241,7 @@ class GSCUtils:
     Serial number bits along with the board id allow a device to attest to its
     identity and participate in Chrome OS Zero-Touch.
 
-    A script located at /usr/share/cros/cr50-set-sn-bits.sh helps us
+    A script located at /usr/share/cros/hwsec-utils/cr50_set_sn_bits helps us
     to set the proper serial number bits in the GSC chip.
     """
 
@@ -317,7 +317,7 @@ class GSCUtils:
     security reason. To achieve this, we need to tell the GSC which board
     it is running on, and which phase is it, during the factory flow.
 
-    A script located at /usr/share/cros/cr50-set-board-id.sh helps us
+    A script located at /usr/share/cros/hwsec-utils/cr50_set_board_id helps us
     to set the board id and phase to the GSC chip.
 
     To the detail design of the lock-down mechanism, please refer to
