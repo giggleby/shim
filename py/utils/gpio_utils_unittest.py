@@ -62,9 +62,11 @@ class GpioManagerTest(unittest.TestCase):
     self.assertTrue(gpio_manager.Poll(PORT, 'gpio_falling'))
     self.assertTrue(gpio_manager.Poll(PORT, 'gpio_both'))
 
+  @mock.patch.object(gpio_utils.sync_utils, 'Timeout', spec=_GpioProxy)
   @mock.patch.object(gpio_utils.net_utils, 'TimeoutXMLRPCServerProxy',
                      spec=_GpioProxy)
-  def testPollRemote(self, mock_server):
+  def testPollRemote(self, mock_server, mock_timeout):
+    del mock_timeout  # unused
     gpio_manager = gpio_utils.GpioManager(True, 'host', PORT, TIMEOUT, True)
     self.assertTrue(gpio_manager.Poll(PORT, 'gpio_rising', TIMEOUT))
 
