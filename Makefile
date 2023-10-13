@@ -599,15 +599,17 @@ ebuild-unit-test:
 	$(TEST_RUNNER) --no-informational --no-pass-mark --plain-log --timeout 120
 
 # Only run this test if factory-board is overlayed and the board name does not
-# contain '-' as a substring since we want to skip *-arc and *-kernelnext
-# overlays.
+# contain '-' or '64' as a substring since we want to skip *-arc, *-kernelnext,
+# and *64 overlays.
 ebuild-test: ebuild-unit-test
 ifeq ($(findstring -,$(BOARD)),)
+ifeq ($(findstring 64,$(BOARD)),)
 ifneq ($(filter-out $(EBUILD_TEST_BLOCKED_LIST), $(BOARD)),)
 	rm -rf $(EBUILD_TEMP_DIR)
 	$(BUILD_DIR)/$(TOOLKIT_FILENAME) --noexec --noprogress --nox11 \
 	  --target $(EBUILD_TEMP_DIR)
 	$(MAKE) test-list-check TOOLKITPATH=$(EBUILD_TEMP_DIR)$(TARGET_DIR)
+endif
 endif
 endif
 
