@@ -4,7 +4,44 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Checks voltages."""
+"""Checks voltages.
+
+Description
+-----------
+
+Internal references
+^^^^^^^^^^^^^^^^^^^
+- go/cros_whale_slides
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+
+Dependency
+----------
+- bft_fixture
+- Whale
+
+Examples
+--------
+An example of checking green LED voltage::
+
+  {
+    "pytest_name": "whale_check_voltage",
+    "args": {
+      "bft_fixture": {
+        "class_name":
+          "cros.factory.test.fixture.dummy_bft_fixture.DummyBFTFixture",
+        "params": {}
+      },
+      "criteria": {
+        "krill_vc_connector_ina8": ["GREEN_LED", 1600, 100]
+      },
+      "timeout_secs": 30
+    }
+  }
+
+"""
 
 import logging
 import time

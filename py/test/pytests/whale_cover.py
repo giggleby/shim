@@ -2,7 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Checks if Whale's cover is opened / closed."""
+"""Checks if Whale's cover is opened / closed.
+
+Description
+-----------
+
+Internal references
+^^^^^^^^^^^^^^^^^^^
+- go/cros_whale_slides
+
+Test Procedure
+--------------
+1. Display instruction to tell the operator to open/close the cover.
+2. The operator opens/closes the cover.
+
+Dependency
+----------
+- bft_fixture
+- Whale
+
+Examples
+--------
+An example of checking if whale is closed::
+
+  {
+    "pytest_name": "whale_cover",
+    "args": {
+      "bft_fixture": {
+        "class_name":
+          "cros.factory.test.fixture.dummy_bft_fixture.DummyBFTFixture",
+        "params": {}
+      },
+      "check_interval_secs": 0.2,
+      "check_open": false
+    }
+  }
+
+"""
 
 import logging
 
