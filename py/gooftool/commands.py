@@ -920,6 +920,22 @@ def VerifyFeatureManagementFlags(options):
                   'be incompliant version: '
                   f'({feature_compliance.FEATURE_INCOMPLIANT_VERSION}).')
 
+  # TODO(stevesu) Refactor this to a Verifier class when feature factory
+  # flow roll out to partner factory reaches steady state. Currently we
+  # would like to limit the scope of change related with feature factory flow.
+  brand_code = hwid_utils.GetBrandCode()
+  permitted = checker.CheckFeatureEnablement(brand_code,
+                                             chassis_branded_device_data)
+  if not permitted:
+    raise Error('Current feature enablement status is not permitted as '
+                'this is inconsistent with the data on DLM. Feature must'
+                f'{" not" if chassis_branded_device_data else ""} be '
+                f'enabled on this project ({brand_code}). Please check the '
+                'chassis used on this project again and contact Google.')
+
+  logging.info('Feature enablement status (%s, %s) passed verification.',
+               chassis_branded_device_data, hw_compliance_version_checker)
+
 
 @Command(
     'verify_hwid',

@@ -136,6 +136,19 @@ class FeatureComplianceVersionTest(test_case.TestCase):
       self.assertGreaterEqual(checker_hw_compliance_version,
                               feature_compliance.FEATURE_INCOMPLIANT_VERSION)
 
+    # Check feature enablement status. Hard-branded-only projects are not
+    # allowed to be shipped without branded chassis, while non-feature
+    # proejcts are not allowed to be shipped with branded chassis.
+    brand_code = hwid_utils.GetBrandCode()
+    permitted = checker.CheckFeatureEnablement(brand_code,
+                                               branded_chassis_device_data)
+    self.assertTrue(
+        permitted, 'Current feature enablement status is not permitted as '
+        'this is inconsistent with the data on DLM. Feature must'
+        f'{" not" if branded_chassis_device_data else ""} be '
+        f'enabled on this project ({brand_code}). Please check the chassis '
+        'used on this project again and contact Google.')
+
     # Add further checks for RMA but the above asserts should always be True.
     if (self.args.rma_mode and gsc_utils.GSCUtils().IsGSCFieldLocked()):
       self.CheckFeatureComplianceForRMACr50Locked(checker_hw_compliance_version)
