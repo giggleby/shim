@@ -2,9 +2,41 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Tests USB type-C DP function with Plankton-Raiden, which links/unlinks DUT
-USB type-C port to DP sink. And with Plankton-HDMI as DP sunk to capture DP
-output to verify.
+"""Tests USB type-C DP function with Plankton.
+
+Description
+-----------
+
+See `here <https://chromium.googlesource.com/website/+/HEAD/site/chromium-os/\
+plankton/index.md>`_ for Plankton introduction.
+
+1. There is a fixture called Plankton-Raiden, which links/unlinks the DUT
+   USB Type-C port.
+2. There is another fixture called Plankton-HDMI, which is a DP sink and it
+   can capture the DP output and verify it.
+
+This test uses these fixtures to test USB type-C DP function.
+
+Internal references
+^^^^^^^^^^^^^^^^^^^
+
+1. http://go/plankton_v3
+2. http://go/cros-plankton-hdmi-introduction
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+
+Dependency
+----------
+- bft_fixture
+- Plankton
+
+Examples
+--------
+
+No example is found.
+
 """
 
 import logging
