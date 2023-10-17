@@ -2,11 +2,48 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""A video playback test.
+
+Description
+-----------
+
+This test exposes options to assign file to play, loop, control ui, and time
+limitation.
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+
+Dependency
+----------
+- HTML <video> Tag
+
+Examples
+--------
+
+To record from camera and internal mics and playback immediately::
+
+  {
+    "pytest_name": "video_playback"
+  }
+
+To play an video, you must put 720_h264.mp4 under video_playback_static::
+
+  {
+    "pytest_name": "video_playback",
+    "args": {
+      "video_file": "720_h264.mp4"
+    }
+  }
+
+"""
+
 import logging
 
 from cros.factory.test import test_case
 from cros.factory.test.utils import audio_utils
 from cros.factory.utils.arg_utils import Arg
+
 
 DEFAULT_SECONDS = 10
 
