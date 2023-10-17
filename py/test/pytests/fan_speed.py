@@ -4,6 +4,9 @@
 
 """A factory test to ensure the functionality of CPU fan.
 
+Description
+-----------
+
 It provides two types of test:
 
 A. target_rpm mode
@@ -20,6 +23,61 @@ In mode A, the steps are:
    num_samples_to_use samples as the stabilized fan speed reading.
 3. Checks that the averaged reading is within range
    [target_rpm - error_margin, target_rpm + error_margin].
+
+Some system services like dptf may change the fan speed while testing so users
+have to disable them with test object option "disable_services". See Examples.
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+
+Dependency
+----------
+- Device API ``cros.factory.device.fan``.
+
+Examples
+--------
+An example::
+
+  {
+    "pytest_name": "fan_speed",
+    "label": "Fan Speed",
+    "run_if": "constants.has_fan",
+    "disable_services": [
+      "dptf"
+    ],
+    "args": {
+      "probe_interval_secs": 0.2,
+      "target_rpm": [
+        3000,
+        4500,
+        6000
+      ],
+      "error_margin": 300
+    }
+  }
+
+If you prefer to use 7% as error margin::
+
+  {
+    "pytest_name": "fan_speed",
+    "label": "Fan Speed",
+    "run_if": "constants.has_fan",
+    "disable_services": [
+      "dptf"
+    ],
+    "args": {
+      "probe_interval_secs": 0.2,
+      "target_rpm": [
+        3000,
+        4500,
+        6000
+      ],
+      "error_margin": 7,
+      "error_margin_use_percentage": true
+    }
+  }
+
 """
 
 import logging
