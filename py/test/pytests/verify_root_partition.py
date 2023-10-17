@@ -2,7 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Verifies the integrity of the root partition."""
+"""Verifies the integrity of the root partition.
+
+Description
+-----------
+
+The root partition may be modified during the factory process. If the disk is
+damaged or the flash process is broken, the root partition may also be wrong.
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+
+Dependency
+----------
+- Device API ``cros.factory.device.partitions``.
+- Device API ``cros.factory.device.toybox``.
+
+Examples
+--------
+An example::
+
+  {
+    "pytest_name": "verify_root_partition",
+    "args": {
+      "max_bytes": 1048576
+    }
+  }
+
+"""
 
 import logging
 import os
