@@ -2,7 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Factory test for lightbar on A case."""
+"""Factory test for lightbar on A-case.
+
+Description
+-----------
+
+The test checks if the color of the light bar is correct for given colors.
+
+`Here <https://chromeunboxed.com/lenovos-light-bar-toting-14-chromebook-5i-is-\
+available-and-100-off>`_ is a site that introduces a chromebook with a light
+bar.
+
+Test Procedure
+--------------
+
+1. Set light bar to a color in colors_to_test.
+2. The operator judges if the color is correct.
+3. Go back to 1. until all the colors in colors_to_test are tested.
+
+Dependency
+----------
+- ``ectool lightbar``
+
+Examples
+--------
+An example::
+
+  {
+    "pytest_name": "lightbar"
+  }
+
+"""
 
 
 import logging
