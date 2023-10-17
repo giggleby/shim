@@ -64,7 +64,7 @@ class VerifyBrandedChassis(test_case.TestCase):
   def ShowPrompt(self) -> None:
     self.ui.SetTitle(_('Verify branded chassis'))
     self.ui.SetState(
-        _('Please verify if the chassis has X label on it.'
+        _('Please verify if the chassis has ChromeBook Plus label on it.'
           'If Yes, press "Y". If not, press "N"'))
 
   def runTest(self):

@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-10-20 12:10+CST\n"
+"PO-Revision-Date: 2023-10-31 15:01+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: th-TH\n"
@@ -1690,9 +1690,11 @@ msgstr "ตรวจสอบโครงสร้างแบรนด์"
 
 #: ../py/test/pytests/branded_chassis.py
 msgid ""
-"Please verify if the chassis has X label on it.If Yes, press \"Y\". If not, "
-"press \"N\""
-msgstr "กรุณาตรวจสอบว่าโครงสร้างมีป้าย X หรือไม่ ถ้ามี ให้กด \"Y\" ถ้าไม่มี ให้กด \"N\""
+"Please verify if the chassis has ChromeBook Plus label on it.If Yes, press "
+"\"Y\". If not, press \"N\""
+msgstr ""
+"กรุณาตรวจสอบว่าโครงสร้างมีป้าย ChromeBook Plus หรือไม่ ถ้ามี ให้กด \"Y\" ถ้าไม่มี ให้กด \"N"
+"\""
 
 #: ../py/test/pytests/branded_chassis.py
 msgid "The DUT is a branded chassis"
