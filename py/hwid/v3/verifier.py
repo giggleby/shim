@@ -73,8 +73,8 @@ def VerifyComponentStatus(database, bom, mode, current_phase=None,
               f'{comp_name!r}')
 
 
-_PRE_MP_KEY_NAME_PATTERN = re.compile('_pre_?mp')
-_MP_KEY_NAME_PATTERN = re.compile('_mp[_0-9v]*?[_a-z]*(_\d+)?$')
+_PRE_MP_KEY_NAME_PATTERN = re.compile(r'_pre_?mp')
+_MP_KEY_NAME_PATTERN = re.compile(r'_mp[_0-9v]*?[_a-z]*(_\d+)?$')
 
 def _IsMPKeyName(name):
   """Returns True if the key name looks like MP (not pre-MP).
@@ -123,7 +123,7 @@ def VerifyPhase(database, bom, current_phase=None, rma_mode=False):
 
   # MP-key checking applies only in PVT and above
   if current_phase >= phase.PVT:
-    if 'firmware_keys' not in bom.components:
+    if not bom.components.get('firmware_keys', []):
       raise common.HWIDException('firmware_keys is required but not found.')
 
     name = next(iter(bom.components['firmware_keys']))

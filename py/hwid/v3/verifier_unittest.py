@@ -81,9 +81,17 @@ class VerifyPhaseTest(unittest.TestCase):
     self.possible_names = list(self.database.GetComponents('firmware_keys'))
 
   @classmethod
-  def _CreateBOM(cls, image_id, firmware_key_name=None):
+  def _CreateBOM(cls, image_id, firmware_key_name=None,
+                 empty_firmware_keys=False):
+    if firmware_key_name is not None and empty_firmware_keys:
+      raise ValueError(
+          'firmware_key_name and empty_firmware_keys are mutually exclusive.')
+
     components = {}
-    if firmware_key_name:
+
+    if empty_firmware_keys:
+      components['firmware_keys'] = []
+    elif firmware_key_name is not None:
       components['firmware_keys'] = [firmware_key_name]
     return BOM(0, image_id, components)
 
@@ -98,6 +106,12 @@ class VerifyPhaseTest(unittest.TestCase):
     self.assertRaises(common.HWIDException, verifier.VerifyPhase,
                       self.database, bom,
                       current_phase=self.database.GetImageName(3))
+
+  def testEmptyFirmwareKeys(self):
+    bom = self._CreateBOM(image_id=3, empty_firmware_keys=True)
+
+    self.assertRaises(common.HWIDException, verifier.VerifyPhase, self.database,
+                      bom)
 
   def testEarlyBuild(self):
     for image_id in [0, 1, 2]:
