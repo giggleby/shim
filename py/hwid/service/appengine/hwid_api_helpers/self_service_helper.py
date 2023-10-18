@@ -308,6 +308,8 @@ def _ConvertChangeUnitToMsg(
     msg.replace_rules.CopyFrom(_ChangeUnitMsg.ReplaceRules())
   elif isinstance(change_unit, change_unit_utils.RenameImages):
     msg.rename_images.CopyFrom(_ChangeUnitMsg.RenameImages())
+  elif isinstance(change_unit, change_unit_utils.PadEncodingBits):
+    msg.pad_encoding_bits.CopyFrom(_ChangeUnitMsg.PadEncodingBits())
   else:
     raise ValueError('Invalid change unit {change_unit!r}.')
   return msg

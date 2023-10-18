@@ -29,6 +29,7 @@ _SplitChangeUnitException = change_unit_utils.SplitChangeUnitException
 _ChangeUnit = change_unit_utils.ChangeUnit
 _CompChange = change_unit_utils.CompChange
 _AddEncodingCombination = change_unit_utils.AddEncodingCombination
+_PadEncodingBits = change_unit_utils.PadEncodingBits
 _ImageDesc = change_unit_utils.ImageDesc
 _NewImageIdToExistingEncodingPattern = (
     change_unit_utils.NewImageIdToExistingEncodingPattern)
@@ -218,14 +219,26 @@ class ChangeUnitTestBase(unittest.TestCase):
       raise self.skipTest('No test data.')
 
     for i, diff in enumerate(self._DIFFS):
-      with self.subTest(diff_test_data_index=i):
+      with self.subTest(
+          diff_test_class=self.__class__.__name__,
+          diff_test_data_index=i,
+      ):
+        # Arrange.
         target_db_content = self._LoadDBContentWithDiffPatched(diff)
         target_db = database.Database.LoadData(target_db_content)
 
+        # Act.
         change_unit_manager = _ChangeUnitManager(self._base_db, target_db)
-        extracted = change_unit_manager.GetChangeUnits().values()
+        change_unit_manager.SetApprovalStatus({
+            change_unit_identity: _ApprovalStatus.AUTO_APPROVED
+            for change_unit_identity in change_unit_manager.GetChangeUnits()
+        })
+        split_result = change_unit_manager.SplitChange()
 
-        self._AssertApplyingPatchesEqualsData(target_db_content, extracted)
+        # Assert.
+        self.assertTrue(split_result.review_required_noop)
+        self.assertTrue(
+            _RelaxedDBEqual(target_db, split_result.auto_mergeable_db))
 
 
 class CompChangeTest(ChangeUnitTestBase):
@@ -233,7 +246,7 @@ class CompChangeTest(ChangeUnitTestBase):
   _DIFF_ADD_COMPONENT = textwrap.dedent('''\
       ---
       +++
-      @@ -97,6 +97,12 @@
+      @@ -100,6 +100,12 @@
              comp_1_2:
                values:
                  value: '2'
@@ -250,7 +263,7 @@ class CompChangeTest(ChangeUnitTestBase):
   _DIFF_ADD_COMPONENT_INTERNAL = textwrap.dedent('''\
       ---
       +++
-      @@ -97,6 +97,15 @@
+      @@ -100,6 +100,15 @@
              comp_1_2:
                values:
                  value: '2'
@@ -280,7 +293,7 @@ class CompChangeTest(ChangeUnitTestBase):
            1:
              comp_cls_1: comp_1_2
          comp_cls_23_field:
-      @@ -91,9 +91,13 @@
+      @@ -94,9 +94,13 @@
                  hash: '0'
          comp_cls_1:
            items:
@@ -301,7 +314,7 @@ class CompChangeTest(ChangeUnitTestBase):
   _DIFF_UPDATE_STATUS_REMAIN_BUNDLE_UUIDS = textwrap.dedent('''\
       ---
       +++
-      @@ -116,8 +116,8 @@
+      @@ -119,8 +119,8 @@
          comp_cls_4:
            items:
              comp_4_1: !from_factory_bundle
@@ -420,10 +433,13 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
   _DIFF_ADD_FIRST_ENCODING_COMBINATION = textwrap.dedent('''\
        ---
        +++
-       @@ -63,6 +63,11 @@
+       @@ -63,9 +63,14 @@
             1:
               comp_cls_2: comp_2_2
               comp_cls_3: comp_3_2
+          field_absent_in_pattern:
+            0:
+              comp_cls_1: comp_1_2
        +  new_field:
        +    0:
        +      comp_cls_2:
@@ -436,20 +452,17 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
   _DIFF_ADD_FOLLOWING_ENCODING_COMBINATION = textwrap.dedent('''\
       ---
       +++
-      @@ -25,6 +25,7 @@
-         - ro_main_firmware_field: 1
-         - comp_cls_1_field: 2
-         - comp_cls_23_field: 2
-      +  - comp_cls_1_field: 1
-
-       encoded_fields:
-         chassis_field:
-      @@ -56,6 +57,21 @@
-             comp_cls_1: comp_1_1
-           1:
+      @@ -66,4 +66,19 @@
+         field_absent_in_pattern:
+           0:
              comp_cls_1: comp_1_2
+      +    1:
+      +      comp_cls_1:
+      +      - comp_1_2
+      +      - comp_1_2
       +    2:
       +      comp_cls_1:
+      +      - comp_1_2
       +      - comp_1_2
       +      - comp_1_2
       +    3:
@@ -457,15 +470,8 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
       +      - comp_1_2
       +      - comp_1_2
       +      - comp_1_2
-      +    4:
-      +      comp_cls_1:
       +      - comp_1_2
-      +      - comp_1_2
-      +      - comp_1_2
-      +      - comp_1_2
-         comp_cls_23_field:
-           0:
-             comp_cls_2: comp_2_1
+
   ''')
 
   _DIFFS: Sequence[str] = [
@@ -495,7 +501,7 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
         comp_hashes=[
             self._comp_2_1_hash,
             self._comp_2_2_hash,
-        ], pattern_idxes=[], comp_analyses=[
+        ], comp_analyses=[
             self._comp_2_1_info,
             self._comp_2_2_info,
         ])
@@ -510,7 +516,7 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
         comp_cls='comp_cls_2', comp_hashes=[
             self._comp_2_1_hash,
             self._comp_2_2_hash,
-        ], pattern_idxes=[], comp_analyses=[
+        ], comp_analyses=[
             self._comp_2_1_info,
             self._comp_2_2_info,
         ])
@@ -523,12 +529,10 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
     # Add more combinations and check if the bit_length was enough.
     following_encodings = [
         _AddEncodingCombination(
-            is_first=False, encoded_field_name='comp_cls_1_field',
+            is_first=False, encoded_field_name='field_absent_in_pattern',
             comp_cls='comp_cls_1', comp_hashes=[self._comp_1_2_hash] * i,
-            pattern_idxes=[0], comp_analyses=[self._comp_1_2_info] * i)
-        for i in range(2, 5)
+            comp_analyses=[self._comp_1_2_info] * i) for i in range(2, 5)
     ]
-
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(
             self._DIFF_ADD_FOLLOWING_ENCODING_COMBINATION), following_encodings)
@@ -537,15 +541,44 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
     following_encoding = _AddEncodingCombination(
         is_first=False, encoded_field_name='no_such_encoded_field',
         comp_cls='comp_cls_2',
-        comp_hashes=[self._comp_2_1_hash,
-                     self._comp_2_2_hash], pattern_idxes=[0], comp_analyses=[
-                         self._comp_2_1_info,
-                         self._comp_2_2_info,
-                     ])
+        comp_hashes=[self._comp_2_1_hash, self._comp_2_2_hash], comp_analyses=[
+            self._comp_2_1_info,
+            self._comp_2_2_info,
+        ])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, following_encoding.Patch,
                         self._builder)
+
+
+class PadEncodingBitsTest(ChangeUnitTestBase):
+
+  _DIFF_PAD_BITS_IN_EXISTING_PATTERNS = textwrap.dedent('''\
+      ---
+      +++
+      @@ -25,6 +25,7 @@
+         - ro_main_firmware_field: 1
+         - comp_cls_1_field: 2
+         - comp_cls_23_field: 2
+      +  - field_absent_in_pattern: 0
+
+       encoded_fields:
+         chassis_field:
+  ''')
+
+  _DIFFS: Sequence[str] = [
+      _DIFF_PAD_BITS_IN_EXISTING_PATTERNS,
+  ]
+
+  def testPadExistingPatternsNewEncodedField(self):
+    pad_bits = _PadEncodingBits(
+        encoded_field_name='field_absent_in_pattern',
+        pattern_idxes=[0],
+    )
+
+    self._AssertApplyingPatchesEqualsData(
+        self._LoadDBContentWithDiffPatched(
+            self._DIFF_PAD_BITS_IN_EXISTING_PATTERNS), [pad_bits])
 
 
 class NewImageIdToExistingEncodingPatternTest(ChangeUnitTestBase):
@@ -697,7 +730,7 @@ class ReplaceRulesTest(ChangeUnitTestBase):
   _DIFF_REPLACE_RULES = textwrap.dedent('''\
       ---
       +++
-      @@ -122,4 +122,10 @@
+      @@ -125,4 +125,10 @@
                values:
                  value: '1'
 
@@ -800,10 +833,13 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
          comp_cls_23_field:
            0:
              comp_cls_2: comp_2_1
-      @@ -63,6 +92,11 @@
+      @@ -63,9 +92,14 @@
            1:
              comp_cls_2: comp_2_2
              comp_cls_3: comp_3_2
+         field_absent_in_pattern:
+           0:
+             comp_cls_1: comp_1_2
       +  new_field:
       +    0:
       +      comp_cls_2:
@@ -812,7 +848,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
        components:
          mainboard:
-      @@ -91,12 +125,21 @@
+      @@ -94,12 +128,21 @@
                  hash: '0'
          comp_cls_1:
            items:
@@ -836,7 +872,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
          comp_cls_2:
            items:
              comp_2_1:
-      @@ -122,4 +157,10 @@
+      @@ -125,4 +160,10 @@
                values:
                  value: '1'
 
@@ -895,32 +931,32 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
     add_comb_cus = [
         _AddEncodingCombination(
             is_first=True, encoded_field_name='new_comp_cls_1_field',
-            comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash, comp_1_2_hash],
-            pattern_idxes=[0], comp_analyses=[
-                comp_1_1_analysis,
-                comp_1_2_analysis,
-            ]),
+            comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash,
+                                                comp_1_2_hash], comp_analyses=[
+                                                    comp_1_1_analysis,
+                                                    comp_1_2_analysis,
+                                                ]),
         _AddEncodingCombination(
             is_first=False, encoded_field_name='new_comp_cls_1_field',
-            comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash, comp_1_3_hash],
-            pattern_idxes=[0], comp_analyses=[
-                comp_1_1_analysis,
-                comp_1_3_analysis,
-            ]),
+            comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash,
+                                                comp_1_3_hash], comp_analyses=[
+                                                    comp_1_1_analysis,
+                                                    comp_1_3_analysis,
+                                                ]),
+        _PadEncodingBits('new_comp_cls_1_field', [0]),
     ]
     expected_diff = textwrap.dedent('''\
         ---
         +++
-        @@ -25,6 +25,8 @@
+        @@ -25,6 +25,7 @@
            - ro_main_firmware_field: 1
            - comp_cls_1_field: 2
            - comp_cls_23_field: 2
-        +  - new_comp_cls_1_field: 0
         +  - new_comp_cls_1_field: 1
 
          encoded_fields:
            chassis_field:
-        @@ -55,7 +57,7 @@
+        @@ -55,7 +56,7 @@
              0:
                comp_cls_1: comp_1_1
              1:
@@ -929,10 +965,14 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
            comp_cls_23_field:
              0:
                comp_cls_2: comp_2_1
-        @@ -63,6 +65,15 @@
+        @@ -63,9 +64,18 @@
              1:
                comp_cls_2: comp_2_2
                comp_cls_3: comp_3_2
+           field_absent_in_pattern:
+             0:
+        -      comp_cls_1: comp_1_2
+        +      comp_cls_1: comp_1_3
         +  new_comp_cls_1_field:
         +    0:
         +      comp_cls_1:
@@ -945,7 +985,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
          components:
            mainboard:
-        @@ -94,9 +105,13 @@
+        @@ -97,9 +107,13 @@
                comp_1_1:
                  values:
                    value: '1'
@@ -973,7 +1013,6 @@ class ChangeUnitManagerTest(unittest.TestCase):
     super().setUp()
     self._base_db_content = file_utils.ReadFile(_TEST_DATABASE_PATH)
     self._base_db = database.Database.LoadData(self._base_db_content)
-    self.maxDiff = None
 
   def testDependencyGraph(self):
     new_db_content = _ApplyUnifiedDiff(
@@ -1033,10 +1072,13 @@ class ChangeUnitManagerTest(unittest.TestCase):
                  1:
                    comp_cls_1: comp_1_2
                comp_cls_23_field:
-            @@ -63,6 +86,17 @@
+            @@ -63,9 +86,20 @@
                  1:
                    comp_cls_2: comp_2_2
                    comp_cls_3: comp_3_2
+               field_absent_in_pattern:
+                 0:
+                   comp_cls_1: comp_1_2
             +  new_field:
             +    0:
             +      comp_cls_1: new_comp
@@ -1051,7 +1093,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
 
              components:
                mainboard:
-            @@ -91,12 +125,16 @@
+            @@ -94,12 +128,16 @@
                        hash: '0'
                comp_cls_1:
                  items:
@@ -1084,16 +1126,24 @@ class ChangeUnitManagerTest(unittest.TestCase):
                  'comp_1_1_renamed,comp_1_2'),
                 # Following combinations depends on the first.
                 'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp',
-                # new_field is included in this image
-                'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
+                # new_field is included in this image.
+                ('AssignBitMappingToEncodingPattern:'
+                 'PHASE_NEW_PATTERN_1(5)(last)'),
+                # Padding bits of new_field to pattern idx 0 depends on this
+                # change.
+                'PadEncodingBits:new_field-0',
             },
-            # Not depended by other change units.
             ('AddEncodingCombination:new_field-comp_cls_1:'
-             'comp_1_1_renamed,comp_1_2'):
-                set(),
-            # Not depended by other change units.
-            'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp':
-                set(),
+             'comp_1_1_renamed,comp_1_2'): {
+                # Padding bits of new_field to pattern idx 0 depends on this
+                # change.
+                'PadEncodingBits:new_field-0'
+            },
+            'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp': {
+                # Padding bits of new_field to pattern idx 0 depends on this
+                # change.
+                'PadEncodingBits:new_field-0',
+            },
             # Component renamed is depended by combination addition.
             'CompChange:comp_cls_1:comp_1_1_renamed': {
                 ('AddEncodingCombination:new_field-comp_cls_1:'
@@ -1120,6 +1170,9 @@ class ChangeUnitManagerTest(unittest.TestCase):
                 # image id additions.
                 'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
             },
+            # Not depended by other change units.
+            'PadEncodingBits:new_field-0':
+                set(),
             'RenameImages': {
                 # Change units of adding new images depend on rename images.
                 ('AssignBitMappingToEncodingPattern:'
@@ -1138,10 +1191,13 @@ class ChangeUnitManagerTest(unittest.TestCase):
         textwrap.dedent('''\
             ---
             +++
-            @@ -63,6 +63,11 @@
+            @@ -63,9 +63,14 @@
                  1:
                    comp_cls_2: comp_2_2
                    comp_cls_3: comp_3_2
+               field_absent_in_pattern:
+                 0:
+                   comp_cls_1: comp_1_2
             +  new_field:
             +    0:
             +      comp_cls_2:
@@ -1166,17 +1222,20 @@ class ChangeUnitManagerTest(unittest.TestCase):
         textwrap.dedent('''\
             ---
             +++
-            @@ -63,6 +63,9 @@
+            @@ -63,9 +63,12 @@
                  1:
                    comp_cls_2: comp_2_2
                    comp_cls_3: comp_3_2
+               field_absent_in_pattern:
+                 0:
+                   comp_cls_1: comp_1_2
             +  new_field:
             +    0:
             +      comp_cls_1: new_comp
 
              components:
                mainboard:
-            @@ -97,6 +100,9 @@
+            @@ -100,6 +103,9 @@
                    comp_1_2:
                      values:
                        value: '2'
@@ -1194,7 +1253,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
             textwrap.dedent('''\
                 ---
                 +++
-                @@ -97,6 +97,9 @@
+                @@ -100,6 +100,9 @@
                        comp_1_2:
                          values:
                            value: '2'
@@ -1509,7 +1568,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
         textwrap.dedent('''\
             ---
             +++
-            @@ -118,7 +118,6 @@
+            @@ -121,7 +121,6 @@
                    comp_4_1: !from_factory_bundle
                      bundle_uuids:
                      - bundle_uuid_1

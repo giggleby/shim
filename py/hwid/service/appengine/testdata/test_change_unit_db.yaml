@@ -63,6 +63,9 @@ encoded_fields:
     1:
       comp_cls_2: comp_2_2
       comp_cls_3: comp_3_2
+  field_absent_in_pattern:
+    0:
+      comp_cls_1: comp_1_2
 
 components:
   mainboard:

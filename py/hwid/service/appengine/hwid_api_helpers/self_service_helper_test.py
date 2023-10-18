@@ -56,6 +56,7 @@ _HWIDSectionChangeStatusMsg = _HWIDSectionChangeMsg.ChangeStatus
 _ChangeUnitMsg = hwid_api_messages_pb2.ChangeUnit
 _AddEncodingCombinationMsg = _ChangeUnitMsg.AddEncodingCombination
 _NewImageIdMsg = _ChangeUnitMsg.NewImageId
+_PadEncodingBitsMsg = _ChangeUnitMsg.PadEncodingBits
 _ClActionMsg = hwid_api_messages_pb2.ClAction
 _ReplaceRulesMsg = _ChangeUnitMsg.ReplaceRules
 _FactoryBundleRecord = hwid_api_messages_pb2.FactoryBundleRecord
@@ -1953,6 +1954,7 @@ class SelfServiceShardTest(unittest.TestCase):
             new_image_id=_NewImageIdMsg(
                 image_names=['PHASE_NEW_PATTERN_1', 'PHASE_NEW_PATTERN_2'],
                 with_new_encoding_pattern=True)),
+        _ChangeUnitMsg(pad_encoding_bits=_PadEncodingBitsMsg()),
     ], list(split_resp.change_units.values()))
 
   def testSplitHwidDbChange_PassWhenNoChange(self):
@@ -2110,7 +2112,7 @@ class SelfServiceShardTest(unittest.TestCase):
          #
          #####
         -checksum: 222abbbca451589a2cc44535fbe67f4feccb9ac2
-        +checksum: 72f58aceddca8779c32728e7f35989c7ea839dc9
+        +checksum: 1f8a06e90af7fb1150e7bdf9d7d0e36461565648
 
          ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -2123,16 +2125,15 @@ class SelfServiceShardTest(unittest.TestCase):
 
          pattern:
          - image_ids:
-        @@ -45,6 +47,8 @@
+        @@ -45,6 +47,7 @@
            - ro_main_firmware_field: 1
            - comp_cls_1_field: 2
            - comp_cls_23_field: 2
-        +  - new_field: 0
         +  - new_field: 1
          - image_ids:
            - 3
            - 4
-        @@ -53,6 +57,13 @@
+        @@ -53,6 +56,13 @@
            - cpu_field: 5
            - comp_cls_1_field: 2
            - ro_main_firmware_field: 1
@@ -2146,7 +2147,7 @@ class SelfServiceShardTest(unittest.TestCase):
 
          encoded_fields:
            chassis_field:
-        @@ -91,6 +102,13 @@
+        @@ -91,6 +101,13 @@
              1:
                comp_cls_2: comp_2_2
                comp_cls_3: comp_3_2
