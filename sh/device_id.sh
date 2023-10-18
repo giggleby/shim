@@ -33,6 +33,12 @@ get_rootdev() {
   return 1
 }
 
+# Get md5sum of given input.
+get_md5sum() {
+  local input="$1"
+  echo "${input}" | md5sum | cut -d ' ' -f 1
+}
+
 # Use disk storage name and serial number to build device id.
 id_storage() {
   local device="$1"
@@ -49,18 +55,29 @@ id_storage() {
 
   # Leverage ID_SERIAL and ID_NAME as input context
   # to generate md5sum as device id.
-  udevadm info --query=property "${device}" | \
-    grep 'ID_\(SERIAL\|NAME\)=' | \
-    sort | md5sum | cut -d ' ' -f 1
+  get_md5sum "$(udevadm info --query=property "${device}" \
+                  | grep 'ID_\(SERIAL\|NAME\)=' \
+                  | sort)"
 }
 
 # Collect all ethernet type network interfaces and compute a hash.
 id_ethernet() {
-  ip addr | grep link/ether | sort | md5sum | sed 's/ .*//'
+  get_md5sum "$(ip addr | grep link/ether | sort)"
+}
+
+# Use GSC device id (available for cr50 or ti50 devices) to build device id.
+id_gsc_device() {
+  # Leverage GSC device id as input context
+  # to generate md5sum as device id.
+  get_md5sum "$(gsctool -a -K dev_ids)"
 }
 
 main() {
   set -e
-  id_storage "$@"
+  if command -v gsctool >/dev/null 2>&1; then
+    id_gsc_device
+  else
+    id_storage "$@"
+  fi
 }
 main "$@"
