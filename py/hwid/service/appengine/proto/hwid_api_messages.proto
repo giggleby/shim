@@ -964,6 +964,10 @@ message ChangeUnit {
   // required.
   message RenameImages {}
 
+  // The information of padding bits in image patterns.  Currently no extra
+  // information is required.
+  message PadEncodingBits {}
+
   // The information of change unit.
   oneof change_unit_type {
     HwidDbEditableSectionAnalysisReport.ComponentInfo comp_change = 1;
@@ -971,6 +975,7 @@ message ChangeUnit {
     NewImageId new_image_id = 3;
     ReplaceRules replace_rules = 4;
     RenameImages rename_images = 5;
+    PadEncodingBits pad_encoding_bits = 6;
   }
 }
 
