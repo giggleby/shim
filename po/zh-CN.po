@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-09-19 18:19+CST\n"
+"PO-Revision-Date: 2023-10-18 18:35+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -130,10 +130,6 @@ msgid "Cellular Switch Firmware"
 msgstr "切换数据机韧体"
 
 #: ../build/pytests_label_generated.json
-msgid "Chameleon"
-msgstr "Chameleon"
-
-#: ../build/pytests_label_generated.json
 msgid "Charger"
 msgstr "充电器"
 
@@ -246,10 +242,6 @@ msgid "Fan Speed"
 msgstr "风扇转速"
 
 #: ../build/pytests_label_generated.json
-msgid "Fastboot Flash"
-msgstr "烧录 Fastboot"
-
-#: ../build/pytests_label_generated.json
 msgid "Feature Compliance Version"
 msgstr "功能合规测试"
 
@@ -287,10 +279,6 @@ msgstr ""
 #: ../build/pytests_label_generated.json
 msgid "HWID"
 msgstr "HWID"
-
-#: ../build/pytests_label_generated.json
-msgid "Interrupt"
-msgstr "中断"
 
 #: ../build/pytests_label_generated.json
 msgid "Keyboard"
@@ -372,18 +360,6 @@ msgid "Nop"
 msgstr "无动作"
 
 #: ../build/pytests_label_generated.json
-msgid "Offline Test"
-msgstr "离线测试"
-
-#: ../build/pytests_label_generated.json
-msgid "Offline Test Shell Deploy"
-msgstr "离线测试部署"
-
-#: ../build/pytests_label_generated.json
-msgid "Offline Test Shell Fetch Log"
-msgstr "离线测试日志提取"
-
-#: ../build/pytests_label_generated.json
 msgid "Partition Table"
 msgstr "分区表"
 
@@ -410,10 +386,6 @@ msgstr "Plankton 充电"
 #: ../build/pytests_label_generated.json
 msgid "Plankton Display"
 msgstr "Plankton 显示"
-
-#: ../build/pytests_label_generated.json
-msgid "Power Under Stress"
-msgstr "压力电源测试"
 
 #: ../build/pytests_label_generated.json
 msgid "Privacy Screen"
@@ -664,10 +636,6 @@ msgstr "更新 PSR Oem 资料"
 #: ../build/pytests_label_generated.json
 msgid "Urandom"
 msgstr "乱数产生"
-
-#: ../build/pytests_label_generated.json
-msgid "USB"
-msgstr "USB"
 
 #: ../build/pytests_label_generated.json
 msgid "Verify Component"
@@ -1829,25 +1797,6 @@ msgstr ""
 msgid "Switching firmware to {target!r}"
 msgstr "切换数据机至{target!r}韧体"
 
-#: ../py/test/pytests/chameleon.py
-msgid "Please plug in the display to test"
-msgstr "请拔下耳机"
-
-#: ../py/test/pytests/chameleon.py
-msgid ""
-"Testing DUT {dut_port} port on Chameleon {chameleon_port} port using mode "
-"{mode}..."
-msgstr ""
-"测试 DUT {dut_port} 对 Chameleon {chameleon_port} 外接显示 mode: {mode}..."
-
-#: ../py/test/pytests/chameleon.py
-msgid "Automated testing on {dut_port} to {chameleon_port} in progress..."
-msgstr "{dut_port} 对 {chameleon_port} 自动测试进行中..."
-
-#: ../py/test/pytests/chameleon.py
-msgid "Captured images mismatch"
-msgstr "撷取的图片不相符"
-
 #: ../py/test/pytests/charger.py
 msgid "Discharging"
 msgstr "放电"
@@ -2155,18 +2104,6 @@ msgstr "风扇减速"
 #: ../py/test/pytests/fan_speed_static/fan_speed.html
 msgid "Fan speed (RPM):"
 msgstr "风扇转速(RPM):"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Switching device into fastboot."
-msgstr "等待待测物进入fastboot"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Switching device back to normal mode."
-msgstr "等待待测物正常开机"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Flashing {file} to {partition}."
-msgstr "安装 {file} 至 {partition}."
 
 #: ../py/test/pytests/finalize.py
 msgid "Build Phase"
@@ -2547,14 +2484,6 @@ msgstr "已连接 BFT 显示屏: {device}, 正在传送画面"
 #: ../py/test/pytests/plankton_display_static/plankton_display.html
 msgid "Caution: monitor may turn black for a short time."
 msgstr "注意: 萤幕可能会有短暂黑屏"
-
-#: ../py/test/pytests/power_under_stress.py
-msgid "Voltage: {voltage} mV"
-msgstr "电压: {voltage} mV"
-
-#: ../py/test/pytests/power_under_stress.py
-msgid "Current: {current} mA"
-msgstr "电流: {current} mA"
 
 #: ../py/test/pytests/privacy_screen.py
 msgid "Running diagnostics privacy screen routine..."
@@ -3329,10 +3258,6 @@ msgstr "输入{label}: "
 #: ../py/test/pytests/update_device_data.py
 msgid "(ESC to keep current value)"
 msgstr "(ESC 保持原值不变)"
-
-#: ../py/test/pytests/usb.py
-msgid "Plug device into each USB port, {num_usb_ports} to go..."
-msgstr "在每个 USB 端口插入装置, 还有 {num_usb_ports} 个待测试..."
 
 #: ../py/test/pytests/verify_component_static/verify_component.html
 msgid "Probing components..."

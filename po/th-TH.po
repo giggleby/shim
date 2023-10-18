@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-09-19 18:19+CST\n"
+"PO-Revision-Date: 2023-10-18 18:35+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: th-TH\n"
@@ -130,10 +130,6 @@ msgid "Cellular Switch Firmware"
 msgstr "เฟิร์มแวร์สวิตช์เซลลูลาร์"
 
 #: ../build/pytests_label_generated.json
-msgid "Chameleon"
-msgstr "Chameleon"
-
-#: ../build/pytests_label_generated.json
 msgid "Charger"
 msgstr "ที่ชาร์จ"
 
@@ -246,10 +242,6 @@ msgid "Fan Speed"
 msgstr "ความเร็วพัดลม"
 
 #: ../build/pytests_label_generated.json
-msgid "Fastboot Flash"
-msgstr "แฟลช Fastboot"
-
-#: ../build/pytests_label_generated.json
 msgid "Feature Compliance Version"
 msgstr "เวอร์ชันการปฏิบัติตามคุณลักษณะ"
 
@@ -287,10 +279,6 @@ msgstr "HPS"
 #: ../build/pytests_label_generated.json
 msgid "HWID"
 msgstr "HWID"
-
-#: ../build/pytests_label_generated.json
-msgid "Interrupt"
-msgstr "ขัดจังหวะ"
 
 #: ../build/pytests_label_generated.json
 msgid "Keyboard"
@@ -372,18 +360,6 @@ msgid "Nop"
 msgstr "Nop"
 
 #: ../build/pytests_label_generated.json
-msgid "Offline Test"
-msgstr "การทดสอบแบบออฟไลน์"
-
-#: ../build/pytests_label_generated.json
-msgid "Offline Test Shell Deploy"
-msgstr "การปรับใช้เชลล์ทดสอบแบบออฟไลน์"
-
-#: ../build/pytests_label_generated.json
-msgid "Offline Test Shell Fetch Log"
-msgstr "การดึงบันทึกเชลล์ทดสอบแบบออฟไลน์"
-
-#: ../build/pytests_label_generated.json
 msgid "Partition Table"
 msgstr "ตารางพาร์ติชัน"
 
@@ -410,10 +386,6 @@ msgstr "การชาร์จ Plankton"
 #: ../build/pytests_label_generated.json
 msgid "Plankton Display"
 msgstr "จอแสดงผล Plankton"
-
-#: ../build/pytests_label_generated.json
-msgid "Power Under Stress"
-msgstr "กำลังไฟภายใต้ความเครียด"
 
 #: ../build/pytests_label_generated.json
 msgid "Privacy Screen"
@@ -664,10 +636,6 @@ msgstr "อัปเดตข้อมูล OEM PSR"
 #: ../build/pytests_label_generated.json
 msgid "Urandom"
 msgstr "ยูรันดอม"
-
-#: ../build/pytests_label_generated.json
-msgid "USB"
-msgstr "USB"
 
 #: ../build/pytests_label_generated.json
 msgid "Verify Component"
@@ -1836,26 +1804,6 @@ msgstr ""
 msgid "Switching firmware to {target!r}"
 msgstr "กําลังสลับเปลี่ยนเฟิร์มแวร์เป็น {target!r}"
 
-#: ../py/test/pytests/chameleon.py
-msgid "Please plug in the display to test"
-msgstr "กรุณาเสียบจอแสดงผลเพื่อทดสอบ"
-
-#: ../py/test/pytests/chameleon.py
-msgid ""
-"Testing DUT {dut_port} port on Chameleon {chameleon_port} port using mode "
-"{mode}..."
-msgstr ""
-"กําลังทดสอบ DUT {dut_port} พอร์ตบน Chameleon {chameleon_port} พอร์ตโดยใช้โหมด "
-"{mode}..."
-
-#: ../py/test/pytests/chameleon.py
-msgid "Automated testing on {dut_port} to {chameleon_port} in progress..."
-msgstr "กําลังทดสอบอัตโนมัติบน {dut_port} ไปยัง {chameleon_port} กําลังดําเนินการ..."
-
-#: ../py/test/pytests/chameleon.py
-msgid "Captured images mismatch"
-msgstr "ภาพที่บันทึกไม่ตรงกัน"
-
 #: ../py/test/pytests/charger.py
 msgid "Discharging"
 msgstr "การปล่อยประจุ"
@@ -2165,18 +2113,6 @@ msgstr "หยุดหมุนใบพัดพัดลม"
 #: ../py/test/pytests/fan_speed_static/fan_speed.html
 msgid "Fan speed (RPM):"
 msgstr "ความเร็วใบพัด (RPM):"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Switching device into fastboot."
-msgstr "กําลังสลับอุปกรณ์เข้าโหมด fastboot"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Switching device back to normal mode."
-msgstr "กําลังสลับอุปกรณ์กลับเข้าโหมดปกติ"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Flashing {file} to {partition}."
-msgstr "กําลังเขียนไฟล์ {file} ไปยังพาร์ทิชัน {partition}"
 
 #: ../py/test/pytests/finalize.py
 msgid "Build Phase"
@@ -2556,14 +2492,6 @@ msgstr "จอแสดงผล BFT {device} เชื่อมต่อแล�
 #: ../py/test/pytests/plankton_display_static/plankton_display.html
 msgid "Caution: monitor may turn black for a short time."
 msgstr "ระวัง: จอแสดงผลอาจมืดลงเป็นเวลาสั้นๆ"
-
-#: ../py/test/pytests/power_under_stress.py
-msgid "Voltage: {voltage} mV"
-msgstr "แรงดันไฟฟ้า: {voltage} mV"
-
-#: ../py/test/pytests/power_under_stress.py
-msgid "Current: {current} mA"
-msgstr "กระแสไฟฟ้า: {current} mA"
 
 #: ../py/test/pytests/privacy_screen.py
 msgid "Running diagnostics privacy screen routine..."
@@ -3345,10 +3273,6 @@ msgstr "ใส่ {label}: "
 #: ../py/test/pytests/update_device_data.py
 msgid "(ESC to keep current value)"
 msgstr "(กด ESC เพื่อเก็บค่าปัจจุบัน)"
-
-#: ../py/test/pytests/usb.py
-msgid "Plug device into each USB port, {num_usb_ports} to go..."
-msgstr "เสียบอุปกรณ์เข้าพอร์ต USB แต่ละพอร์ต ยังเหลืออีก {num_usb_ports} พอร์ต"
 
 #: ../py/test/pytests/verify_component_static/verify_component.html
 msgid "Probing components..."

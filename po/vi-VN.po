@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-09-19 18:19+CST\n"
+"PO-Revision-Date: 2023-10-18 18:35+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -130,10 +130,6 @@ msgid "Cellular Switch Firmware"
 msgstr "Chuyển đổi phần mềm xử lý dữ liệu"
 
 #: ../build/pytests_label_generated.json
-msgid "Chameleon"
-msgstr "Chameleon"
-
-#: ../build/pytests_label_generated.json
 msgid "Charger"
 msgstr "Bộ sạc"
 
@@ -246,10 +242,6 @@ msgid "Fan Speed"
 msgstr "Tốc độ quạt"
 
 #: ../build/pytests_label_generated.json
-msgid "Fastboot Flash"
-msgstr " Đốt Fastboot"
-
-#: ../build/pytests_label_generated.json
 msgid "Feature Compliance Version"
 msgstr "Phiên bản Công cụ Kiểm tra"
 
@@ -287,10 +279,6 @@ msgstr ""
 #: ../build/pytests_label_generated.json
 msgid "HWID"
 msgstr "HWID"
-
-#: ../build/pytests_label_generated.json
-msgid "Interrupt"
-msgstr "Gián đoạn"
 
 #: ../build/pytests_label_generated.json
 msgid "Keyboard"
@@ -372,18 +360,6 @@ msgid "Nop"
 msgstr "Không có hành động"
 
 #: ../build/pytests_label_generated.json
-msgid "Offline Test"
-msgstr "Kiểm tra ngoại tuyến"
-
-#: ../build/pytests_label_generated.json
-msgid "Offline Test Shell Deploy"
-msgstr "Kiểm tra ngoại tuyến"
-
-#: ../build/pytests_label_generated.json
-msgid "Offline Test Shell Fetch Log"
-msgstr "Kiểm tra ngoại tuyến"
-
-#: ../build/pytests_label_generated.json
 msgid "Partition Table"
 msgstr "Bảng phân vùng"
 
@@ -410,10 +386,6 @@ msgstr "Sạc Plankton"
 #: ../build/pytests_label_generated.json
 msgid "Plankton Display"
 msgstr "hiển thị Plankton"
-
-#: ../build/pytests_label_generated.json
-msgid "Power Under Stress"
-msgstr "Kiểm tra công suất áp suất"
 
 #: ../build/pytests_label_generated.json
 msgid "Privacy Screen"
@@ -664,10 +636,6 @@ msgstr ""
 #: ../build/pytests_label_generated.json
 msgid "Urandom"
 msgstr "Số ngẫu nhiên"
-
-#: ../build/pytests_label_generated.json
-msgid "USB"
-msgstr "USB"
 
 #: ../build/pytests_label_generated.json
 msgid "Verify Component"
@@ -1855,26 +1823,6 @@ msgstr ""
 msgid "Switching firmware to {target!r}"
 msgstr "máy cưa số lần đổi cắt đến {target!r}"
 
-#: ../py/test/pytests/chameleon.py
-msgid "Please plug in the display to test"
-msgstr "Vui lòng rút phích cắm tai nghe"
-
-#: ../py/test/pytests/chameleon.py
-msgid ""
-"Testing DUT {dut_port} port on Chameleon {chameleon_port} port using mode "
-"{mode}..."
-msgstr ""
-"Kiểm tra DUT {dut_port} cho Chameleon {chameleon_port} Chế độ hiển thị bên "
-"ngoài: {mode} ..."
-
-#: ../py/test/pytests/chameleon.py
-msgid "Automated testing on {dut_port} to {chameleon_port} in progress..."
-msgstr "{dut_port} Đang tiến hành kiểm tra tự động  {chameleon_port} ..."
-
-#: ../py/test/pytests/chameleon.py
-msgid "Captured images mismatch"
-msgstr "Các hình ảnh được chụp không khớp"
-
 #: ../py/test/pytests/charger.py
 msgid "Discharging"
 msgstr "Xả"
@@ -2191,18 +2139,6 @@ msgstr "Giảm tốc quạt"
 #: ../py/test/pytests/fan_speed_static/fan_speed.html
 msgid "Fan speed (RPM):"
 msgstr "Tốc độ quạt(RPM):"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Switching device into fastboot."
-msgstr "fastbootchất phân tích vào fastboot chờ đợi"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Switching device back to normal mode."
-msgstr "Chờ chất phân tích khởi động bình thường"
-
-#: ../py/test/pytests/fastboot_flash.py
-msgid "Flashing {file} to {partition}."
-msgstr "Cài đặt  {file} thành {partition}."
 
 #: ../py/test/pytests/finalize.py
 msgid "Build Phase"
@@ -2591,14 +2527,6 @@ msgstr "Màn hình BFT được kết nối: {device}, màn hình truyền"
 #: ../py/test/pytests/plankton_display_static/plankton_display.html
 msgid "Caution: monitor may turn black for a short time."
 msgstr "Lưu ý: Màn hình có thể có màn hình đen ngắn."
-
-#: ../py/test/pytests/power_under_stress.py
-msgid "Voltage: {voltage} mV"
-msgstr "mVĐiện áp: {voltage} mV"
-
-#: ../py/test/pytests/power_under_stress.py
-msgid "Current: {current} mA"
-msgstr "Hiện tại: {current} mA"
 
 #: ../py/test/pytests/privacy_screen.py
 msgid "Running diagnostics privacy screen routine..."
@@ -3391,11 +3319,6 @@ msgstr "Nhập{label}: "
 #: ../py/test/pytests/update_device_data.py
 msgid "(ESC to keep current value)"
 msgstr "(ESC giữ nguyên giá trị ban đầu)"
-
-#: ../py/test/pytests/usb.py
-msgid "Plug device into each USB port, {num_usb_ports} to go..."
-msgstr ""
-"Lắp thiết bị vào mỗi cổng USB và có {num_usb_ports}  để được kiểm tra..."
 
 #: ../py/test/pytests/verify_component_static/verify_component.html
 msgid "Probing components..."
