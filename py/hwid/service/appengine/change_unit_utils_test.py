@@ -570,6 +570,64 @@ class PadEncodingBitsTest(ChangeUnitTestBase):
       _DIFF_PAD_BITS_IN_EXISTING_PATTERNS,
   ]
 
+  def setUp(self):
+    super().setUp()
+    self.db_content_before = textwrap.dedent('''\
+        checksum: DUMMY
+
+        project: CHROMEBOOK
+
+        encoding_patterns:
+          0: default
+
+        image_id:
+          0: PROTO
+          1: EVT
+
+        pattern:
+        - image_ids:
+          - 0
+          encoding_scheme: base8192
+          fields:
+          - comp_cls_1_field: 0
+        - image_ids:
+          - 1
+          encoding_scheme: base8192
+          fields:
+          - comp_cls_1_field: 1
+
+        encoded_fields:
+          comp_cls_1_field:
+            0:
+              comp_cls_1: null
+            1:
+              comp_cls_1: comp_cls_1_1
+
+        components:
+          comp_cls_1:
+            items:
+              comp_cls_1_1:
+                values:
+                  value: '0'
+          region: !region_component
+
+        rules: []
+    ''')
+    diff = textwrap.dedent('''\
+        ---
+        +++
+        @@ -14,7 +14,8 @@
+           - 0
+           encoding_scheme: base8192
+           fields:
+           - comp_cls_1_field: 0
+        +  - comp_cls_1_field: 1
+         - image_ids:
+           - 1
+           encoding_scheme: base8192
+    ''')
+    self.db_content_after = _ApplyUnifiedDiff(self.db_content_before, diff)
+
   def testPadExistingPatternsNewEncodedField(self):
     pad_bits = _PadEncodingBits(
         encoded_field_name='field_absent_in_pattern',
@@ -579,6 +637,26 @@ class PadEncodingBitsTest(ChangeUnitTestBase):
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(
             self._DIFF_PAD_BITS_IN_EXISTING_PATTERNS), [pad_bits])
+
+  def testExtractPadEncodingBitsChangeUnit(self):
+    db_before = database.Database.LoadData(self.db_content_before)
+    db_after = database.Database.LoadData(self.db_content_after)
+
+    change_unit_manager = _ChangeUnitManager(db_before, db_after)
+    change_units_reprs = [
+        repr(c) for c in change_unit_manager.GetChangeUnits().values()
+    ]
+
+    self.assertCountEqual(['PadEncodingBits:comp_cls_1_field-0'],
+                          change_units_reprs)
+
+  def testApplyPadEncodingBitsChangeUnit(self):
+    with builder.DatabaseBuilder.FromDBData(
+        self.db_content_before) as db_builder:
+      _PadEncodingBits('comp_cls_1_field', [0]).Patch(db_builder)
+
+    self.assertEqual(self.db_content_after,
+                     db_builder.Build().DumpDataWithoutChecksum())
 
 
 class NewImageIdToExistingEncodingPatternTest(ChangeUnitTestBase):

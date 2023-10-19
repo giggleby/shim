@@ -515,8 +515,9 @@ def _ExtractEncodingRelatedChanges(
   else:
     common_pattern_idxes = range(old_db.GetPatternCount())
 
-  def _GetPatternIdxesToFill(encoded_field_name: str) -> Sequence[int]:
-    """Gets the indices of common patterns requiring bit filling.
+  def _GetPatternIdxesHavingEncodedField(
+      encoded_field_name: str) -> Sequence[int]:
+    """Gets the indices of common patterns having the given encoded field.
 
     Returns:
       Indices of patterns including the specified encoded field in new_db.
@@ -528,21 +529,35 @@ def _ExtractEncodingRelatedChanges(
             pattern_idx=pattern_idx)
     ]
 
-  def _GetPatternIdxesWithNewEncodedFields(
+  def _GetPatternIdxesRequiringPadding(
       encoded_field_name: str) -> Sequence[int]:
     """Gets the indices of common patterns requiring bit filling.
 
     Returns:
-      Indices of patterns including the specified encoded field in new_db but
-      not in old_db.
+      Indices of patterns including the specified encoded field in the following
+      cases:
+        1. The given encoded field exists in a pattern of the new DB but not the
+          old DB.
+        2. The given encoded field exists in a pattern of both new DB and old
+          DB, but the bit length in new DB is greater than in old DB.
     """
-
-    return [
-        pattern_idx for pattern_idx in common_pattern_idxes
-        if encoded_field_name in new_db.GetEncodedFieldsBitLength(
-            pattern_idx=pattern_idx) and encoded_field_name not in
-        old_db.GetEncodedFieldsBitLength(pattern_idx=pattern_idx)
-    ]
+    pattern_idxes_required = []
+    for pattern_idx in common_pattern_idxes:
+      old_bit_lengths = old_db.GetEncodedFieldsBitLength(
+          pattern_idx=pattern_idx)
+      new_bit_lengths = new_db.GetEncodedFieldsBitLength(
+          pattern_idx=pattern_idx)
+      if encoded_field_name not in new_bit_lengths:
+        # encoded_field_name does not exist in the pattern of new DB.
+        continue
+      if encoded_field_name not in old_bit_lengths:
+        # In new DB but not in old DB.
+        pattern_idxes_required.append(pattern_idx)
+      elif new_bit_lengths[encoded_field_name] > old_bit_lengths[
+          encoded_field_name]:
+        # Exists in the pattern of both old/new DB and has more bits in new DB.
+        pattern_idxes_required.append(pattern_idx)
+    return pattern_idxes_required
 
   def _GetComponentHashes(comp_cls: str,
                           comp_names: Iterable[str]) -> Sequence[str]:
@@ -564,7 +579,8 @@ def _ExtractEncodingRelatedChanges(
         new_db, extra_encoded_field)
 
     # Only fill bits in existing patterns that include this encoded field.
-    pattern_idxes_to_fill = _GetPatternIdxesToFill(extra_encoded_field)
+    pattern_idxes_to_fill = _GetPatternIdxesHavingEncodedField(
+        extra_encoded_field)
     if pattern_idxes_to_fill:
       yield PadEncodingBits(extra_encoded_field, pattern_idxes_to_fill)
 
@@ -607,7 +623,7 @@ def _ExtractEncodingRelatedChanges(
 
     if old_comb_idx_set < new_comb_idx_set:
       # Only fill bits in existing patterns that include this encoded field.
-      pattern_idxes_to_fill = _GetPatternIdxesToFill(encoded_field)
+      pattern_idxes_to_fill = _GetPatternIdxesHavingEncodedField(encoded_field)
       if pattern_idxes_to_fill:
         yield PadEncodingBits(encoded_field, pattern_idxes_to_fill)
       comp_cls = _GetExactlyOneComponentClassFromEncodedField(
@@ -623,8 +639,7 @@ def _ExtractEncodingRelatedChanges(
     else:
       # A pattern introduces an existing encoded field without combinations
       # changed.
-      pattern_idxes_to_fill = _GetPatternIdxesWithNewEncodedFields(
-          encoded_field)
+      pattern_idxes_to_fill = _GetPatternIdxesRequiringPadding(encoded_field)
       if pattern_idxes_to_fill:
         yield PadEncodingBits(encoded_field, pattern_idxes_to_fill)
 
