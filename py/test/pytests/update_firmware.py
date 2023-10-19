@@ -126,7 +126,7 @@ class UpdateFirmwareTest(test_case.TestCase):
     current_version = f'ro:{ro_version};rw:{rw_version}'
 
     if not updater.IsUpdateAvailable(
-        current_version, match_method=update_utils.MATCH_METHOD.substring):
+        current_version, match_method=update_utils.MatchMethod.substring):
       logging.info('Your firmware is already in same version as server (%s)',
                    updater.GetUpdateVersion())
       if not force_update:
