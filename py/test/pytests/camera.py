@@ -185,6 +185,23 @@ To check the camera capturing black frames (the maximum brightness less than
       "brightness_range": [null, 10]
     }
   }
+
+This is used if camera_characteristics.conf is not ready. Users must replace
+``camera_usb_vid_pid`` with vid pid they are testing::
+
+  {
+    "pytest_name": "camera",
+    "args": {
+      "mode": "manual",
+      "e2e_mode": false,
+      "camera_facing": null,
+      "camera_usb_vid_pid": [
+        "13d3",
+        "56ec"
+      ]
+    }
+  }
+
 """
 
 
@@ -730,8 +747,14 @@ class CameraTest(test_case.TestCase):
     self.dut = device_utils.CreateDUTInterface()
 
     self.mode = self.args.mode
-    self.camera_type = camera_utils.GetCameraTypeFromCameraFacing(
-        self.args.camera_facing)
+    if self.args.camera_facing is None:
+      self.camera_type = camera_utils.CameraType.usb
+      self.assertTrue(
+          self.args.camera_usb_vid_pid is not None,
+          'camera_usb_vid_pid must be set if camera_facing is None')
+    else:
+      self.camera_type = camera_utils.GetCameraTypeFromCameraFacing(
+          self.args.camera_facing)
     self.e2e_mode = self.args.e2e_mode
     self.min_luminance_ratio = self.args.min_luminance_ratio
 

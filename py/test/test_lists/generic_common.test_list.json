@@ -337,6 +337,19 @@
         "mode": "manual"
       }
     },
+    "CameraNoCharacteristics": {
+      "pytest_name": "camera",
+      "__comment": "This is used if camera_characteristics.conf is not ready. Users must replace ``camera_usb_vid_pid`` with vid pid they are testing.",
+      "args": {
+        "mode": "manual",
+        "e2e_mode": false,
+        "camera_facing": null,
+        "camera_usb_vid_pid": [
+          "13d3",
+          "56ec"
+        ]
+      }
+    },
     "CameraTests": {
       "label": "Camera Tests",
       "subtests": [

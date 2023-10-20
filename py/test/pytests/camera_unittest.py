@@ -30,7 +30,7 @@ class FakeArgs:
     self.show_image = True
     self.e2e_mode = True
     self.resize_ratio = 0.4
-    self.camera_facing = None
+    self.camera_facing = camera_utils.CameraFacing.front
     self.camera_usb_vid_pid = None
     self.flip_image = None
     self.camera_args = {}
@@ -76,6 +76,15 @@ class CameraUnitTest(unittest.TestCase):
     self.assertRaisesRegex(Exception,
                            r'e2e_mode should be enabled for MIPI camera\.',
                            self.test.setUp)
+
+  def testSetUp_NoFacingAndNoUpVidPid_Fail(self):
+    self.test.args = FakeArgs(e2e_mode=False, camera_facing=None)
+
+    # Check if camera_usb_vid_pid and camera_facing are mentioned in the error
+    # messages.
+    with self.assertRaisesRegex(AssertionError,
+                                r'camera_usb_vid_pid.*camera_facing'):
+      self.test.setUp()
 
   def testSetUpVidPid(self):
     self.test.args = FakeArgs(e2e_mode=False, camera_usb_vid_pid=['vid', 'pid'],
