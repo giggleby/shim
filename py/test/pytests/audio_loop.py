@@ -1198,7 +1198,8 @@ class AudioLoopTest(test_case.TestCase):
         `True` if given device in the board list.
       """
 
-      _merge_threshold_size_480_boards = ('brya', 'rex', 'volteer', 'hades')
+      _merge_threshold_size_480_boards = ('brya', 'rex', 'volteer', 'hades',
+                                          'nissa')
 
       lsb_data = LSBFile(os.path.join('/', 'etc', 'lsb-release'))
       board_name = lsb_data.GetChromeOSBoard().lower()
