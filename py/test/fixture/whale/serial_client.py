@@ -143,15 +143,15 @@ def CallFunction(args, sclient):
   Args:
     args: dict of function commands, like:
         Send command: {
-            function: FUNCTIONS.send,
+            function: Functions.send,
             serial_index: 0,
             function_args: ['contents to send']}
         Receive command: {
-            function: FUNCTIONS.receive,
+            function: Functions.receive,
             serial_index: 0,
             function_args: ['number of bytes to receive']}
         Get serial amount command: {
-            function: FUNCTIONS.get_serial_num
+            function: Functions.get_serial_num
             serial_index: -1}
     sclient: SerialClient object.
   """

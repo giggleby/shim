@@ -69,7 +69,7 @@ class Instalog(plugin.Plugin):
       :type event_: cros.factory.test.event.Event
     """
     if event_.type == event.Event.Type.FACTORY_SERVER_CONFIG_CHANGED:
-      if self._state == self.STATE.RUNNING:
+      if self._state == self.State.RUNNING:
         # restart myself
         self.Stop()
         self.Start()
