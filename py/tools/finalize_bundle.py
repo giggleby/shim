@@ -1064,8 +1064,9 @@ class FinalizeBundle:
     ]
     for index in reversed(range(len(self.netboot_firmware_source.version))):
       version_str = '.'.join(netboot_firmware_source_version)
-      url_prefix = gsutil.BuildResourceBaseURL(
-          gsutil.GSUtil.Channels.dev, self.build_board.gsutil_name, version_str)
+      url_prefix = gsutil.BuildResourceBaseURL(gsutil.GSUtil.Channels.canary,
+                                               self.build_board.gsutil_name,
+                                               version_str)
       urls.append(f'{url_prefix}/ChromeOS-firmware-*.tar.bz2')
       netboot_firmware_source_version[index] = '*'
     return urls

@@ -389,7 +389,7 @@ class CreateFirmwareArchiveFallbackListTest(FinalizeBundleTestBase):
     bundle_builder.ProcessManifest()
     result = bundle_builder.CreateFirmwareArchiveFallbackList()
 
-    prefix = 'gs://chromeos-releases/dev-channel/brya/'
+    prefix = 'gs://chromeos-releases/canary-channel/brya/'
     self.assertListEqual(result, [
         f'{prefix}12345.67.89/ChromeOS-firmware-*.tar.bz2',
         f'{prefix}12345.67.*/ChromeOS-firmware-*.tar.bz2',
