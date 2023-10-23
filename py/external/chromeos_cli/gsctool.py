@@ -531,6 +531,16 @@ class GSCTool:
                                  'Fail to get wpsr.')
     return not re.search(r'not provisioned', result.stdout)
 
+  def GetExpandedAprovStatus(self):
+    """Gets the status which explains why Ti50 AP RO verification failed."""
+    result = self._InvokeCommand([GSCTOOL_PATH, '-a', '-W'],
+                                 'Fail to get Ti50 metrics.')
+    match = re.search(r'expanded_aprov_status: (?P<status>\w+)', result.stdout)
+    if match:
+      return match.group('status')
+    raise GSCToolError(
+        f'Failed to get expanded_aprov_status from {result.stdout}')
+
   def _InvokeCommand(self, cmd, failure_msg, cmd_result_checker=None):
     cmd_result_checker = cmd_result_checker or (lambda result: result.success)
     result = self._shell(cmd)

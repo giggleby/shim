@@ -322,5 +322,16 @@ class GSCToolTest(unittest.TestCase):
     self.assertTrue(self.gsctool.IsWpsrProvisioned())
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-E'])
 
+  def testGetExpandedAprovStatus(self):
+    expanded_aprov_status = textwrap.dedent("""
+      fs_init_time:          15
+      fs_usage:              5271
+      aprov_time:            7
+      expanded_aprov_status: 20094FC""")
+    self._SetGSCToolUtilityResult(stdout=expanded_aprov_status)
+    status = self.gsctool.GetExpandedAprovStatus()
+    self.assertEqual(status, '20094FC')
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-W'])
+
 if __name__ == '__main__':
   unittest.main()
