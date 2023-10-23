@@ -51,6 +51,7 @@ except ImportError:
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.realpath(__file__)))), 'py_pkg'))
 from cros.factory.tools import netboot_firmware_settings  # pylint: disable=wrong-import-position
+from cros.factory.utils import devkeys  # pylint: disable=wrong-import-position
 from cros.factory.utils import fmap  # pylint: disable=wrong-import-position
 from cros.factory.utils import pygpt  # pylint: disable=wrong-import-position
 
@@ -3321,6 +3322,36 @@ class ExtractRMAImageCommand(SubCommand):
                                           self.args.select)
     ChromeOSFactoryBundle.ShowRMAImage(output)
     print(f'OK: Extracted successfully in new image: {output}')
+
+
+class UnsignRMAImageCommand(SubCommand):
+  """Unsign (e.g., sign with DEV keys) an RMA image."""
+  namespace = CMD_NAMESPACE_RMA
+  name = 'unsign'
+
+  def Init(self):
+    self.subparser.add_argument('-i', '--image', required=True,
+                                type=ArgTypes.ExistsPath,
+                                help='Path of the RMA image to be resigned.')
+
+  def Run(self):
+    path_futility = SysUtils.FindCommand('futility')
+    image = self.args.image
+    gpt = GPT.LoadFromFile(image)
+
+    first_kernel = gpt.GetPartition(PART_CROS_KERNEL_A)
+    if not first_kernel.IsChromeOSKernel():
+      raise RuntimeError(f'Not an RMA image (no ChromeOS kernel): {image}')
+
+    for part in gpt.GetUsedPartitions():
+      # Some disabled kernel partitions have only 1 blocks.
+      if (not part.IsChromeOSKernel()) or (part.blocks <= 1):
+        continue
+      print(f'Resigning the kernel partition with DEV keys: {part}')
+      with part.Map() as kernel:
+        devkeys.ResignRecoveryKernel(Sudo, path_futility, kernel)
+    ChromeOSFactoryBundle.ShowRMAImage(image)
+    print(f'OK: Unsigned (resigned with DEV keys) the image: {image}')
 
 
 class ShowRMAImageCommand(SubCommand):
