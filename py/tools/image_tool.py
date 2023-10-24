@@ -2112,7 +2112,6 @@ class ChromeOSFactoryBundle:
 
     try:
       path_futility = SysUtils.FindCommand('futility')
-      results = []
 
       def is_dev(part):
         """Checks if the kernel partition is DEV signed."""
@@ -2124,7 +2123,7 @@ class ChromeOSFactoryBundle:
       if all(results):
         key_name = 'DEV'
       elif not any(results):
-        key_name = 'PRODUCTION (non-edv)'
+        key_name = 'PRODUCTION (non-dev)'
       else:
         key_name = 'BOTH dev and non-dev'
       print(f'SIGNING: The image was signed by {key_name} keys.')
