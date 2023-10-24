@@ -676,6 +676,13 @@ def Aligned(value, alignment):
 class GPT(pygpt.GPT):
   """A special version GPT object with more helper utilities."""
 
+  def GetValidChromeOSKernelPartitions(self):
+    """Returns all valid ChromeOS kernel partitions."""
+    return [
+        p for p in self.GetUsedPartitions()
+        if p.IsChromeOSKernel() and p.blocks > 1
+    ]
+
   class CopyablePartitionMixin:
     """A mixin class that supports copying partitions.
 
@@ -2099,31 +2106,31 @@ class ChromeOSFactoryBundle:
     """Show the content of a RMA image."""
     gpt = GPT.LoadFromFile(image)
 
-    kernel_part = gpt.GetPartition(PART_CROS_KERNEL_A)
-    if not kernel_part.IsChromeOSKernel():
+    first_kernel = gpt.GetPartition(PART_CROS_KERNEL_A)
+    if not first_kernel.IsChromeOSKernel():
       raise RuntimeError(f'Not an RMA image (no ChromeOS kernel): {image}')
 
-    # futility vbutil_kernel --verify <file> [--signpubkey <pubk>]
-    # We can search for 'Signature: *valid' if pubk is assigned.
-    # In the current implementation we skipped the public key and directly look
-    # at the kernel data key.
-    with kernel_part.Map() as kernel:
-      # The key hash can be found in src/platform/vboot_reference/tests/devkeys/
-      # by command: vbutil_key --unpack recovery_kernel_data_key.vbpubk
-      dev_recovery_kernel_data_key = 'e78ce746a037837155388a1096212ded04fb86eb'
-      # TODO(hungte): Rewrite the vblock parsing to pure Python implementation.
-      result = SudoOutput(['futility', 'vbutil_kernel', '--verify', kernel],
-                          check=False)
-      if result.find('Data key sha1sum:') < 0:
-        print(f'Unable to verify the RMA shim signature in: ${kernel_part}.')
+    try:
+      path_futility = SysUtils.FindCommand('futility')
+      results = []
+
+      def is_dev(part):
+        """Checks if the kernel partition is DEV signed."""
+        with part.Map() as kernel:
+          return devkeys.IsRecoveryKernel(SudoOutput, path_futility, kernel)
+
+      results = [is_dev(p) for p in gpt.GetValidChromeOSKernelPartitions()]
+
+      if all(results):
+        key_name = 'DEV'
+      elif not any(results):
+        key_name = 'PRODUCTION (non-edv)'
       else:
-        if result.find(dev_recovery_kernel_data_key) >= 0:
-          key_name = 'DEV'
-        else:
-          # Technically this is 'non-DEV' but that's too confusing so let's call
-          # it 'production' for now.
-          key_name = 'PRODUCTION'
-        print(f'The image was signed by {key_name} keys.')
+        key_name = 'BOTH dev and non-dev'
+      print(f'SIGNING: The image was signed by {key_name} keys.')
+    except Exception:
+      print('SIGNING: WARNING: Unable to identify the signing keys.')
+
     print()
 
     stateful_part = gpt.GetPartition(PART_CROS_STATEFUL)
@@ -3343,10 +3350,7 @@ class UnsignRMAImageCommand(SubCommand):
     if not first_kernel.IsChromeOSKernel():
       raise RuntimeError(f'Not an RMA image (no ChromeOS kernel): {image}')
 
-    for part in gpt.GetUsedPartitions():
-      # Some disabled kernel partitions have only 1 blocks.
-      if (not part.IsChromeOSKernel()) or (part.blocks <= 1):
-        continue
+    for part in gpt.GetValidChromeOSKernelPartitions():
       print(f'Resigning the kernel partition with DEV keys: {part}')
       with part.Map() as kernel:
         devkeys.ResignRecoveryKernel(Sudo, path_futility, kernel)
