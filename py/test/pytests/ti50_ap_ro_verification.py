@@ -95,8 +95,10 @@ class Ti50APROVerficationTest(test_case.TestCase):
         # but it would pass if GBB flags are zero.
         result = self.gooftool.GSCGetAPROResult()
         if result != gsctool.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
+          status = self.gsctool.GetExpandedAprovStatus()
           self.FailTask('Ti50 AP RO Verification failed '
-                        f'with the following result: {result.name}')
+                        f'with the following result: {result.name}, '
+                        f'and expanded_aprov_status: {status}')
       else:
         # Enable software write protect.
         if self.args.enable_swwp:
