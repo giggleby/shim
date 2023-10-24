@@ -85,12 +85,13 @@
     "generic": {
       "eval": "generic_network_device:ethernet",
       "keys": [
-        "product",
-        "vendor",
-        "revision_id",
         "idProduct",
         "idVendor",
-        "bcdDevice"
+        "bcdDevice",
+        "vendor",
+        "device",
+        "revision_id",
+        "subsystem_device"
       ]
     }
   },
