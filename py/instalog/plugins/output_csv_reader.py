@@ -77,6 +77,8 @@ class OutputCSVReader(plugin_base.OutputPlugin):
       try:
         self.gcs.DownloadFile(object_id, csv_path, overwrite=True)
         csv_events.extend(self.ReadCSV(csv_path, object_id))
+      except Exception:
+        self.exception('Failed to parse the file: %s', object_id)
       finally:
         if os.path.exists(csv_path):
           os.unlink(csv_path)
