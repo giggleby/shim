@@ -42,10 +42,10 @@ To test AP RO verification, add this to test list::
 
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool import write_protect_target
+from cros.factory.test.rules import phase
 from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
-from cros.factory.test.rules import phase
 from cros.factory.test.utils.gsc_utils import GSCUtils
 from cros.factory.utils.arg_utils import Arg
 
@@ -121,8 +121,10 @@ class Ti50APROVerficationTest(test_case.TestCase):
     # but it would pass if GBB flags are zero.
     result = self.gsctool.GSCGetAPROResult()
     if result != gsctool_module.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
+      status = self.gsctool.GetExpandedAprovStatus()
       self.FailTask('Ti50 AP RO Verification failed '
-                    f'with the following result: {result.name}')
+                    f'with the following result: {result.name}, '
+                    f'and expanded_aprov_status: {status}')
 
     # Check the WPSR value for PVT/MP devices,
     # it should be set to correct value instead of "0 0" for security concern.
