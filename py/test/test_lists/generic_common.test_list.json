@@ -1176,6 +1176,13 @@
         "rma_mode": "eval! constants.rma_mode"
       }
     },
+    "WriteRMAHWID": {
+      "inherit": "WriteHWID",
+      "label": "Write RMA HWID",
+      "args": {
+        "rma_mode": true
+      }
+    },
     "WriteProtectSwitch": {
       "pytest_name": "write_protect_switch"
     }
