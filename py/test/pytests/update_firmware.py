@@ -68,6 +68,7 @@ import os
 import tempfile
 
 from cros.factory.device import device_utils
+from cros.factory.gooftool import crosfw
 from cros.factory.test.env import paths
 from cros.factory.test import event
 from cros.factory.test import test_case
@@ -160,9 +161,12 @@ class UpdateFirmwareTest(test_case.TestCase):
     else:
       command += ['--mode=factory']
 
-    logging.info('Pass `--quirks unlock_csme_nissa` to firmware updater to '
-                 'unlock CSME region.')
-    command += ['--quirks', 'unlock_csme_nissa']
+    main_fw = crosfw.LoadIntelMainFirmware()
+    _, is_locked = main_fw.GenerateAndCheckLockedDescriptor()
+    if not is_locked:
+      logging.info('Pass `--quirks unlock_csme_nissa` to firmware updater to '
+                   'unlock CSME region.')
+      command += ['--quirks', 'unlock_csme_nissa']
 
     returncode = self.ui.PipeProcessOutputToUI(command)
 
