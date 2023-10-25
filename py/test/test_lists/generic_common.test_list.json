@@ -1183,6 +1183,16 @@
         "rma_mode": true
       }
     },
+    "TPMVerifyEKGroup": {
+      "inherit": "TestGroup",
+      "label": "Verify EK",
+      "subtests": [
+        "TPMVerifyEK",
+        "ClearTPMOwnerRequest",
+        "Barrier",
+        "RebootStep"
+      ]
+    },
     "WriteProtectSwitch": {
       "pytest_name": "write_protect_switch"
     }
