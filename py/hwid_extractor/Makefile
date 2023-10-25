@@ -70,6 +70,10 @@ install: $(INSTALL_TARGET)
 	ln -sf ../../py $(DEST_LIB_PATH)/py_pkg/cros/factory
 	mkdir -p $(DEST_BIN_PATH)
 
-	# Setup hwid_extractor execuable
-	ln -sf $(BIN_TO_LIB_REL_PATH)/py/cli/factory_env.py \
+	# Setup hwid_extractor executable locally
+	mkdir -p $(DEST_LIB_PATH)/bin
+	ln -sf ../py/cli/factory_env.py $(DEST_LIB_PATH)/bin/hwid_extractor
+
+	# Setup hwid_extractor executable globally
+	ln -sf $(BIN_TO_LIB_REL_PATH)/bin/hwid_extractor \
 		$(DEST_BIN_PATH)/hwid_extractor
