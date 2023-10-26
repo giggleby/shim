@@ -8,6 +8,7 @@ import queue
 import signal
 import threading
 import time
+from typing import cast
 import unittest
 from unittest import mock
 
@@ -181,7 +182,7 @@ class QueueGetTest(PollingTestBase):
     local_queue = mock.Mock()
     local_queue.get = Get
 
-    value = sync_utils.QueueGet(local_queue, timeout=None)
+    value = cast(int, sync_utils.QueueGet(local_queue, timeout=None))
     self.assertEqual(value, answer)
 
   @mock.patch(sync_utils.__name__ + '.GetPollingSleepFunction')

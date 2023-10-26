@@ -37,7 +37,7 @@ import select
 import socket
 import sys
 import time
-from typing import Optional
+from typing import Optional, cast
 
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
@@ -110,7 +110,9 @@ class GpioManager:
         with Gpio(port) as gpio:
           return gpio.Poll(edge, timeout_secs)
     except Exception as e:
-      exception_name = sys.exc_info()[0].__name__
+      # sys.exc_info() is guaranteed to be not None.
+      # https://docs.python.org/3/library/sys.html#sys.exc_info
+      exception_name = sys.exc_info()[0].__name__  # type: ignore[union-attr]
       raise GpioManagerError(
           f'Problem to poll GPIO {port} {edge}: {exception_name}({str(e)})'
       ) from None
@@ -129,12 +131,12 @@ class GpioManager:
     """
     try:
       if self._server is not None:
-        return self._server.read_gpio(port)
+        return cast(int, self._server.read_gpio(port))
       # Use with statement to make sure releasing system resource
       with Gpio(port) as gpio:
         return gpio.Read()
     except Exception as e:
-      exception_name = sys.exc_info()[0].__name__
+      exception_name = sys.exc_info()[0].__name__  # type: ignore[union-attr]
       raise GpioManagerError(
           f'Problem to read GPIO {port}: {exception_name}({str(e)})') from None
 
@@ -159,7 +161,7 @@ class GpioManager:
         with Gpio(port) as gpio:
           gpio.Write(1 if value else 0)
     except Exception as e:
-      exception_name = sys.exc_info()[0].__name__
+      exception_name = sys.exc_info()[0].__name__  # type: ignore[union-attr]
       raise GpioManagerError(
           f'Problem to write GPIO {port}: {exception_name}({str(e)})') from None
 

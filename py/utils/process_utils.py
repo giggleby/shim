@@ -446,21 +446,21 @@ class CommandPipe:
   def _GetDecodedStr(self, string: bytes) -> Union[str, bytes]:
     return string.decode(self._encoding) if self._encoding else string
 
-  def _Communicate(self):
+  def _Communicate(self) -> None:
     if not self._processes:
       raise ValueError('CommandPipe has no command to run.')
 
     # `bufs` contains stderr of all the processes, and the stdout of the last
     # process. The last two are the stderr and stdout of the last process.
     out_pipes: List[IO[Any]] = (
-        [p.stderr for p in self._processes] + [self._processes[-1].stdout]
-    )  # type: ignore
+        [cast(IO[Any], p.stderr) for p in self._processes] +
+        [cast(IO[Any], self._processes[-1].stdout)])
     bufs: List[bytes] = [b''] * len(out_pipes)
     try:
       while not self._is_done:
         self._is_done = all(p.poll() is not None for p in self._processes)
 
-        rlist: IO[Any]
+        rlist: List[IO[Any]]
         rlist, unused_wlist, unused_xlist = select.select(
             out_pipes, [], [], self._read_timeout)  # type: ignore
         for i, pipe in enumerate(out_pipes):

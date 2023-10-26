@@ -228,7 +228,7 @@ class SystemInterface:
                   stdin: Union[None, int, IO[Any]] = None,
                   stderr: Union[None, int,
                                 IO[Any]] = None, cwd: Optional[str] = None,
-                  log=False, encoding: str = 'utf-8') -> str:
+                  log=False, *, encoding: str = ...) -> str:
     ...
 
   @overload
@@ -236,14 +236,14 @@ class SystemInterface:
                   stdin: Union[None, int, IO[Any]] = None,
                   stderr: Union[None, int,
                                 IO[Any]] = None, cwd: Optional[str] = None,
-                  log=False, encoding: None = None) -> bytes:
+                  log=False, *, encoding: None) -> bytes:
     ...
 
   def CheckOutput(self, command: Union[str, Sequence[str]],
                   stdin: Union[None, int,
                                IO[Any]] = None, stderr: Union[None, int,
                                                               IO[Any]] = None,
-                  cwd: Optional[str] = None, log=False,
+                  cwd: Optional[str] = None, log=False, *,
                   encoding: Optional[str] = 'utf-8') -> Union[str, bytes]:
     """Executes a command on device, using subprocess.check_output convention.
 

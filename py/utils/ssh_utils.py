@@ -253,7 +253,8 @@ class _SSHControlMasterWatcher:
 
   def __init__(self, ssh_runner: SSHRunner):
     self._ssh_runner = ssh_runner
-    self._thread = threading.Thread(target=self._Run)
+    self._thread: Optional[threading.Thread] = (
+        threading.Thread(target=self._Run))
     self._proc_queue: 'queue.Queue[Tuple[int, Optional[int]]]' = queue.Queue()
     self._link_class_name = self._ssh_runner.__class__.__name__
 

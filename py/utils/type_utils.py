@@ -97,7 +97,7 @@ def FlattenList(lst: List[T_ElementOrList]) -> List[T]:
 T_ElementOrTuple = Union[T, Tuple[T]]
 
 
-def FlattenTuple(tupl: Tuple[T_ElementOrTuple]) -> Tuple[T, ...]:
+def FlattenTuple(tupl: Tuple[T_ElementOrTuple, ...]) -> Tuple[T, ...]:
   """Flattens a tuple, recursively including all items in contained tuples.
 
   For example:
