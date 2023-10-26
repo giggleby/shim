@@ -202,6 +202,12 @@ This is used if camera_characteristics.conf is not ready. Users must replace
     }
   }
 
+To test the LED of the front camera:
+
+.. test_list::
+
+  generic_main:FFT.CameraTests.FrontCameraLED
+
 """
 
 

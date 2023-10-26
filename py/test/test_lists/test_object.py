@@ -14,6 +14,7 @@ import itertools
 import json
 import logging
 import re
+from typing import Any, Dict
 
 from cros.factory.test import i18n
 from cros.factory.test.i18n import _
@@ -331,13 +332,19 @@ class FactoryTest:
     return ''.join(name.capitalize() if name[0].islower() else name
                    for name in new_name.split())
 
-  def ToStruct(self, extra_fields=None, recursive=True):
+  def ToStruct(self, extra_fields=None, recursive=True, *,
+               remove_default=False) -> Dict[str, Any]:
     """Returns the node as a struct suitable for JSONification.
+
+    If |extra_fields| or |remove_default| are provided, then the returned object
+    might not match definition of test_list.scheme.json.
 
     Args:
       extra_fields: additional fields from FactoryTest object you'd like to
-        include.  If this is provided, then the returned object might not match
-        definition of test_list.scheme.json.
+        include.
+      recursive: Set this to False to not resolve subtests.
+      remove_default: Remove the fields with default arguments for displaying in
+        documents.
 
     Returns:
       A JSON serializable object that can is a test_object defined by
@@ -369,6 +376,12 @@ class FactoryTest:
     for key in struct['args']:
       if callable(struct['args'][key]):
         struct['args'][key] = '<lambda function>'
+
+    if remove_default:
+      default_factory_test = FactoryTest().ToStruct()
+      for key, value in default_factory_test.items():
+        if key in struct and struct[key] == value:
+          struct.pop(key)
 
     return struct
 

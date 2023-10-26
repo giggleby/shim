@@ -102,6 +102,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'recommonmark',
     'cros.factory.doc.factory_docs',
+    'cros.factory.doc.test_list_bindings',
     'sphinx_markdown_tables',
     'sphinx_copybutton',
 ]
