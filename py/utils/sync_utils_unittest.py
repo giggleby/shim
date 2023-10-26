@@ -385,6 +385,11 @@ class TimeoutTest(unittest.TestCase):
     else:
       raise AssertionError("No timeout")
 
+  def testSignalTimeoutWithFloatSecs(self):
+    with self.assertRaisesRegex(
+        ValueError, r'SignalTimeout does not support secs in float\.'):
+      sync_utils.Timeout(0.1, use_signal=True)
+
   def testThreadTimeout(self):
     with sync_utils.ThreadTimeout(0.3):
       time.sleep(0.1)

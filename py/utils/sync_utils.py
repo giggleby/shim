@@ -398,7 +398,7 @@ def Retry(max_retry_times, interval, callback, target, *args, **kwargs):
   return result
 
 
-def Timeout(secs: float, use_signal=False):
+def Timeout(secs: Union[float, int], use_signal: bool = False):
   """Timeout context manager.
 
   It will raise TimeoutError after timeout is reached, interrupting execution
@@ -413,11 +413,13 @@ def Timeout(secs: float, use_signal=False):
       # script in this block has to be done in 0.5 seconds
 
   Args:
-    secs: Number of seconds to wait before timeout.
-    use_signal: force using SignalTimeout (implemented by signal.alarm)
+    secs: Number of seconds to wait before timeout.  0 for no timeout.
+    use_signal: force using SignalTimeout (implemented by signal.alarm).  If set
+      to True, the secs argument must be an integer.
   """
   if not _HAVE_CTYPES or use_signal:
-    # b/275018373: SignalTimeout fails when secs is not integer.
+    if isinstance(secs, float):
+      raise ValueError('SignalTimeout does not support secs in float.')
     return SignalTimeout(secs)
   return ThreadTimeout(secs)
 
@@ -447,7 +449,7 @@ def WithTimeout(secs: float, use_signal=False):
 
 
 @contextlib.contextmanager
-def SignalTimeout(secs: float):
+def SignalTimeout(secs: int):
   """Timeout context manager.
 
   It will raise TimeoutError after timeout is reached, interrupting execution
@@ -455,7 +457,7 @@ def SignalTimeout(secs: float):
   be used in the main thread of Python.
 
   Args:
-    secs: Number of seconds to wait before timeout.
+    secs: Number of seconds to wait before timeout.  0 for no timeout.
 
   Raises:
     TimeoutError if timeout is reached before execution has completed.
@@ -523,14 +525,14 @@ class ThreadTimeout:
   of the thread.
 
   Args:
-    secs: Number of seconds to wait before timeout.
+    secs: Number of seconds to wait before timeout.  0 for no timeout.
 
   Raises:
     TimeoutError if timeout is reached before execution has completed.
     ValueError if not run in the main thread.
   """
 
-  def __init__(self, secs: float):
+  def __init__(self, secs: Union[float, int]):
     self._secs = secs
     self._timer: Optional[threading.Timer] = None
     self._current_thread = threading.current_thread().ident

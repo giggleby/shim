@@ -76,14 +76,13 @@ class GpioManager:
       self._server = net_utils.TimeoutXMLRPCServerProxy(remote, timeout=timeout,
                                                         verbose=verbose)
 
-  def Poll(self, port: int, edge: str,
-           timeout_secs: Optional[int] = None) -> bool:
+  def Poll(self, port: int, edge: str, timeout_secs: int = 0) -> bool:
     """Polls a GPIO port.
 
     Args:
       port: An integer as the port number of target GPIO.
       edge: value in GPIO_EDGE_LIST
-      timeout_secs: (int) polling timeout in seconds.
+      timeout_secs: (int) polling timeout in seconds.  0 for no timeout.
 
     Returns:
       True if the GPIO port is edge triggered.
@@ -286,7 +285,7 @@ class Gpio:
     This method may block up to 'timeout_secs' seconds.
 
     Args:
-      timeout_secs: (int) polling timeout in seconds. 0 if no timeout.
+      timeout_secs: (int) polling timeout in seconds.  0 for no timeout.
 
     Returns:
       True if the GPIO port is edge triggered.
