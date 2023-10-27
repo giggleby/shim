@@ -171,8 +171,8 @@ class SystemInterface:
     if log:
       logger = logging.info if log is True else log
       logger('%s Running: %r', type(self), command)
-    return process_utils.Spawn(command, cwd=cwd, shell=True, stdin=stdin,
-                               stdout=stdout, stderr=stderr, encoding=encoding)
+    return process_utils.Spawn(command, encoding=encoding, cwd=cwd, shell=True,
+                               stdin=stdin, stdout=stdout, stderr=stderr)
 
   def Call(self, *args, **kargs) -> int:
     """Executes a command on target device, using subprocess.call convention.

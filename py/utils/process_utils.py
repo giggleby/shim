@@ -16,14 +16,13 @@ import sys
 import threading
 import time
 import traceback
-from typing import IO, TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, cast
-
-from cros.factory.utils import type_utils
+from typing import IO, TYPE_CHECKING, Any, Callable, Dict, Generic, List, Optional, Sequence, Tuple, TypeVar, Union, cast, overload
 
 
 # Use subprocess.CalledProcessError for invocation exceptions.
 class CalledProcessError(subprocess.CalledProcessError):
   """A CalledProcessError with a workaround repr."""
+
   def __repr__(self):
     msg = 'CalledProcessError(returncode=%d, cmd=%r, stdout=%r, stderr=%r)'
     return msg % (self.returncode, self.cmd, self.stdout, self.stderr)
@@ -88,76 +87,18 @@ def IsProcessAlive(pid: int, ppid: Optional[int] = None) -> bool:
     return False
 
 
-def CheckCall(*args, **kwargs) -> 'ExtendedPopen':
-  """Run and wait for the command to be completed.
-
-  It is like subprocess.check_call but with the extra flexibility of Spawn.
-
-  Args/Returns:
-    Refer to Spawn.
-
-  Raises:
-    process_utils.CalledProcessError if returncode != 0.
-  """
-  kwargs['check_call'] = True
-  return Spawn(*args, **kwargs)
+_RetType = TypeVar('_RetType', str, bytes)
 
 
-def CheckOutput(*args, **kwargs) -> Union[str, bytes]:
-  """Runs command and returns its output.
-
-  It is like subprocess.check_output but with the extra flexibility of Spawn.
-
-  Args:
-    Refer to Spawn.
-
-  Returns:
-    stdout
-
-  Raises:
-    process_utils.CalledProcessError if returncode != 0.
-  """
-  kwargs['check_output'] = True
-  return Spawn(*args, **kwargs).stdout_data  # type: ignore
-
-
-def SpawnOutput(*args, **kwargs) -> Union[str, bytes]:
-  """Runs command and returns its output.
-
-  Like CheckOutput. But it won't raise exception unless you set
-  check_output=True.
-
-  Args:
-    Refer to Spawn.
-
-  Returns:
-    stdout
-  """
-  kwargs['read_stdout'] = True
-  return Spawn(*args, **kwargs).stdout_data  # type: ignore
-
-
-def LogAndCheckCall(*args, **kwargs) -> 'ExtendedPopen':
-  """Logs a command and invokes CheckCall."""
-  logging.info('Running: %s', ' '.join(pipes.quote(arg) for arg in args[0]))
-  return CheckCall(*args, **kwargs)
-
-
-def LogAndCheckOutput(*args, **kwargs) -> Union[str, bytes]:
-  """Logs a command and invokes CheckOutput."""
-  logging.info('Running: %s', ' '.join(pipes.quote(arg) for arg in args[0]))
-  return CheckOutput(*args, **kwargs)
-
-
-class ExtendedPopen(Popen):
+class ExtendedPopen(Popen, Generic[_RetType]):
   """Popen subclass that supports a few extra methods.
 
   Attributes:
     stdout_data, stderr_data: Data read by communicate().  These are set by
       the Spawn call if read_stdout/read_stderr are True.
   """
-  stdout_data: Union[str, bytes, None] = None
-  stderr_data: Union[str, bytes, None] = None
+  stdout_data: Optional[_RetType] = None
+  stderr_data: Optional[_RetType] = None
 
   def stdout_lines(self, strip=False) -> List[str]:
     """Returns lines in stdout_data as a list.
@@ -185,17 +126,155 @@ class ExtendedPopen(Popen):
       raise TypeError('Stderr are bytes.')
     return GetLines(self.stderr_data, strip)
 
-  @type_utils.Overrides
   def communicate(self, *args,
-                  **kwargs) -> Tuple[Union[str, bytes], Union[str, bytes]]:
+                  **kwargs) -> Tuple[Optional[_RetType], Optional[_RetType]]:
     if self.stdout_data is None and self.stderr_data is None:
       return super().communicate(*args, **kwargs)
 
     # Already communicated.
-    return self.stdout_data, self.stderr_data  # type: ignore
+    return self.stdout_data, self.stderr_data
 
 
-def Spawn(args: Union[str, Sequence[str]], **kwargs) -> ExtendedPopen:
+@overload
+def CheckCall(args: Union[str, Sequence[str]], *, encoding: str = 'utf-8',
+              **kwargs) -> ExtendedPopen[str]:
+  ...
+
+
+@overload
+def CheckCall(args: Union[str, Sequence[str]], *, encoding: None,
+              **kwargs) -> ExtendedPopen[bytes]:
+  ...
+
+
+def CheckCall(args: Union[str, Sequence[str]], *,
+              encoding: Optional[str] = 'utf-8', **kwargs):
+  """Run and wait for the command to be completed.
+
+  It is like subprocess.check_call but with the extra flexibility of Spawn.
+
+  Args/Returns:
+    Refer to Spawn.
+
+  Raises:
+    process_utils.CalledProcessError if returncode != 0.
+  """
+  kwargs['check_call'] = True
+  return Spawn(args, encoding=encoding, **kwargs)
+
+
+@overload
+def CheckOutput(args: Union[str, Sequence[str]], *, encoding: str = 'utf-8',
+                **kwargs) -> str:
+  ...
+
+
+@overload
+def CheckOutput(args: Union[str, Sequence[str]], *, encoding: None,
+                **kwargs) -> bytes:
+  ...
+
+
+def CheckOutput(args: Union[str, Sequence[str]], *,
+                encoding: Optional[str] = 'utf-8', **kwargs):
+  """Runs command and returns its output.
+
+  It is like subprocess.check_output but with the extra flexibility of Spawn.
+
+  Args:
+    Refer to Spawn.
+
+  Returns:
+    stdout
+
+  Raises:
+    process_utils.CalledProcessError if returncode != 0.
+  """
+  kwargs['check_output'] = True
+  return Spawn(args, encoding=encoding, **kwargs).stdout_data
+
+
+@overload
+def SpawnOutput(args: Union[str, Sequence[str]], *, encoding: str = 'utf-8',
+                **kwargs) -> str:
+  ...
+
+
+@overload
+def SpawnOutput(args: Union[str, Sequence[str]], *, encoding: None,
+                **kwargs) -> bytes:
+  ...
+
+
+def SpawnOutput(args: Union[str, Sequence[str]], *,
+                encoding: Optional[str] = 'utf-8', **kwargs):
+  """Runs command and returns its output.
+
+  Like CheckOutput. But it won't raise exception unless you set
+  check_output=True.
+
+  Args:
+    Refer to Spawn.
+
+  Returns:
+    stdout
+  """
+  kwargs['read_stdout'] = True
+  return Spawn(args, encoding=encoding, **kwargs).stdout_data
+
+
+@overload
+def LogAndCheckCall(args: Union[str, Sequence[str]], *, encoding: str = 'utf-8',
+                    **kwargs) -> ExtendedPopen[str]:
+  ...
+
+
+@overload
+def LogAndCheckCall(args: Union[str, Sequence[str]], *, encoding: None,
+                    **kwargs) -> ExtendedPopen[bytes]:
+  ...
+
+
+def LogAndCheckCall(args: Union[str, Sequence[str]], *,
+                    encoding: Optional[str] = 'utf-8', **kwargs):
+  """Logs a command and invokes CheckCall."""
+  logging.info('Running: %s', ' '.join(pipes.quote(arg) for arg in args))
+  return CheckCall(args, encoding=encoding, **kwargs)
+
+
+@overload
+def LogAndCheckOutput(args: Union[str, Sequence[str]], *,
+                      encoding: str = 'utf-8', **kwargs) -> ExtendedPopen[str]:
+  ...
+
+
+@overload
+def LogAndCheckOutput(args: Union[str, Sequence[str]], *, encoding: None,
+                      **kwargs) -> ExtendedPopen[bytes]:
+  ...
+
+
+def LogAndCheckOutput(args: Union[str, Sequence[str]], *,
+                      encoding: Optional[str] = 'utf-8', **kwargs):
+  """Logs a command and invokes CheckOutput."""
+  logging.info('Running: %s', ' '.join(pipes.quote(arg) for arg in args))
+  return CheckOutput(args, encoding=encoding, **kwargs)
+
+
+@overload
+def Spawn(args: Union[str, Sequence[str]], *, encoding: str = 'utf-8',
+          **kwargs) -> ExtendedPopen[str]:
+  ...
+
+
+@overload
+def Spawn(args: Union[str, Sequence[str]], *, encoding: None,
+          **kwargs) -> ExtendedPopen[bytes]:
+  ...
+
+
+def Spawn(args: Union[str, Sequence[str]], *, encoding: Optional[str] = 'utf-8',
+          **kwargs):
   """Popen wrapper with extra functionality:
 
   - Sets close_fds to True by default.  (You may still set close_fds=False to
@@ -220,6 +299,8 @@ def Spawn(args: Union[str, Sequence[str]], **kwargs) -> ExtendedPopen:
         ['cmd'], read_stdout=True, read_stderr=True).communicate()
 
   Args:
+    encoding: Same as subprocess.Popen, we will use `utf-8` as default to make
+      it output str type.
     log: Do a logging.info before running the command, or to any
       logging object to call its info method.
     stdout: Same as subprocess.Popen, but may be set to DEV_NULL to discard
@@ -249,8 +330,6 @@ def Spawn(args: Union[str, Sequence[str]], **kwargs) -> ExtendedPopen:
     ignore_stderr: Ignore stderr.
     sudo: Prepend sudo to arguments if user is not root.
     env: Same as subprocess.Popen, set-up environment parameters if needed.
-    encoding: Same as subprocess.Popen, we will use `utf-8` as default to make
-      it output str type.
     timeout: Set a timeout for process. Implies call=True.
     shell: If this is a shell script. In this case args must be a string.
 
@@ -263,7 +342,6 @@ def Spawn(args: Union[str, Sequence[str]], **kwargs) -> ExtendedPopen:
     TimeoutExpired: If timeout expired.
   """
   kwargs.setdefault('close_fds', True)
-  kwargs.setdefault('encoding', 'utf-8')
 
   args_to_log: str
   if kwargs.get('shell'):
@@ -344,7 +422,7 @@ def Spawn(args: Union[str, Sequence[str]], **kwargs) -> ExtendedPopen:
     raise ValueError('Cannot use call=True argument with stderr=PIPE, '
                      'since OS buffers may get filled up')
 
-  process = ExtendedPopen(args, **kwargs)
+  process = ExtendedPopen(args, encoding=encoding, **kwargs)
 
   if call:
     try:
@@ -384,7 +462,13 @@ def Spawn(args: Union[str, Sequence[str]], **kwargs) -> ExtendedPopen:
   return process
 
 
-class CommandPipe:
+def _AssertIOIsNotNone(obj: Optional[IO[Any]]) -> IO[Any]:
+  if obj is None:
+    raise AssertionError('The IO object must not be None')
+  return obj
+
+
+class CommandPipe(Generic[_RetType]):
   """Interface for commands piping.
 
   Attributes:
@@ -400,28 +484,57 @@ class CommandPipe:
     out = CommandPipe().Pipe(['cmdA', 'arg']).Pipe('CmdB').stdout_data
     out, err = CommandPipe().Pipe(['cmdC']).Pipe('CmdD').Communicate()
   """
-  def __init__(self, encoding: Optional[str] = 'utf-8', check=True,
-               read_timeout=0.1):
-    self._encoding: Optional[str] = encoding
+
+  @overload
+  def __init__(self: 'CommandPipe[str]', *, encoding: Optional[str] = 'utf-8',
+               check: bool = True, read_timeout: float = 0.1):
+    ...
+
+  @overload
+  def __init__(self: 'CommandPipe[bytes]', *, encoding: None,
+               check: bool = True, read_timeout: float = 0.1):
+    ...
+
+  def __init__(self, *, encoding: Optional[str] = 'utf-8', check: bool = True,
+               read_timeout: float = 0.1):
+    self._encoding = encoding
     self._check = check
     self._read_timeout = read_timeout
     self._processes: List[subprocess.Popen] = []
     self._is_done = False
-    self._stdout_data: Union[str, bytes, None] = None
-    self._stderr_data: Union[str, bytes, None] = None
+    self._stdout_data: Optional[_RetType] = None
+    self._stderr_data: Optional[_RetType] = None
+
+  @overload
+  def stdout_data(self: 'CommandPipe[str]') -> str:
+    ...
+
+  @overload
+  def stdout_data(self: 'CommandPipe[bytes]') -> bytes:
+    ...
 
   @property
-  def stdout_data(self) -> Union[str, bytes]:
-    stdout, unused_stderr = self.Communicate()
+  def stdout_data(self):
+    # pylint does not correctly handle overloaded methods.
+    # https://github.com/pylint-dev/pylint/issues/4696
+    stdout, unused_stderr = self.Communicate()  # pylint: disable=unpacking-non-sequence
     return stdout
 
+  @overload
+  def stderr_data(self: 'CommandPipe[str]') -> str:
+    ...
+
+  @overload
+  def stderr_data(self: 'CommandPipe[bytes]') -> bytes:
+    ...
+
   @property
-  def stderr_data(self) -> Union[str, bytes]:
-    unused_stdout, stderr = self.Communicate()
+  def stderr_data(self):
+    unused_stdout, stderr = self.Communicate()  # pylint: disable=unpacking-non-sequence
     return stderr
 
   def Pipe(self, args: Union[str, List[str]], shell=False, sudo=False,
-           env: Optional[Dict[str, str]] = None) -> 'CommandPipe':
+           env: Optional[Dict[str, str]] = None) -> 'CommandPipe[_RetType]':
     """Add a command to the commands pipe.
 
     Args:
@@ -443,7 +556,15 @@ class CommandPipe:
     self._processes.append(process)
     return self
 
-  def _GetDecodedStr(self, string: bytes) -> Union[str, bytes]:
+  @overload
+  def _GetDecodedStr(self: 'CommandPipe[bytes]', string: bytes) -> bytes:
+    ...
+
+  @overload
+  def _GetDecodedStr(self: 'CommandPipe[str]', string: bytes) -> str:
+    ...
+
+  def _GetDecodedStr(self, string: bytes):
     return string.decode(self._encoding) if self._encoding else string
 
   def _Communicate(self) -> None:
@@ -452,43 +573,50 @@ class CommandPipe:
 
     # `bufs` contains stderr of all the processes, and the stdout of the last
     # process. The last two are the stderr and stdout of the last process.
-    out_pipes: List[IO[Any]] = (
-        [cast(IO[Any], p.stderr) for p in self._processes] +
-        [cast(IO[Any], self._processes[-1].stdout)])
-    bufs: List[bytes] = [b''] * len(out_pipes)
+    out_pipes = ([_AssertIOIsNotNone(p.stderr) for p in self._processes] +
+                 [_AssertIOIsNotNone(self._processes[-1].stdout)])
+    bufs = [io.BytesIO() for unused_i in range(len(out_pipes))]
     try:
       while not self._is_done:
         self._is_done = all(p.poll() is not None for p in self._processes)
 
         rlist: List[IO[Any]]
         rlist, unused_wlist, unused_xlist = select.select(
-            out_pipes, [], [], self._read_timeout)  # type: ignore
+            out_pipes, [], [], self._read_timeout)
         for i, pipe in enumerate(out_pipes):
           if pipe not in rlist:
             continue
 
           # Read until the pipe is empty
           pipe_buffer = os.read(pipe.fileno(), 4096)
-          while len(pipe_buffer) > 0:
-            bufs[i] += pipe_buffer
+          while pipe_buffer:
+            bufs[i].write(pipe_buffer)
             pipe_buffer = os.read(pipe.fileno(), 4096)
 
-      self._stdout_data = self._GetDecodedStr(bufs[-1])
-      self._stderr_data = self._GetDecodedStr(bufs[-2])
+      self._stdout_data = self._GetDecodedStr(bufs[-1].getvalue())
+      self._stderr_data = self._GetDecodedStr(bufs[-2].getvalue())
 
       if self._check:
         for i, p in enumerate(self._processes):
           if p.returncode != 0:
             stdout = (
-                self._GetDecodedStr(bufs[-1])
+                self._GetDecodedStr(bufs[-1].getvalue())
                 if p is self._processes[-1] else None)
-            stderr = self._GetDecodedStr(bufs[i])
+            stderr = self._GetDecodedStr(bufs[i].getvalue())
             raise CalledProcessError(p.returncode, p.args, stdout, stderr)
     finally:
       for pipe in out_pipes:
         pipe.close()
 
-  def Communicate(self) -> Tuple[Union[str, bytes], Union[str, bytes]]:
+  @overload
+  def Communicate(self: 'CommandPipe[str]') -> Tuple[str, str]:
+    ...
+
+  @overload
+  def Communicate(self: 'CommandPipe[bytes]') -> Tuple[bytes, bytes]:
+    ...
+
+  def Communicate(self):
     """Get the output of the commands pipe.
 
     Returns:
@@ -500,7 +628,7 @@ class CommandPipe:
     """
     if not self._is_done:
       self._Communicate()
-    return self._stdout_data, self._stderr_data  # type: ignore
+    return self._stdout_data, self._stderr_data
 
 
 def TerminateOrKillProcess(process: subprocess.Popen, wait_seconds=1,
@@ -623,8 +751,7 @@ def StartDaemonThread(*args, **kwargs) -> threading.Thread:
         os.kill(os.getpid(), signal.SIGINT)
 
     if len(args) > 1:
-      args = list(args)  # type: ignore
-      args[1] = _target  # type: ignore
+      args = (args[0], _target, *args[2:])
     else:
       kwargs['target'] = _target
 

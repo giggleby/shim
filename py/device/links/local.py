@@ -78,9 +78,9 @@ class LocalLink(device_types.IDeviceLink):
       # Trust default path specified by Python runtime. Useful for non-POSIX
       # systems like Windows.
       shell = True
-    return process_utils.Spawn(command, shell=shell, cwd=cwd, close_fds=True,
-                               stdin=stdin, stdout=stdout, stderr=stderr,
-                               encoding=encoding)
+    return process_utils.Spawn(command, encoding=encoding, shell=shell, cwd=cwd,
+                               close_fds=True, stdin=stdin, stdout=stdout,
+                               stderr=stderr)
 
   @type_utils.Overrides
   def IsReady(self) -> bool:
