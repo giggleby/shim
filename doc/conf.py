@@ -99,9 +99,11 @@ if py_shopfloor not in sys.path:
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
+    'sphinx.ext.napoleon',
     'recommonmark',
     'cros.factory.doc.factory_docs',
     'sphinx_markdown_tables',
+    'sphinx_copybutton',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
