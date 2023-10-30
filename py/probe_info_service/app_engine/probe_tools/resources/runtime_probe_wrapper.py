@@ -14,8 +14,18 @@ import subprocess
 import sys
 import tempfile
 
-import client_payload_pb2  # pylint: disable=import-error
 from google.protobuf import text_format
+
+
+# Check if the protobuf library on the device is compatible with the payload.
+try:
+  import client_payload_pb2  # pylint: disable=import-error
+except Exception as err:
+  logging.error(err)
+  logging.error(
+      'Failed to execute the probe test bundle. Please use the latest ChromeOS '
+      'test image and run the probe test bundle again. If the execution still '
+      'fails, please contact Google.')
 
 
 _BUNDLE_ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -131,6 +141,9 @@ def _CreateTempReportFile():
 
 
 def Main():
+  if 'client_payload_pb2' not in sys.modules:
+    return
+
   ap = argparse.ArgumentParser(
       description=('Test the probe statements in the config file by '
                    'executing runtime_probe against it.'))
