@@ -17,7 +17,6 @@ from google.protobuf import text_format
 from cros.factory.probe.runtime_probe import generic_probe_statement
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.probe_info_service.app_engine import bundle_builder
-from cros.factory.probe_info_service.app_engine import config
 from cros.factory.probe_info_service.app_engine import probe_info_analytics
 from cros.factory.probe_info_service.app_engine.probe_tools import client_payload_pb2  # pylint: disable=no-name-in-module
 from cros.factory.utils import file_utils
@@ -499,16 +498,14 @@ class ProbeInfoAnalyzer(probe_info_analytics.IProbeInfoAnalyzer):
     if not missing_component_parts:
       return _ProbeInfoTestResult(result_type=_ProbeInfoTestResult.PASSED)
 
-    # TODO(b/293377003): Enable in production.
-    if not config.Config().is_prod:
-      suggestions, suggestion_msg = self._AnalyzeGenericProbeResult(
-          preproc_conclusion.probed_generic_components, probe_data_source)
+    suggestions, suggestion_msg = self._AnalyzeGenericProbeResult(
+        preproc_conclusion.probed_generic_components, probe_data_source)
 
-      if suggestions or suggestion_msg:
-        return _ProbeInfoTestResult(
-            result_type=_ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION,
-            probe_parameter_suggestions=suggestions,
-            suggestion_msg=suggestion_msg)
+    if suggestions or suggestion_msg:
+      return _ProbeInfoTestResult(
+          result_type=_ProbeInfoTestResult.PROBE_PRAMETER_SUGGESTION,
+          probe_parameter_suggestions=suggestions,
+          suggestion_msg=suggestion_msg)
 
     return _ProbeInfoTestResult(
         result_type=_ProbeInfoTestResult.INTRIVIAL_ERROR, intrivial_error_msg=(
